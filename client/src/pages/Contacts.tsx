@@ -1,74 +1,28 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ContactCard from "@/components/ContactCard";
 import { Plus, Search, Upload } from "lucide-react";
+import { useContacts } from "@/hooks/useContacts";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Contacts() {
   const [searchQuery, setSearchQuery] = useState("");
+  const { data: contacts, isLoading } = useContacts();
 
-  const mockContacts = [
-    {
-      id: "1",
-      fullName: "Sarah Johnson",
-      role: "Investor",
-      org: "Sequoia Capital",
-      geo: "San Francisco, CA",
-      relationshipStrength: 0.85,
-      tags: ["AI", "Seed Stage", "DevTools"],
-      lastInteractionAt: "2025-01-15",
-    },
-    {
-      id: "2",
-      fullName: "Michael Park",
-      role: "Founder",
-      org: "TechFlow AI",
-      geo: "New York, NY",
-      relationshipStrength: 0.62,
-      tags: ["Series A", "Fundraising", "B2B SaaS"],
-      lastInteractionAt: "2024-12-28",
-    },
-    {
-      id: "3",
-      fullName: "Amanda Chen",
-      role: "GP",
-      org: "Benchmark",
-      geo: "Palo Alto, CA",
-      relationshipStrength: 0.91,
-      tags: ["Growth Stage", "Fintech", "Enterprise"],
-      lastInteractionAt: "2025-01-20",
-    },
-    {
-      id: "4",
-      fullName: "David Rodriguez",
-      role: "LP",
-      org: "University Endowment",
-      geo: "Boston, MA",
-      relationshipStrength: 0.73,
-      tags: ["Institutional", "Long-term"],
-      lastInteractionAt: "2024-11-30",
-    },
-    {
-      id: "5",
-      fullName: "Emma Wilson",
-      role: "Operator",
-      org: "Scale AI",
-      geo: "San Francisco, CA",
-      relationshipStrength: 0.58,
-      tags: ["ML", "Operations", "Hiring"],
-      lastInteractionAt: "2025-01-10",
-    },
-    {
-      id: "6",
-      fullName: "James Kim",
-      role: "Investor",
-      org: "Andreessen Horowitz",
-      geo: "Menlo Park, CA",
-      relationshipStrength: 0.79,
-      tags: ["Crypto", "Web3", "Early Stage"],
-      lastInteractionAt: "2025-01-05",
-    },
-  ];
+  const filteredContacts = useMemo(() => {
+    if (!contacts) return [];
+    
+    if (!searchQuery.trim()) return contacts;
+    
+    const query = searchQuery.toLowerCase();
+    return contacts.filter(contact => 
+      contact.name.toLowerCase().includes(query) ||
+      contact.company?.toLowerCase().includes(query) ||
+      contact.title?.toLowerCase().includes(query) ||
+      contact.email?.toLowerCase().includes(query)
+    );
+  }, [contacts, searchQuery]);
 
   return (
     <div className="p-8">
@@ -104,15 +58,42 @@ export default function Contacts() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {mockContacts.map((contact) => (
-          <ContactCard
-            key={contact.id}
-            {...contact}
-            onEdit={() => console.log('Edit', contact.fullName)}
-          />
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Skeleton key={i} className="h-64" data-testid={`skeleton-contact-${i}`} />
+          ))}
+        </div>
+      ) : filteredContacts.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground mb-4" data-testid="text-no-contacts">
+            {searchQuery ? 'No contacts match your search.' : 'No contacts yet. Add your first contact to get started.'}
+          </p>
+          {!searchQuery && (
+            <Button data-testid="button-add-first-contact">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Your First Contact
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredContacts.map((contact) => (
+            <ContactCard
+              key={contact.id}
+              id={contact.id}
+              fullName={contact.name}
+              role={contact.title || 'Contact'}
+              org={contact.company || undefined}
+              geo={undefined}
+              relationshipStrength={0.5}
+              tags={[]}
+              lastInteractionAt={contact.updatedAt.toISOString()}
+              onEdit={() => console.log('Edit', contact.name)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
