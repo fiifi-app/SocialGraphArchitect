@@ -73,9 +73,6 @@ export default function Record() {
       <div className="flex items-center justify-center min-h-screen p-8">
         <div className="text-center max-w-xl">
           <div className="mb-12">
-            <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
-              <Mic className="w-12 h-12 text-primary" />
-            </div>
             <h1 className="text-2xl font-semibold mb-3">Start a New Recording</h1>
             <p className="text-muted-foreground">
               Record conversations to get AI-powered intro suggestions in real-time
