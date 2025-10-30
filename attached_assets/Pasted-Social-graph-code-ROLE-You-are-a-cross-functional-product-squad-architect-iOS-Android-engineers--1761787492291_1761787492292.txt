@@ -1,0 +1,200 @@
+Social graph code:
+
+ROLE
+You are a cross-functional product squad (architect, iOS/Android engineers, ML engineer, data engineer, product designer, UX writer, QA). You produce working, privacy-first mobile software with clean code, tests, and a concise README.
+
+MISSION
+Build “Social Graph Connector” — a mobile app that:
+1) live-transcribes in-person conversations,
+2) extracts topics/intent in real time,
+3) matches what’s being discussed to my personal social graph,
+4) produces an end-of-meeting intro list with relevance scores (1–3) and the “why.”
+
+RESEARCH ANCHOR
+Independently research the “Granola” AI notes app and emulate its high-level UX patterns: tap-to-record, live transcript view, consent nudge, mic-only capture, and ephemeral audio deletion after transcription. Do NOT copy proprietary assets; mirror the flow, accessibility, and clarity.
+
+PLATFORMS & STACK
+- Primary: iOS app in Swift + SwiftUI. iOS 15+.
+- Optional parity: Generate a React Native shell (Android later), with native modules for audio/transcription; business logic shared in TypeScript where reasonable.
+- Transcription: Prefer on-device (Apple Speech where available). Provide optional on-device Whisper-tiny wrapper; allow cloud fallback behind an explicit privacy toggle.
+- Storage: Local first. Use SQLite (via GRDB) or Core Data for transcripts, entities, contacts, and suggestions.
+- Optional sync backend: Postgres + Prisma schema with simple Node service (email/OAuth auth). Keep all enrichment user-provided or via official OAuth APIs only.
+
+CORE USER STORIES (MVP)
+1) Record & Transcribe: Tap “Record,” show consent nudge, live transcript scroll, pause/resume, stop.
+2) Real-Time Suggestions: While speaking, surface a right-side (or bottom sheet) “Suggested Intros” stream that updates at most every 5 seconds.
+3) Wrap-Up: End-of-meeting summary (Highlights, Decisions, Action Items) + intro list with 1–3 score and explicit “why” factors.
+4) Intro Queue: Mark each suggestion as Promised / Nice-to-have / Skip; one-tap copy of a warm-intro draft.
+5) History & Search: Search transcripts, entities, contacts, and suggestions; link “why” back to transcript spans.
+6) Create New Contact: Find data on the person being recorded ask for missing information, fill in the blank
+
+MATCHING DOMAINS (PHASE 1)
+- Investor ↔ Investor
+- Investor ↔ Startup / Startup ↔ Investor
+- GP ↔ LP / LP ↔ GP
+- GP ↔ GP
+
+DATA MODEL (create local tables; mirror to backend if generated)
+Contact
+{
+  "id": "uuid",
+  "fullName": "string",
+  "email": "string|null",
+  "phone": "string|null",
+  "linkedinUrl": "string|null",
+  "role": "enum['Founder','Operator','Investor','GP','LP','Advisor','Other']",
+  "org": "string|null",
+  "geo": "string|null",
+  "relationshipStrength": "number(0-1)",
+  "lastInteractionAt": "isoDate|null",
+  "theses": ["uuid"], 
+  "tags": ["string"],
+  "notes": "string|null",
+  "privacyLevel": "enum['private','team','public']"
+}
+
+Thesis
+{
+  "id": "uuid",
+  "ownerContactId": "uuid|null",
+  "stage": "enum['Pre-seed','Seed','A','B','Growth','Other']",
+  "checkSizeMinUSD": "number|null",
+  "checkSizeMaxUSD": "number|null",
+  "sectors": ["string"], 
+  "themes": ["string"], 
+  "geos": ["string"], 
+  "why": "string",
+  "exclusions": ["string"]
+}
+
+Conversation
+{
+  "id": "uuid",
+  "startedAt": "isoDate",
+  "endedAt": "isoDate|null",
+  "participants": ["string"], 
+  "transcript": [
+    {"t":"isoDate","speaker":"string|null","text":"string"}
+  ],
+  "entities": [
+    {"type":"ORG|PERSON|SECTOR|STAGE|AMOUNT|GEO|THEME","value":"string","salience":0.0}
+  ],
+  "summary":{"bullets":["string"],"decisions":["string"],"actions":["string"]},
+  "suggestions":["uuid"]
+}
+
+Suggestion
+{
+  "id": "uuid",
+  "conversationId": "uuid",
+  "contactId": "uuid",
+  "reason": "string",
+  "score": 1,
+  "evidenceSpans": [{"startIdx":0,"endIdx":42}],
+  "status": "enum['Queued','Promised','Sent','Dismissed']"
+}
+
+ENTITY & TOPIC PIPELINE
+- NER + keyword + light rules to detect: sectors (e.g., fintech, AI infra), stage, check sizes, geos, company names, personas (GP/LP), intents (“raising $2–3M seed”, “looking for LPs”, “hiring Head of Sales”).
+- Maintain rolling context (last 2–5 min) + cumulative context; debounce updates to avoid flicker.
+
+EXPLAINABLE MATCHING (produce both weighted score and 1–3 rating)
+Weighted score in [0,1], then map to 1–3:
+score = 0.40*topicalMatch
+      + 0.20*stageFit
+      + 0.10*checkSizeFit
+      + 0.10*geoFit
+      + 0.10*relationshipStrength
+      + 0.05*recencyBoost
+      + 0.05*conflictPenalty
+
+- topicalMatch: cosine similarity between conversation embeddings (recent window + summary) and thesis embeddings (sectors/themes).
+- stageFit: startup stage ↔ investor target stage match.
+- checkSizeFit: amount mentioned within investor range.
+- geoFit: overlapping geos.
+- relationshipStrength: user-provided [0–1].
+- recencyBoost: +0.05 if lastInteraction < 60 days.
+- conflictPenalty: −0.05 for competitor/exclusion tags.
+
+Map to rating:
+- ≥0.70 → 3 (highly likely), 0.50–0.69 → 2 (good), <0.50 → 1 (okay).
+In UI, show top 3 “why” factors and link to transcript spans.
+
+UX (Granola-style, adapted)
+- Home: Big Tap-to-Record, recent meetings, search.
+- Live: Large readable transcript, animated mic, chips for detected entities; suggestions panel with score badges (1–3).
+- Wrap-Up: Summary sections + intro list (checkboxes and statuses).
+- Intro Queue: Multi-select, copy/share intro text, log sent.
+- History: Search + filter by entity, person, sector, stage.
+- 
+
+INTEGRATIONS (privacy-safe; BYO auth keys; optional)
+- Contacts: iOS Contacts (CNContact), Google Contacts OAuth, CSV import.
+- Calendars: iOS/Google to prefill attendees + titles.
+- CRM/Notes: Notion, Airtable, HubSpot via OAuth (optional).
+- Excel spreadsheet upload contacts, bulk upload
+- LinkedIn: STORE user-provided profile URLs; DO NOT scrape. Only open links users add or provided via official APIs with OAuth.
+
+PRIVACY, CONSENT, COMPLIANCE
+- Show pre-recording consent card with editable preamble (e.g., “Using an AI notepad to transcribe so I don’t miss details — OK?”).
+- Prominent recording indicator; pause/resume; one-tap delete.
+- Audio cache is ephemeral and deleted post-transcription unless the user opts into retention.
+- All enrichment is user-provided or via official APIs; no scraping.
+- Provide a settings switch for 1-party vs 2-party consent jurisdictions (user-configurable messaging). This is not legal advice.
+
+ACCESSIBILITY & RESPONSIVE DESIGN
+- SwiftUI with Dynamic Type, VoiceOver labels, sufficient contrast.
+- Autolayout for iPhone SE → Pro Max; adaptive layout for portrait/landscape.
+- React Native shell uses responsive flexbox; no hard-coded sizes.
+
+PERFORMANCE BUDGETS (MVP targets on iPhone 13+)
+- First suggestion appears < 7s after start.
+- Suggestions refresh no more than once/5s.
+- Wrap-up summary + intro list generated < 10s for a 30-min meeting.
+
+DELIVERABLES
+- Swift/SwiftUI iOS project with modules: Audio, Transcription, NER, Embeddings, Matching, Suggestions, Consent, Contacts, Calendar, Storage, UI.
+- Optional React Native shell with native bridges for Audio/Transcription.
+- SQL & Prisma schema + migration scripts (if backend generated).
+- Seed data: contacts.csv and theses.json (see “Seed Data Specs” below).
+- Unit tests (matching, scoring mapping) + UI tests (consent flow, live suggestions).
+- README: build/run, permissions (Mic/Contacts/Calendars), privacy toggles, consent configuration, and architecture overview.
+- Example privacy policy text and in-app consent copy.
+
+SEED DATA SPECS
+Prepare /seed:
+- contacts.csv columns:
+  fullName,role,org,linkedinUrl,geo,relationshipStrength,lastInteractionAt,sectors,themes,stage,checkSizeMinUSD,checkSizeMaxUSD,why,tags
+- theses.json example:
+  {"ownerContactId":"<id>","stage":"Seed","checkSizeMinUSD":250000,"checkSizeMaxUSD":1500000,"sectors":["AI infra","DevTools"],"themes":["agentic workflows","data security"],"geos":["US"],"why":"Backs technical founders building infra that unlocks distribution moats.","exclusions":["adtech"]}
+
+DEMO SCRIPTS
+- Generate 10 demo transcripts and 50 demo contacts with varied theses to exercise the matcher.
+- Provide a sample warm-intro email template that inserts {ContactA}, {ContactB}, {Reason}, and {TranscriptSpanLink}.
+
+NON-FUNCTIONAL REQUIREMENTS
+- Clean architecture, dependency-injected services, no singletons.
+- Strict offline-first; queue outbound requests.
+- Observability: local debug logs only; no external telemetry by default.
+- Feature flags for Android parity and cloud transcription.
+
+ACCEPTANCE CRITERIA (DONE)
+- Build runs on simulator/device; mic, contacts, and calendar permissions handled gracefully.
+- Consent banner shown before/at start; audio deleted post-transcription by default.
+- Suggestions show score (1–3) + top 3 “why” factors + transcript span links.
+- Search works across transcripts, entities, contacts, suggestions.
+- Export CSV of intro queue (contact, reason, score, link).
+- Tests pass; README is accurate and concise.
+
+OUTPUT FORMAT
+1) Provide the full Swift/SwiftUI project with folder structure and key files (pseudocode acceptable only where trivial and well-annotated).
+2) Include seed data files and a script/command to load them on first run.
+3) Include a minimal Node/Prisma backend ONLY if necessary for OAuth demos; otherwise keep the MVP local-first.
+4) Provide a short section titled “Next Iterations” with: meeting title/entity auto-fill from calendar, speaker diarization, deduped intro orchestration, and CRM sync.
+
+CONSTRAINTS & ETHICS
+- Do not scrape social networks; only use user-provided data or official OAuth APIs.
+- Default to maximum privacy and transparency; user owns their data.
+- Clearly separate facts from AI-generated summaries in the UI.
+
+Now generate the codebase, tests, seed data, and README accordingly.
