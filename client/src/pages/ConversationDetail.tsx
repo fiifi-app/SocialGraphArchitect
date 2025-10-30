@@ -1,12 +1,17 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import TranscriptView from "@/components/TranscriptView";
 import MeetingSummary from "@/components/MeetingSummary";
 import SuggestionCard from "@/components/SuggestionCard";
+import IntroEmailPanel from "@/components/IntroEmailPanel";
 import { ArrowLeft, Download } from "lucide-react";
 import { Link } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ConversationDetail() {
+  const { toast } = useToast();
+
   const mockTranscript = [
     {
       t: new Date().toISOString(),
@@ -45,6 +50,31 @@ export default function ConversationDetail() {
     }
   ];
 
+  const mockIntroMatches = [
+    {
+      contactA: {
+        name: "Alex Chen",
+        email: "alex@techflow.ai"
+      },
+      contactB: {
+        name: "Sarah Johnson",
+        email: "sarah@sequoia.com"
+      },
+      score: 3,
+      reason: "Based on our conversation, Alex is raising a $2M seed round for their AI infrastructure platform. Given Sarah's focus on AI infra investments at the seed stage, this could be a great fit.",
+      conversationContext: "Alex mentioned they're specifically looking for investors who understand the DevTools space and have experience with technical founders. Their current traction (500 developers, 20% MoM growth) aligns well with Sarah's typical investment criteria."
+    }
+  ];
+
+  const handleSendEmail = (to: string, message: string) => {
+    console.log('Sending email to:', to);
+    console.log('Message:', message);
+    toast({
+      title: "Email sent!",
+      description: `Introduction email sent to ${to}`,
+    });
+  };
+
   return (
     <div className="p-8">
       <div className="mb-6">
@@ -78,53 +108,69 @@ export default function ConversationDetail() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Transcript</h2>
-            <div className="bg-card border border-card-border rounded-lg h-96">
-              <TranscriptView transcript={mockTranscript} />
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="mb-6">
+          <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
+          <TabsTrigger value="emails" data-testid="tab-emails">Intro Emails</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-8">
+              <div>
+                <h2 className="text-xl font-semibold mb-4">Transcript</h2>
+                <div className="bg-card border border-card-border rounded-lg h-96">
+                  <TranscriptView transcript={mockTranscript} />
+                </div>
+              </div>
+
+              <div>
+                <h2 className="text-xl font-semibold mb-4">Meeting Summary</h2>
+                <MeetingSummary
+                  highlights={[
+                    "Team is raising $2M seed round for AI infrastructure platform",
+                    "Current traction: 500 developers, 20% MoM growth",
+                    "Geographic focus: Bay Area and New York",
+                    "Looking for investors with DevTools experience"
+                  ]}
+                  decisions={[
+                    "Follow up with Sarah Johnson about seed investment intro",
+                    "Share deck with Michael Park by end of week",
+                    "Schedule follow-up call for next Tuesday"
+                  ]}
+                  actions={[
+                    "Send updated pitch deck to Alex by Friday",
+                    "Prepare investor questions document",
+                    "Research comparable DevTools valuations",
+                  ]}
+                />
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Suggested Intros</h2>
+              <div className="space-y-4">
+                {mockSuggestions.map((suggestion, idx) => (
+                  <SuggestionCard
+                    key={idx}
+                    {...suggestion}
+                    onPromise={() => console.log('Promised', suggestion.contactName)}
+                    onMaybe={() => console.log('Maybe', suggestion.contactName)}
+                    onDismiss={() => console.log('Dismissed', suggestion.contactName)}
+                  />
+                ))}
+              </div>
             </div>
           </div>
+        </TabsContent>
 
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Meeting Summary</h2>
-            <MeetingSummary
-              highlights={[
-                "Team is raising $2M seed round for AI infrastructure platform",
-                "Current traction: 500 developers, 20% MoM growth",
-                "Geographic focus: Bay Area and New York",
-                "Looking for investors with DevTools experience"
-              ]}
-              decisions={[
-                "Follow up with Sarah Johnson about seed investment intro",
-                "Share deck with Michael Park by end of week",
-                "Schedule follow-up call for next Tuesday"
-              ]}
-              actions={[
-                "Send updated pitch deck to Alex by Friday",
-                "Prepare investor questions document",
-                "Research comparable DevTools valuations",
-              ]}
-            />
-          </div>
-        </div>
-
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Suggested Intros</h2>
-          <div className="space-y-4">
-            {mockSuggestions.map((suggestion, idx) => (
-              <SuggestionCard
-                key={idx}
-                {...suggestion}
-                onPromise={() => console.log('Promised', suggestion.contactName)}
-                onMaybe={() => console.log('Maybe', suggestion.contactName)}
-                onDismiss={() => console.log('Dismissed', suggestion.contactName)}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
+        <TabsContent value="emails">
+          <IntroEmailPanel 
+            matches={mockIntroMatches}
+            onSendEmail={handleSendEmail}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
