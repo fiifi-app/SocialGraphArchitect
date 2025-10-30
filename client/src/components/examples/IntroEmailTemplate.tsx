@@ -12,6 +12,12 @@ export default function IntroEmailTemplateExample() {
         introducingTo="Alex Chen (Founder, TechFlow AI)"
         reason="Based on our recent conversation, I learned that Alex is raising a $2M seed round for their AI infrastructure platform. Given your focus on AI infra investments at the seed stage, I thought this could be a great fit."
         conversationContext="Alex mentioned they're specifically looking for investors who understand the DevTools space and have experience with technical founders. Their current traction (500 developers, 20% MoM growth) aligns well with your typical investment criteria."
+        introBullets={[
+          "Raising $2M seed for AI infrastructure platform",
+          "500 developers on platform, 20% MoM growth",
+          "Looking for investors with DevTools expertise",
+          "Strong technical team focused on agentic workflows"
+        ]}
         onSend={(message) => {
           console.log('Sending email:', message);
           toast({

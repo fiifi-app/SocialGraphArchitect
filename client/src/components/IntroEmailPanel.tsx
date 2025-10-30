@@ -16,6 +16,8 @@ interface IntroMatch {
   score: number;
   reason: string;
   conversationContext: string;
+  introBulletsForA: string[];
+  introBulletsForB: string[];
 }
 
 interface IntroEmailPanelProps {
@@ -123,6 +125,7 @@ export default function IntroEmailPanel({ matches, onSendEmail }: IntroEmailPane
                     introducingTo={match.contactB.name}
                     reason={match.reason}
                     conversationContext={match.conversationContext}
+                    introBullets={match.introBulletsForA}
                     onSend={(message) => handleSend(idx, match.contactA.email, message)}
                     onCopy={(message) => console.log('Copied email for', match.contactA.name)}
                   />
@@ -143,6 +146,7 @@ export default function IntroEmailPanel({ matches, onSendEmail }: IntroEmailPane
                     introducingTo={match.contactA.name}
                     reason={match.reason}
                     conversationContext={match.conversationContext}
+                    introBullets={match.introBulletsForB}
                     onSend={(message) => handleSend(idx, match.contactB.email, message)}
                     onCopy={(message) => console.log('Copied email for', match.contactB.name)}
                   />

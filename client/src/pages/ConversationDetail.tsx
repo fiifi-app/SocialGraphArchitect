@@ -62,7 +62,19 @@ export default function ConversationDetail() {
       },
       score: 3,
       reason: "Based on our conversation, Alex is raising a $2M seed round for their AI infrastructure platform. Given Sarah's focus on AI infra investments at the seed stage, this could be a great fit.",
-      conversationContext: "Alex mentioned they're specifically looking for investors who understand the DevTools space and have experience with technical founders. Their current traction (500 developers, 20% MoM growth) aligns well with Sarah's typical investment criteria."
+      conversationContext: "Alex mentioned they're specifically looking for investors who understand the DevTools space and have experience with technical founders. Their current traction (500 developers, 20% MoM growth) aligns well with Sarah's typical investment criteria.",
+      introBulletsForA: [
+        "Sarah invests in AI infra at seed stage ($1-3M checks)",
+        "Strong track record with technical founders in DevTools",
+        "Based in SF, matches geographic focus",
+        "Portfolio includes similar AI infrastructure companies"
+      ],
+      introBulletsForB: [
+        "Alex raising $2M seed for AI infrastructure platform",
+        "500 developers on platform, 20% MoM growth in Bay Area/NYC",
+        "Looking for investors with DevTools expertise",
+        "Strong technical team focused on agentic workflows for developers"
+      ]
     }
   ];
 

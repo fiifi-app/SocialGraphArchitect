@@ -11,6 +11,7 @@ interface IntroEmailTemplateProps {
   introducingTo: string;
   reason: string;
   conversationContext: string;
+  introBullets: string[];
   onSend: (customizedMessage: string) => void;
   onCopy: (message: string) => void;
 }
@@ -21,6 +22,7 @@ export default function IntroEmailTemplate({
   introducingTo,
   reason,
   conversationContext,
+  introBullets,
   onSend,
   onCopy,
 }: IntroEmailTemplateProps) {
@@ -73,6 +75,20 @@ Best regards`;
         >
           <Edit2 className="w-4 h-4" />
         </Button>
+      </div>
+
+      <div className="bg-muted/30 p-4 rounded-md border border-border space-y-2">
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          Why this intro (from transcript):
+        </h4>
+        <ul className="space-y-1.5">
+          {introBullets.map((bullet, idx) => (
+            <li key={idx} className="flex gap-2 text-sm" data-testid={`intro-bullet-${idx}`}>
+              <span className="text-primary">•</span>
+              <span>{bullet}</span>
+            </li>
+          ))}
+        </ul>
       </div>
 
       {isEditing ? (
