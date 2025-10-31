@@ -4,12 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import ContactCard from "@/components/ContactCard";
 import ContactDialog from "@/components/ContactDialog";
-import { Plus, Search, Upload, Users, TrendingUp, Sparkles } from "lucide-react";
+import { Plus, Search, Upload, Users, TrendingUp } from "lucide-react";
 import { useContacts } from "@/hooks/useContacts";
 import { Skeleton } from "@/components/ui/skeleton";
-import { seedSampleContacts } from "@/lib/seedContacts";
-import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
 import {
   Select,
   SelectContent,
@@ -23,31 +20,9 @@ export default function Contacts() {
   const [filterType, setFilterType] = useState<'all' | 'investor' | 'lp'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [showContactDialog, setShowContactDialog] = useState(false);
-  const [isSeeding, setIsSeeding] = useState(false);
   const CONTACTS_PER_PAGE = 50;
   
   const { data: contacts, isLoading } = useContacts();
-  const { toast } = useToast();
-
-  const handleSeedData = async () => {
-    setIsSeeding(true);
-    try {
-      await seedSampleContacts();
-      queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
-      toast({
-        title: "Sample contacts created!",
-        description: "3 sample contacts have been added to your network",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Failed to seed data",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsSeeding(false);
-    }
-  };
 
   const stats = useMemo(() => {
     if (!contacts) return { total: 0, investors: 0, lps: 0 };
@@ -198,24 +173,13 @@ export default function Contacts() {
             {searchQuery || filterType !== 'all' ? 'No contacts match your filters.' : 'No contacts yet. Add your first contact to get started.'}
           </p>
           {!searchQuery && filterType === 'all' && (
-            <div className="flex gap-3 justify-center">
-              <Button 
-                onClick={() => setShowContactDialog(true)}
-                data-testid="button-add-first-contact"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Your First Contact
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleSeedData}
-                disabled={isSeeding}
-                data-testid="button-seed-data"
-              >
-                <Sparkles className="w-4 h-4 mr-2" />
-                {isSeeding ? "Creating..." : "Seed 3 Sample Contacts"}
-              </Button>
-            </div>
+            <Button 
+              onClick={() => setShowContactDialog(true)}
+              data-testid="button-add-first-contact"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Your First Contact
+            </Button>
           )}
         </div>
       ) : (
