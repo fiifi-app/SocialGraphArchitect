@@ -162,14 +162,14 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
             warnings.push(`${c.name}: ${c.errors.join(', ')}`);
           }
           
+          // Only use core fields that exist in current Supabase schema
+          // Note: is_lp and contact_type will be added after migration
           return {
             name: c.name,
             email: c.email || null,
             title: c.title || null,
             company: c.company || null,
             linkedin_url: c.linkedinUrl || null,
-            is_lp: c.isLp || false,
-            contact_type: c.isLp ? 'lp' : 'investor',
             owned_by_profile: user.id,
           };
         });

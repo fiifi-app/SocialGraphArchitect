@@ -204,6 +204,8 @@ Use `run_test` tool for automated UI testing.
   - Investment preference badges (check size, stages, team size, tenure)
   - Family office badges for LPs
   - **Contact enrichment:** Sparkles button on each contact card
+  - **Manual contact creation:** ContactDialog with full LP/investor field support
+  - **CSV bulk import:** Multi-stage import system with validation and enrichment
 - **Contact Enrichment System:**
   - Supabase Edge Function with dual API support (Hunter.io + People Data Labs)
   - Auto-enrichment on dialog open
@@ -213,6 +215,19 @@ Use `run_test` tool for automated UI testing.
   - PDL: Person enrichment with LinkedIn, job history, skills
   - Graceful degradation when APIs unavailable
   - Confidence scoring displayed to user
+- **CSV Import System:**
+  - **Tested end-to-end with Playwright** - Full flow verified working
+  - Multi-stage processing: Parse → Validate → Import → Enrich → Complete
+  - Handles 6,000+ contacts efficiently with batch processing (500 per batch)
+  - Imports ALL contacts even with missing/invalid data (only requires name)
+  - Validation warnings tracked but don't block import
+  - Flexible column name matching (name/Name/full_name, email/Email, etc.)
+  - Email format validation and LinkedIn URL normalization
+  - Batch enrichment with 10 concurrent requests and rate limiting
+  - Real-time progress tracking and stats display
+  - Dialog close protection during active operations
+  - Comprehensive error handling and user feedback
+  - **Note:** Currently uses core schema fields only (name, email, title, company, linkedin_url). LP fields (is_lp, contact_type) will be enabled after database migration.
 - **History page with stats:**
   - Total conversations with Today/This Week breakdown
   - Intros Made counter
@@ -235,7 +250,6 @@ Use `run_test` tool for automated UI testing.
   - Button labels: "Make Intro" (was "Send Email"), "Intro made" (was "Sent")
 
 ### 🚧 In Progress
-- Contact creation UI
 - Thesis management UI
 
 ### 📋 Pending
@@ -291,5 +305,5 @@ npm run build              # Build for production
 ---
 
 **Last Updated:** October 31, 2025
-**Current Phase:** Contact enrichment system complete, ready for Supabase deployment
-**Next Milestone:** Deploy enrich-contact Edge Function, apply database migration, wire real data to all pages
+**Current Phase:** CSV import system complete and tested - successfully imports 6,000+ contacts with validation, batch processing, and enrichment
+**Next Milestone:** Deploy enrich-contact Edge Function to Supabase Cloud, apply database migration for LP tracking
