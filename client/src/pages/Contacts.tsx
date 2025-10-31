@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import ContactCard from "@/components/ContactCard";
 import ContactDialog from "@/components/ContactDialog";
+import CsvUploadDialog from "@/components/CsvUploadDialog";
 import { Plus, Search, Upload, Users, TrendingUp } from "lucide-react";
 import { useContacts } from "@/hooks/useContacts";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,6 +21,7 @@ export default function Contacts() {
   const [filterType, setFilterType] = useState<'all' | 'investor' | 'lp'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [showContactDialog, setShowContactDialog] = useState(false);
+  const [showCsvUploadDialog, setShowCsvUploadDialog] = useState(false);
   const CONTACTS_PER_PAGE = 50;
   
   const { data: contacts, isLoading } = useContacts();
@@ -81,7 +83,11 @@ export default function Contacts() {
             </p>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" data-testid="button-import-csv" disabled>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowCsvUploadDialog(true)}
+              data-testid="button-import-csv"
+            >
               <Upload className="w-4 h-4 mr-2" />
               Import CSV
             </Button>
@@ -243,6 +249,11 @@ export default function Contacts() {
       <ContactDialog
         open={showContactDialog}
         onOpenChange={setShowContactDialog}
+      />
+      
+      <CsvUploadDialog
+        open={showCsvUploadDialog}
+        onOpenChange={setShowCsvUploadDialog}
       />
     </div>
   );
