@@ -21,6 +21,7 @@ import MeetingSummary from "@/components/MeetingSummary";
 import IntroEmailPanel from "@/components/IntroEmailPanel";
 import { Mic, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 interface TranscriptEntry {
   t: string;
@@ -45,6 +46,7 @@ export default function Record() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const transcriptTimerRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   const demoTranscriptSegments = [
     {
@@ -201,10 +203,19 @@ export default function Record() {
   const handleStop = () => {
     setIsRecording(false);
     setIsPaused(false);
-    setShowSummary(true);
     if (timerRef.current) clearInterval(timerRef.current);
     if (transcriptTimerRef.current) clearInterval(transcriptTimerRef.current);
-    console.log('Recording stopped - showing summary');
+    console.log('Recording stopped - redirecting to history');
+    
+    toast({
+      title: "Recording saved!",
+      description: "Redirecting to history...",
+    });
+    
+    // Redirect to history page after a brief delay
+    setTimeout(() => {
+      setLocation('/history');
+    }, 800);
   };
 
   const handleSendEmail = (to: string, message: string) => {
