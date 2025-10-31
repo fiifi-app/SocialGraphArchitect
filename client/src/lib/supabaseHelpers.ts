@@ -18,6 +18,16 @@ export function contactFromDb(dbRow: any): Contact {
     title: dbRow.title,
     linkedinUrl: dbRow.linkedin_url,
     isShared: dbRow.is_shared,
+    isLp: dbRow.is_lp ?? false,
+    contactType: dbRow.contact_type ?? 'investor',
+    checkSizeMin: dbRow.check_size_min,
+    checkSizeMax: dbRow.check_size_max,
+    preferredStages: dbRow.preferred_stages,
+    preferredTeamSizes: dbRow.preferred_team_sizes,
+    preferredTenure: dbRow.preferred_tenure,
+    isFamilyOffice: dbRow.is_family_office ?? false,
+    investmentTypes: dbRow.investment_types,
+    avgCheckSize: dbRow.avg_check_size,
     createdAt: new Date(dbRow.created_at),
     updatedAt: new Date(dbRow.updated_at),
   };
@@ -34,6 +44,16 @@ export function contactToDb(contact: Partial<Contact>): any {
   if (contact.title !== undefined) dbRow.title = contact.title;
   if (contact.linkedinUrl !== undefined) dbRow.linkedin_url = contact.linkedinUrl;
   if (contact.isShared !== undefined) dbRow.is_shared = contact.isShared;
+  if (contact.isLp !== undefined) dbRow.is_lp = contact.isLp;
+  if (contact.contactType !== undefined) dbRow.contact_type = contact.contactType;
+  if (contact.checkSizeMin !== undefined) dbRow.check_size_min = contact.checkSizeMin;
+  if (contact.checkSizeMax !== undefined) dbRow.check_size_max = contact.checkSizeMax;
+  if (contact.preferredStages !== undefined) dbRow.preferred_stages = contact.preferredStages;
+  if (contact.preferredTeamSizes !== undefined) dbRow.preferred_team_sizes = contact.preferredTeamSizes;
+  if (contact.preferredTenure !== undefined) dbRow.preferred_tenure = contact.preferredTenure;
+  if (contact.isFamilyOffice !== undefined) dbRow.is_family_office = contact.isFamilyOffice;
+  if (contact.investmentTypes !== undefined) dbRow.investment_types = contact.investmentTypes;
+  if (contact.avgCheckSize !== undefined) dbRow.avg_check_size = contact.avgCheckSize;
   
   return dbRow;
 }
@@ -160,6 +180,8 @@ export function matchFromDb(dbRow: any): MatchSuggestion {
     reasons: dbRow.reasons,
     justification: dbRow.justification,
     status: dbRow.status,
+    promiseStatus: dbRow.promise_status,
+    promisedAt: dbRow.promised_at ? new Date(dbRow.promised_at) : null,
     createdAt: new Date(dbRow.created_at),
     updatedAt: new Date(dbRow.updated_at),
   };
