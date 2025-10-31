@@ -13,6 +13,7 @@ import Record from "@/pages/Record";
 import Contacts from "@/pages/Contacts";
 import History from "@/pages/History";
 import ConversationDetail from "@/pages/ConversationDetail";
+import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
 import { useEffect } from "react";
@@ -57,6 +58,9 @@ function Router() {
       </Route>
       <Route path="/conversation/:id">
         {() => <ProtectedRoute component={ConversationDetail} />}
+      </Route>
+      <Route path="/settings">
+        {() => <ProtectedRoute component={Settings} />}
       </Route>
       <Route component={NotFound} />
     </Switch>
