@@ -113,7 +113,7 @@ Best regards`;
           data-testid="button-send-email"
         >
           <Send className="w-4 h-4 mr-2" />
-          Send Email
+          Make Intro
         </Button>
         <Button
           variant="outline"

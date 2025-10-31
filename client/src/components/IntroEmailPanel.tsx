@@ -86,7 +86,7 @@ export default function IntroEmailPanel({ matches, onSendEmail }: IntroEmailPane
                     </Badge>
                     {bothSent && (
                       <Badge variant="outline" className="bg-chart-2/20 text-chart-2 border-chart-2">
-                        Both emails sent
+                        Both intros made
                       </Badge>
                     )}
                   </div>
@@ -115,7 +115,7 @@ export default function IntroEmailPanel({ matches, onSendEmail }: IntroEmailPane
                     Email to {match.contactA.name}
                     {emailASent && (
                       <Badge variant="outline" className="bg-chart-2/20 text-chart-2 border-chart-2">
-                        Sent
+                        Intro made
                       </Badge>
                     )}
                   </h4>
@@ -136,7 +136,7 @@ export default function IntroEmailPanel({ matches, onSendEmail }: IntroEmailPane
                     Email to {match.contactB.name}
                     {emailBSent && (
                       <Badge variant="outline" className="bg-chart-2/20 text-chart-2 border-chart-2">
-                        Sent
+                        Intro made
                       </Badge>
                     )}
                   </h4>

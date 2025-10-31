@@ -38,6 +38,23 @@ export const contacts = pgTable("contacts", {
   title: text("title"),
   linkedinUrl: text("linkedin_url"),
   isShared: boolean("is_shared").notNull().default(false),
+  
+  // Contact Type & LP Status
+  contactType: text("contact_type").notNull().default('investor'), // 'investor' | 'lp'
+  isLp: boolean("is_lp").notNull().default(false),
+  
+  // Investor Profile Fields
+  checkSizeMin: integer("check_size_min"),
+  checkSizeMax: integer("check_size_max"),
+  preferredStages: text("preferred_stages").array().default(sql`ARRAY[]::text[]`),
+  preferredTeamSizes: text("preferred_team_sizes").array().default(sql`ARRAY[]::text[]`),
+  preferredTenure: text("preferred_tenure").array().default(sql`ARRAY[]::text[]`),
+  
+  // LP Profile Fields
+  isFamilyOffice: boolean("is_family_office").notNull().default(false),
+  investmentTypes: text("investment_types").array().default(sql`ARRAY[]::text[]`), // 'fund', 'direct', 'co-invest'
+  avgCheckSize: integer("avg_check_size"),
+  
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -115,7 +132,9 @@ export const matchSuggestions = pgTable("match_suggestions", {
   score: integer("score").notNull(),
   reasons: jsonb("reasons").notNull().default(sql`'[]'::jsonb`),
   justification: text("justification"),
-  status: text("status").notNull().default('pending'),
+  status: text("status").notNull().default('pending'), // 'pending' | 'promised' | 'intro_made'
+  promiseStatus: text("promise_status").default('general'), // 'general' | 'promised'
+  promisedAt: timestamp("promised_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

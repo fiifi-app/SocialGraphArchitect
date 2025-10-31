@@ -3,12 +3,23 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import RecordingIndicator from "@/components/RecordingIndicator";
 import TranscriptView from "@/components/TranscriptView";
 import SuggestionCard from "@/components/SuggestionCard";
 import MeetingSummary from "@/components/MeetingSummary";
 import IntroEmailPanel from "@/components/IntroEmailPanel";
-import { Mic, AlertCircle } from "lucide-react";
+import { Mic, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface TranscriptEntry {
@@ -215,34 +226,26 @@ export default function Record() {
             </p>
           </div>
 
-          <Card className="p-6 mb-8 text-left">
-            <div className="flex items-start gap-3 mb-4">
-              <AlertCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-              <div className="flex-1">
-                <h3 className="font-semibold mb-2">Recording Consent</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Before recording, please inform all participants that you're using an AI notepad to transcribe the conversation. 
-                  This ensures transparency and compliance with recording laws in your jurisdiction.
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-md border border-border">
-              <Checkbox
-                id="consent"
-                checked={consentChecked}
-                onCheckedChange={(checked) => setConsentChecked(checked as boolean)}
-                data-testid="checkbox-consent"
-              />
-              <label
-                htmlFor="consent"
-                className="text-sm leading-relaxed cursor-pointer"
-              >
-                I have informed all participants about this recording and have their consent to proceed. 
-                I understand that the audio will be transcribed and processed by AI.
-              </label>
-            </div>
-          </Card>
+          <div className="mb-8 flex items-center justify-center gap-3 p-4 bg-muted/30 rounded-lg border border-border">
+            <Checkbox
+              id="consent"
+              checked={consentChecked}
+              onCheckedChange={(checked) => {
+                const isChecked = checked as boolean;
+                setConsentChecked(isChecked);
+                if (isChecked) {
+                  setTimeout(() => handleStartRecording(), 300);
+                }
+              }}
+              data-testid="checkbox-consent"
+            />
+            <label
+              htmlFor="consent"
+              className="text-sm cursor-pointer"
+            >
+              All participants have consented to this recording
+            </label>
+          </div>
 
           <Button
             size="lg"
@@ -252,18 +255,23 @@ export default function Record() {
             data-testid="button-start-recording"
           >
             <Mic className="w-8 h-8 mr-3" />
-            Start Recording
+            Record
           </Button>
-          
-          {!consentChecked && (
-            <p className="text-xs text-muted-foreground mt-3">
-              Please check the consent box above to enable recording
-            </p>
-          )}
         </div>
       </div>
     );
   }
+
+  const handleDeleteRecording = () => {
+    setShowSummary(false);
+    setTranscript([]);
+    setSuggestions([]);
+    setDuration("00:00");
+    toast({
+      title: "Recording deleted",
+      description: "The recording has been permanently deleted",
+    });
+  };
 
   if (showSummary) {
     return (
@@ -278,18 +286,51 @@ export default function Record() {
                 <span>{duration}</span>
               </div>
             </div>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowSummary(false);
-                setTranscript([]);
-                setSuggestions([]);
-                setDuration("00:00");
-              }}
-              data-testid="button-new-recording"
-            >
-              New Recording
-            </Button>
+            <div className="flex gap-2">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="text-destructive hover:text-destructive"
+                    data-testid="button-delete-recording"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete this recording?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete the recording, 
+                      transcript, and all associated match suggestions.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDeleteRecording}
+                      className="bg-destructive hover:bg-destructive/90"
+                      data-testid="button-confirm-delete"
+                    >
+                      Delete Recording
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowSummary(false);
+                  setTranscript([]);
+                  setSuggestions([]);
+                  setDuration("00:00");
+                }}
+                data-testid="button-new-recording"
+              >
+                New Recording
+              </Button>
+            </div>
           </div>
         </div>
 

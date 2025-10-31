@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import ConversationHistoryRow from "@/components/ConversationHistoryRow";
-import { Search, Download } from "lucide-react";
+import { Search, Download, MessageSquare, TrendingUp, UserPlus } from "lucide-react";
 
 export default function History() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,6 +40,28 @@ export default function History() {
     },
   ];
 
+  const stats = useMemo(() => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const totalConversations = mockConversations.length;
+    const conversationsToday = mockConversations.filter(c => 
+      new Date(c.startedAt) >= todayStart
+    ).length;
+    const conversationsThisWeek = mockConversations.filter(c => 
+      new Date(c.startedAt) >= weekStart
+    ).length;
+
+    return {
+      total: totalConversations,
+      today: conversationsToday,
+      thisWeek: conversationsThisWeek,
+      introsMade: 23,
+      newContactsAdded: 8
+    };
+  }, [mockConversations]);
+
   return (
     <div className="p-8">
       <div className="mb-8">
@@ -52,6 +76,55 @@ export default function History() {
             <Download className="w-4 h-4 mr-2" />
             Export
           </Button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <Card className="p-4" data-testid="stat-card-conversations">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-md bg-chart-1/20">
+                <MessageSquare className="w-5 h-5 text-chart-1" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground mb-1">Total Conversations</p>
+                <p className="text-2xl font-semibold mb-2" data-testid="text-total-conversations">{stats.total}</p>
+                <Separator className="my-2" />
+                <div className="space-y-1 text-xs text-muted-foreground">
+                  <div className="flex items-center justify-between">
+                    <span>Today</span>
+                    <span className="font-medium text-foreground" data-testid="text-conversations-today">{stats.today}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>This Week</span>
+                    <span className="font-medium text-foreground" data-testid="text-conversations-week">{stats.thisWeek}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-4" data-testid="stat-card-intros">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-md bg-chart-2/20">
+                <TrendingUp className="w-5 h-5 text-chart-2" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Intros Made</p>
+                <p className="text-2xl font-semibold" data-testid="text-intros-made">{stats.introsMade}</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-4" data-testid="stat-card-new-contacts">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-md bg-chart-3/20">
+                <UserPlus className="w-5 h-5 text-chart-3" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">New Contacts Added</p>
+                <p className="text-2xl font-semibold" data-testid="text-new-contacts">{stats.newContactsAdded}</p>
+              </div>
+            </div>
+          </Card>
         </div>
 
         <div className="relative max-w-md">

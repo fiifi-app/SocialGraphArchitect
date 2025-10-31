@@ -1,8 +1,9 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Building2, Edit, ExternalLink } from "lucide-react";
+import { MapPin, Building2, Edit, ExternalLink, DollarSign, TrendingUp, Users, Calendar } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 
 interface ContactCardProps {
   id: string;
@@ -14,6 +15,19 @@ interface ContactCardProps {
   tags: string[];
   lastInteractionAt?: string;
   onEdit: () => void;
+  
+  // New fields for LP/Investor profiles
+  linkedinUrl?: string;
+  contactType?: 'investor' | 'lp';
+  isLp?: boolean;
+  checkSizeMin?: number;
+  checkSizeMax?: number;
+  preferredStages?: string[];
+  preferredTeamSizes?: string[];
+  preferredTenure?: string[];
+  isFamilyOffice?: boolean;
+  investmentTypes?: string[];
+  avgCheckSize?: number;
 }
 
 export default function ContactCard({
@@ -26,26 +40,58 @@ export default function ContactCard({
   tags,
   lastInteractionAt,
   onEdit,
+  linkedinUrl,
+  contactType = 'investor',
+  isLp = false,
+  checkSizeMin,
+  checkSizeMax,
+  preferredStages,
+  preferredTeamSizes,
+  preferredTenure,
+  isFamilyOffice,
+  investmentTypes,
+  avgCheckSize,
 }: ContactCardProps) {
-  const roleColors: Record<string, string> = {
-    Investor: "bg-chart-1/20 text-chart-1",
-    Founder: "bg-chart-2/20 text-chart-2",
-    GP: "bg-chart-3/20 text-chart-3",
-    LP: "bg-chart-4/20 text-chart-4",
-    Operator: "bg-chart-5/20 text-chart-5",
+  const formatCurrency = (amount: number) => {
+    if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
+    if (amount >= 1000) return `$${(amount / 1000).toFixed(0)}K`;
+    return `$${amount}`;
   };
 
+  const displayType = isLp ? 'LP' : 'Investor';
+  const typeColor = isLp ? "bg-chart-4/20 text-chart-4" : "bg-chart-1/20 text-chart-1";
+
   return (
-    <Card className="p-6 hover-elevate" data-testid={`contact-card-${id}`}>
-      <div className="space-y-4">
+    <Card className="p-5 hover-elevate" data-testid={`contact-card-${id}`}>
+      <div className="space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-semibold truncate" data-testid="text-contact-name">
-              {fullName}
-            </h3>
-            <Badge className={roleColors[role] || "bg-muted text-muted-foreground"}>
-              {role}
-            </Badge>
+            <div className="flex items-center gap-2 mb-1.5">
+              <h3 className="text-base font-semibold truncate" data-testid="text-contact-name">
+                {fullName}
+              </h3>
+              {linkedinUrl && (
+                <a
+                  href={linkedinUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover-elevate rounded-sm p-0.5"
+                  data-testid="link-linkedin"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              <Badge className={typeColor} data-testid="badge-contact-type">
+                {displayType}
+              </Badge>
+              {isFamilyOffice && (
+                <Badge variant="outline" className="text-xs" data-testid="badge-family-office">
+                  Family Office
+                </Badge>
+              )}
+            </div>
           </div>
           <Button
             size="icon"
@@ -57,59 +103,91 @@ export default function ContactCard({
           </Button>
         </div>
 
-        {(org || geo) && (
-          <div className="space-y-1.5 text-sm text-muted-foreground">
-            {org && (
-              <div className="flex items-center gap-2">
-                <Building2 className="w-4 h-4" />
-                <span className="truncate">{org}</span>
-              </div>
-            )}
-            {geo && (
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                <span>{geo}</span>
-              </div>
-            )}
+        {org && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Building2 className="w-4 h-4" />
+            <span className="truncate">{org}</span>
           </div>
         )}
 
-        <div>
-          <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-            <span>Relationship Strength</span>
-            <span>{Math.round(relationshipStrength * 100)}%</span>
-          </div>
-          <Progress value={relationshipStrength * 100} className="h-1.5" />
-        </div>
+        {/* Investor-specific info */}
+        {!isLp && (checkSizeMin || checkSizeMax || (preferredStages && preferredStages.length > 0)) && (
+          <>
+            <Separator />
+            <div className="space-y-2">
+              {(checkSizeMin || checkSizeMax) && (
+                <div className="flex items-center gap-2 text-xs">
+                  <DollarSign className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="font-medium text-foreground" data-testid="text-check-size">
+                    {checkSizeMin && checkSizeMax 
+                      ? `${formatCurrency(checkSizeMin)} - ${formatCurrency(checkSizeMax)}`
+                      : checkSizeMin 
+                      ? `${formatCurrency(checkSizeMin)}+`
+                      : `Up to ${formatCurrency(checkSizeMax!)}`}
+                  </span>
+                </div>
+              )}
+              {preferredStages && preferredStages.length > 0 && (
+                <div className="flex items-start gap-2 text-xs">
+                  <TrendingUp className="w-3.5 h-3.5 text-muted-foreground mt-0.5" />
+                  <div className="flex flex-wrap gap-1">
+                    {preferredStages.map((stage, idx) => (
+                      <Badge key={idx} variant="secondary" className="text-xs px-1.5 py-0" data-testid={`badge-stage-${idx}`}>
+                        {stage}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {preferredTeamSizes && preferredTeamSizes.length > 0 && (
+                <div className="flex items-start gap-2 text-xs">
+                  <Users className="w-3.5 h-3.5 text-muted-foreground mt-0.5" />
+                  <span className="text-muted-foreground" data-testid="text-team-sizes">
+                    Team: {preferredTeamSizes.join(', ')}
+                  </span>
+                </div>
+              )}
+              {preferredTenure && preferredTenure.length > 0 && (
+                <div className="flex items-start gap-2 text-xs">
+                  <Calendar className="w-3.5 h-3.5 text-muted-foreground mt-0.5" />
+                  <span className="text-muted-foreground" data-testid="text-tenure">
+                    {preferredTenure.join(', ')}
+                  </span>
+                </div>
+              )}
+            </div>
+          </>
+        )}
 
-        {tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {tags.slice(0, 3).map((tag, idx) => (
-              <Badge
-                key={idx}
-                variant="outline"
-                className="text-xs px-2 py-0.5"
-                data-testid={`tag-${idx}`}
-              >
-                {tag}
-              </Badge>
-            ))}
-            {tags.length > 3 && (
-              <Badge variant="outline" className="text-xs px-2 py-0.5">
-                +{tags.length - 3}
-              </Badge>
-            )}
-          </div>
+        {/* LP-specific info */}
+        {isLp && (investmentTypes && investmentTypes.length > 0 || avgCheckSize) && (
+          <>
+            <Separator />
+            <div className="space-y-2">
+              {investmentTypes && investmentTypes.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {investmentTypes.map((type, idx) => (
+                    <Badge key={idx} variant="secondary" className="text-xs" data-testid={`badge-investment-type-${idx}`}>
+                      {type}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              {avgCheckSize && (
+                <div className="flex items-center gap-2 text-xs">
+                  <DollarSign className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="font-medium text-foreground" data-testid="text-avg-check">
+                    Avg: {formatCurrency(avgCheckSize)}
+                  </span>
+                </div>
+              )}
+            </div>
+          </>
         )}
 
         {lastInteractionAt && (
           <div className="text-xs text-muted-foreground pt-2 border-t border-border">
-            Last interaction:{" "}
-            {new Date(lastInteractionAt).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric',
-            })}
+            Last: {new Date(lastInteractionAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </div>
         )}
       </div>

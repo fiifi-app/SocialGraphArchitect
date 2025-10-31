@@ -8,6 +8,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { Home, Mic, Users, History, Settings } from "lucide-react";
 import { Link, useLocation } from "wouter";
@@ -37,6 +38,13 @@ const menuItems = [
 
 export function AppSidebar() {
   const [location] = useLocation();
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  const handleLinkClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
 
   return (
     <Sidebar>
@@ -50,7 +58,11 @@ export function AppSidebar() {
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={location === item.url}>
-                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase()}`}>
+                    <Link 
+                      href={item.url} 
+                      data-testid={`link-${item.title.toLowerCase()}`}
+                      onClick={handleLinkClick}
+                    >
                       <item.icon className="w-4 h-4" />
                       <span>{item.title}</span>
                     </Link>
@@ -65,7 +77,11 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
-              <Link href="/settings" data-testid="link-settings">
+              <Link 
+                href="/settings" 
+                data-testid="link-settings"
+                onClick={handleLinkClick}
+              >
                 <Settings className="w-4 h-4" />
                 <span>Settings</span>
               </Link>
