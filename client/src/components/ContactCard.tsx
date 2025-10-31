@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Building2, Edit, ExternalLink, DollarSign, TrendingUp, Users, Calendar } from "lucide-react";
+import { MapPin, Building2, Edit, ExternalLink, DollarSign, TrendingUp, Users, Calendar, Sparkles } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import EnrichmentDialog from "@/components/EnrichmentDialog";
 
 interface ContactCardProps {
   id: string;
@@ -52,6 +54,8 @@ export default function ContactCard({
   investmentTypes,
   avgCheckSize,
 }: ContactCardProps) {
+  const [showEnrichDialog, setShowEnrichDialog] = useState(false);
+  
   const formatCurrency = (amount: number) => {
     if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
     if (amount >= 1000) return `$${(amount / 1000).toFixed(0)}K`;
@@ -93,15 +97,33 @@ export default function ContactCard({
               )}
             </div>
           </div>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={onEdit}
-            data-testid="button-edit-contact"
-          >
-            <Edit className="w-4 h-4" />
-          </Button>
+          <div className="flex gap-1">
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setShowEnrichDialog(true)}
+              data-testid="button-enrich-contact"
+              title="Enrich contact data"
+            >
+              <Sparkles className="w-4 h-4" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={onEdit}
+              data-testid="button-edit-contact"
+            >
+              <Edit className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
+        
+        <EnrichmentDialog
+          contactId={id}
+          contactName={fullName}
+          open={showEnrichDialog}
+          onOpenChange={setShowEnrichDialog}
+        />
 
         {org && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
