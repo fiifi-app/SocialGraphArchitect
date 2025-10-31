@@ -33,6 +33,8 @@ A web-based application for recording conversations with live transcription, ext
 ### External Services
 - **OpenAI:** Whisper (transcription) + GPT-4 (entity extraction, matching, email generation)
 - **Supabase:** Database, Auth, Edge Functions, Realtime
+- **Hunter.io:** Email finder and verification (requires email domain)
+- **People Data Labs:** Person enrichment API (LinkedIn, job history, skills)
 
 ## 📁 Project Structure
 
@@ -89,6 +91,8 @@ A web-based application for recording conversations with live transcription, ext
 
 **Edge Functions (Supabase Secrets):**
 - `OPENAI_API_KEY` - OpenAI API key
+- `HUNTER_API_KEY` - Hunter.io API key (optional, for email enrichment)
+- `PDL_API_KEY` - People Data Labs API key (optional, for person enrichment)
 
 **Auto-set by Supabase CLI:**
 - `SUPABASE_URL`
@@ -114,9 +118,12 @@ supabase db push
 supabase functions deploy extract-entities
 supabase functions deploy generate-matches
 supabase functions deploy generate-intro-email
+supabase functions deploy enrich-contact
 
-# Set OpenAI API key
+# Set API keys
 supabase secrets set OPENAI_API_KEY=your-key
+supabase secrets set HUNTER_API_KEY=your-key  # Optional
+supabase secrets set PDL_API_KEY=your-key     # Optional
 ```
 
 ### 5. Start Development
@@ -138,6 +145,7 @@ Privileged operations requiring service role:
 - Extract entities from conversations (GPT-4)
 - Generate match suggestions (GPT-4 + scoring)
 - Generate introduction emails (GPT-4)
+- Enrich contact data (Hunter.io + People Data Labs)
 
 **Example:**
 ```typescript
@@ -187,7 +195,7 @@ Use `run_test` tool for automated UI testing.
 - Authentication (Login/Signup)
 - Protected routes
 - Data access hooks (Contacts, Conversations, Profile, Matches)
-- Edge Functions (3 functions created)
+- Edge Functions (4 functions created)
 - Database schema (14 tables with RLS + LP tracking + promise tracking)
 - **Contacts page enhancements:**
   - LP/Investor stats and filtering
@@ -195,6 +203,16 @@ Use `run_test` tool for automated UI testing.
   - LinkedIn link display
   - Investment preference badges (check size, stages, team size, tenure)
   - Family office badges for LPs
+  - **Contact enrichment:** Sparkles button on each contact card
+- **Contact Enrichment System:**
+  - Supabase Edge Function with dual API support (Hunter.io + People Data Labs)
+  - Auto-enrichment on dialog open
+  - Preview dialog showing original vs enriched data side-by-side
+  - Only saves truthy changed values (prevents data loss)
+  - Hunter.io: Extracts domain from email, email finder + domain search
+  - PDL: Person enrichment with LinkedIn, job history, skills
+  - Graceful degradation when APIs unavailable
+  - Confidence scoring displayed to user
 - **History page with stats:**
   - Total conversations with Today/This Week breakdown
   - Intros Made counter
@@ -222,6 +240,8 @@ Use `run_test` tool for automated UI testing.
 
 ### 📋 Pending
 - Apply database migration to Supabase Cloud (supabase/migrations/20250101000001_add_lp_and_promise_tracking.sql)
+- Deploy enrich-contact Edge Function to Supabase Cloud
+- Set Hunter.io and PDL API keys in Supabase secrets (if not already done)
 - Introduction email review UI
 - Relationship tracking display
 - Remove legacy Express backend
@@ -254,8 +274,12 @@ npm run build              # Build for production
 - All database access is protected by Row Level Security (RLS)
 - Users can only access their own data
 - Service role key is server-side only (Edge Functions)
-- OpenAI API key stored in Supabase secrets
+- API keys stored in Supabase secrets:
+  - OpenAI API key (required)
+  - Hunter.io API key (optional, for email enrichment)
+  - People Data Labs API key (optional, for person enrichment)
 - No sensitive data in frontend code
+- Enrichment functions verify user authentication before processing
 
 ## 📚 Additional Documentation
 
@@ -267,5 +291,5 @@ npm run build              # Build for production
 ---
 
 **Last Updated:** October 31, 2025
-**Current Phase:** UI/UX enhancements complete, ready for Supabase data integration
-**Next Milestone:** Apply database migration and wire real data to all pages
+**Current Phase:** Contact enrichment system complete, ready for Supabase deployment
+**Next Milestone:** Deploy enrich-contact Edge Function, apply database migration, wire real data to all pages
