@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Building2, Edit, ExternalLink, DollarSign, TrendingUp, Users, Calendar, Sparkles } from "lucide-react";
+import { Building2, Edit, DollarSign, TrendingUp, Users, Calendar, Sparkles, Mail, Linkedin } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import EnrichmentDialog from "@/components/EnrichmentDialog";
@@ -12,6 +12,7 @@ interface ContactCardProps {
   fullName: string;
   role: string;
   org?: string;
+  email?: string;
   geo?: string;
   relationshipStrength: number;
   tags: string[];
@@ -37,6 +38,7 @@ export default function ContactCard({
   fullName,
   role,
   org,
+  email,
   geo,
   relationshipStrength,
   tags,
@@ -70,32 +72,9 @@ export default function ContactCard({
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1.5">
-              <h3 className="text-base font-semibold truncate" data-testid="text-contact-name">
-                {fullName}
-              </h3>
-              {linkedinUrl && (
-                <a
-                  href={linkedinUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover-elevate rounded-sm p-0.5"
-                  data-testid="link-linkedin"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              <Badge className={typeColor} data-testid="badge-contact-type">
-                {displayType}
-              </Badge>
-              {isFamilyOffice && (
-                <Badge variant="outline" className="text-xs" data-testid="badge-family-office">
-                  Family Office
-                </Badge>
-              )}
-            </div>
+            <h3 className="text-base font-semibold truncate" data-testid="text-contact-name">
+              {fullName}
+            </h3>
           </div>
           <div className="flex gap-1">
             <Button
@@ -125,12 +104,44 @@ export default function ContactCard({
           onOpenChange={setShowEnrichDialog}
         />
 
-        {org && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Building2 className="w-4 h-4" />
-            <span className="truncate">{org}</span>
-          </div>
-        )}
+        <div className="space-y-1.5">
+          <p className="text-sm text-muted-foreground">{role}</p>
+          
+          {org && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Building2 className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">{org}</span>
+            </div>
+          )}
+          
+          {email && (
+            <div className="flex items-center gap-2 text-sm">
+              <Mail className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+              <a
+                href={`mailto:${email}`}
+                className="truncate text-primary hover:underline"
+                data-testid="link-email"
+              >
+                {email}
+              </a>
+            </div>
+          )}
+          
+          {linkedinUrl && (
+            <div className="flex items-center gap-2 text-sm">
+              <Linkedin className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+              <a
+                href={linkedinUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="truncate text-primary hover:underline"
+                data-testid="link-linkedin-full"
+              >
+                LinkedIn Profile
+              </a>
+            </div>
+          )}
+        </div>
 
         {/* Investor-specific info */}
         {!isLp && (checkSizeMin || checkSizeMax || (preferredStages && preferredStages.length > 0)) && (

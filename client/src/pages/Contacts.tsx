@@ -154,6 +154,7 @@ export default function Contacts() {
                 fullName={contact.name}
                 role={contact.title || 'Contact'}
                 org={contact.company || undefined}
+                email={contact.email || undefined}
                 geo={undefined}
                 relationshipStrength={0.5}
                 tags={[]}
