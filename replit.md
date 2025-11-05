@@ -255,12 +255,22 @@ Use `run_test` tool for automated UI testing.
   - Sidebar auto-closes on navigation
 - **UI refinements:**
   - Button labels: "Make Intro" (was "Send Email"), "Intro made" (was "Sent")
+- **Investor Profile Feature (November 5, 2025):**
+  - **Database Migration**: `20250105000000_add_investor_fields.sql` adds is_investor boolean, expands contact_type enum to include GP/Angel/FamilyOffice/Startup/Other, adds investor_notes text field, creates migration_versions table for feature flagging
+  - **Feature Flag System**: `client/src/lib/featureFlags.ts` checks migration version from database to conditionally enable investor fields in UI
+  - **RoleTag Component**: Color-coded badges for contact types (LP=blue, GP=purple, Angel=orange, FamilyOffice=green, Startup=cyan, Other=gray)
+  - **Currency Formatter**: `formatCheckSizeRange()` displays check sizes in compact format ($250k-$2M, $1M+, etc.)
+  - **ContactDialog Updates**: Investor Profile section with Is LP/Is Investor toggles, Contact Type selector, Check Size Min/Max inputs with validation (min ≤ max), and Investor Notes textarea
+  - **ContactCard Display**: Shows role tags next to contact name, displays check size range when present
+  - **Schema Updates**: Contact type now includes isInvestor, contactType enum, checkSizeMin, checkSizeMax, investorNotes fields
+  - **Data Pipeline**: Complete serialization in supabaseHelpers (contactFromDb/contactToDb) for new investor fields
+  - **Tested**: Architect review complete - all components wired end-to-end from DB → helpers → hooks → UI
 
 ### 🚧 In Progress
 - Thesis management UI
 
 ### 📋 Pending
-- Apply database migration to Supabase Cloud (supabase/migrations/20250101000001_add_lp_and_promise_tracking.sql)
+- Apply database migration to Supabase Cloud (supabase/migrations/20250105000000_add_investor_fields.sql)
 - Deploy enrich-contact Edge Function to Supabase Cloud
 - Set Hunter.io and PDL API keys in Supabase secrets (if not already done)
 - Introduction email review UI
@@ -311,6 +321,6 @@ npm run build              # Build for production
 
 ---
 
-**Last Updated:** November 3, 2025
-**Current Phase:** Complete Contact Management CRUD - Add, Edit, Delete contacts with full validation, toast notifications, and real-time updates. End-to-end tested with Playwright.
-**Next Milestone:** Apply database migration to enable LP/Investor tracking features, then restore LP filtering and investment preference badges
+**Last Updated:** November 5, 2025
+**Current Phase:** Investor Profile Feature Complete - Database migration created, feature flag system implemented, RoleTag component with color-coded badges, ContactDialog updated with Investor Profile section, ContactCard displays role tags and check sizes. Complete data pipeline from DB to UI. Architect-reviewed and validated.
+**Next Milestone:** Apply database migration to Supabase Cloud to enable investor fields in production, then add filtering capabilities for LP/GP/Angel/FamilyOffice/Startup contact types
