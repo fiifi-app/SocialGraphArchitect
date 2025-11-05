@@ -123,24 +123,29 @@ export default function ContactCard({
             </h3>
           </div>
           <div className="flex gap-1">
-            {hasCompanyInfo && (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    data-testid="button-more-info"
-                    title="View company information"
-                  >
-                    <Info className="w-4 h-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80 p-0" align="end" sideOffset={5}>
-                  <div className="p-4 border-b">
-                    <h4 className="font-semibold text-sm">Company Information</h4>
-                  </div>
-                  <ScrollArea className="h-96">
-                    <div className="p-4 space-y-3 text-sm">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  data-testid="button-more-info"
+                  title="View company information"
+                >
+                  <Info className="w-4 h-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-0" align="end" sideOffset={5}>
+                <div className="p-4 border-b">
+                  <h4 className="font-semibold text-sm">Company Information</h4>
+                </div>
+                <ScrollArea className="h-96">
+                  <div className="p-4 space-y-3 text-sm">
+                    {!hasCompanyInfo ? (
+                      <div className="text-sm text-muted-foreground text-center py-8">
+                        No company information available
+                      </div>
+                    ) : (
+                      <>
                       {companyAddress && (
                         <div className="flex items-start gap-2">
                           <MapPin className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
@@ -271,11 +276,12 @@ export default function ContactCard({
                           </div>
                         </div>
                       )}
-                    </div>
-                  </ScrollArea>
-                </PopoverContent>
-              </Popover>
-            )}
+                    </>
+                    )}
+                  </div>
+                </ScrollArea>
+              </PopoverContent>
+            </Popover>
             <Button
               size="icon"
               variant="ghost"
