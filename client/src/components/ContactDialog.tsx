@@ -249,7 +249,7 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl" data-testid="dialog-contact">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" data-testid="dialog-contact">
           <DialogHeader>
             <DialogTitle>{isEditMode ? "Edit Contact" : "Add New Contact"}</DialogTitle>
             <DialogDescription>
@@ -258,8 +258,8 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
           </DialogHeader>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <ScrollArea className="max-h-[60vh] pr-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+              <ScrollArea className="flex-1 pr-4">
                 <div className="space-y-4">
                   {/* Name */}
                   <div className="grid grid-cols-2 gap-4">
@@ -645,9 +645,9 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
                 </div>
               </div>
               </div>
-            </ScrollArea>
+              </ScrollArea>
 
-            <DialogFooter className="gap-2 mt-4">
+              <DialogFooter className="gap-2 mt-4 flex-shrink-0">
                 {isEditMode && (
                   <Button
                     type="button"
