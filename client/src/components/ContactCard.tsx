@@ -141,136 +141,136 @@ export default function ContactCard({
                   </div>
                   <ScrollArea className="h-96">
                     <div className="p-4 space-y-3 text-sm">
-                    {companyAddress && (
-                      <div className="flex items-start gap-2">
-                        <MapPin className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
-                        <div>
-                          <div className="text-xs text-muted-foreground">Company Address</div>
-                          <div>{companyAddress}</div>
+                      {companyAddress && (
+                        <div className="flex items-start gap-2">
+                          <MapPin className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                          <div>
+                            <div className="text-xs text-muted-foreground">Company Address</div>
+                            <div>{companyAddress}</div>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    
-                    {companyEmployees && (
-                      <div className="flex items-start gap-2">
-                        <Users className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
-                        <div>
-                          <div className="text-xs text-muted-foreground"># of Employees</div>
-                          <div>{companyEmployees}</div>
+                      )}
+                      
+                      {companyEmployees && (
+                        <div className="flex items-start gap-2">
+                          <Users className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                          <div>
+                            <div className="text-xs text-muted-foreground"># of Employees</div>
+                            <div>{companyEmployees}</div>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    
-                    {companyFounded && (
-                      <div className="flex items-start gap-2">
-                        <Calendar className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
-                        <div>
-                          <div className="text-xs text-muted-foreground">Founded</div>
-                          <div>{companyFounded}</div>
+                      )}
+                      
+                      {companyFounded && (
+                        <div className="flex items-start gap-2">
+                          <Calendar className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                          <div>
+                            <div className="text-xs text-muted-foreground">Founded</div>
+                            <div>{companyFounded}</div>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    
-                    {companyUrl && (
-                      <div className="flex items-start gap-2">
-                        <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
-                        <div>
-                          <div className="text-xs text-muted-foreground">Company Website</div>
-                          <a href={companyUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
-                            {companyUrl}
-                          </a>
+                      )}
+                      
+                      {companyUrl && (
+                        <div className="flex items-start gap-2">
+                          <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                          <div>
+                            <div className="text-xs text-muted-foreground">Company Website</div>
+                            <a href={companyUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
+                              {companyUrl}
+                            </a>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    
-                    {companyLinkedin && (
-                      <div className="flex items-start gap-2">
-                        <Linkedin className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
-                        <div>
-                          <div className="text-xs text-muted-foreground">Company LinkedIn</div>
-                          <a href={companyLinkedin} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                            LinkedIn Profile
-                          </a>
+                      )}
+                      
+                      {companyLinkedin && (
+                        <div className="flex items-start gap-2">
+                          <Linkedin className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                          <div>
+                            <div className="text-xs text-muted-foreground">Company LinkedIn</div>
+                            <a href={companyLinkedin} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                              LinkedIn Profile
+                            </a>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    
-                    {companyTwitter && (
-                      <div className="flex items-start gap-2">
-                        <TwitterIcon className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
-                        <div>
-                          <div className="text-xs text-muted-foreground">Company Twitter</div>
-                          <a
-                            href={companyTwitter.startsWith('http') ? companyTwitter : `https://twitter.com/${companyTwitter.replace('@', '')}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary hover:underline"
-                          >
-                            {companyTwitter}
-                          </a>
+                      )}
+                      
+                      {companyTwitter && (
+                        <div className="flex items-start gap-2">
+                          <TwitterIcon className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                          <div>
+                            <div className="text-xs text-muted-foreground">Company Twitter</div>
+                            <a
+                              href={companyTwitter.startsWith('http') ? companyTwitter : `https://twitter.com/${companyTwitter.replace('@', '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline"
+                            >
+                              {companyTwitter}
+                            </a>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    
-                    {companyFacebook && (
-                      <div className="flex items-start gap-2">
-                        <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
-                        <div>
-                          <div className="text-xs text-muted-foreground">Company Facebook</div>
-                          <a href={companyFacebook} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                            Facebook Page
-                          </a>
+                      )}
+                      
+                      {companyFacebook && (
+                        <div className="flex items-start gap-2">
+                          <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                          <div>
+                            <div className="text-xs text-muted-foreground">Company Facebook</div>
+                            <a href={companyFacebook} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                              Facebook Page
+                            </a>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    
-                    {companyAngellist && (
-                      <div className="flex items-start gap-2">
-                        <Users className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
-                        <div>
-                          <div className="text-xs text-muted-foreground">Company AngelList</div>
-                          <a href={companyAngellist} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                            AngelList Profile
-                          </a>
+                      )}
+                      
+                      {companyAngellist && (
+                        <div className="flex items-start gap-2">
+                          <Users className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                          <div>
+                            <div className="text-xs text-muted-foreground">Company AngelList</div>
+                            <a href={companyAngellist} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                              AngelList Profile
+                            </a>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    
-                    {companyCrunchbase && (
-                      <div className="flex items-start gap-2">
-                        <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
-                        <div>
-                          <div className="text-xs text-muted-foreground">Company Crunchbase</div>
-                          <a href={companyCrunchbase} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                            Crunchbase Profile
-                          </a>
+                      )}
+                      
+                      {companyCrunchbase && (
+                        <div className="flex items-start gap-2">
+                          <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                          <div>
+                            <div className="text-xs text-muted-foreground">Company Crunchbase</div>
+                            <a href={companyCrunchbase} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                              Crunchbase Profile
+                            </a>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    
-                    {companyOwler && (
-                      <div className="flex items-start gap-2">
-                        <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
-                        <div>
-                          <div className="text-xs text-muted-foreground">Company Owler</div>
-                          <a href={companyOwler} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                            Owler Profile
-                          </a>
+                      )}
+                      
+                      {companyOwler && (
+                        <div className="flex items-start gap-2">
+                          <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                          <div>
+                            <div className="text-xs text-muted-foreground">Company Owler</div>
+                            <a href={companyOwler} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                              Owler Profile
+                            </a>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    
-                    {youtubeVimeo && (
-                      <div className="flex items-start gap-2">
-                        <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
-                        <div>
-                          <div className="text-xs text-muted-foreground">YouTube/Vimeo</div>
-                          <a href={youtubeVimeo} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                            Video Channel
-                          </a>
+                      )}
+                      
+                      {youtubeVimeo && (
+                        <div className="flex items-start gap-2">
+                          <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                          <div>
+                            <div className="text-xs text-muted-foreground">YouTube/Vimeo</div>
+                            <a href={youtubeVimeo} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                              Video Channel
+                            </a>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
                     </div>
                   </ScrollArea>
                 </PopoverContent>
