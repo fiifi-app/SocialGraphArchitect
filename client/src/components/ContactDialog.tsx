@@ -20,6 +20,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCreateContact, useUpdateContact, useDeleteContact } from "@/hooks/useContacts";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Trash2 } from "lucide-react";
@@ -258,8 +259,10 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {/* Name */}
-              <div className="grid grid-cols-2 gap-4">
+              <ScrollArea className="max-h-[60vh] pr-4">
+                <div className="space-y-4">
+                  {/* Name */}
+                  <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="firstName"
@@ -641,8 +644,10 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
                   />
                 </div>
               </div>
+              </div>
+            </ScrollArea>
 
-              <DialogFooter className="gap-2">
+            <DialogFooter className="gap-2 mt-4">
                 {isEditMode && (
                   <Button
                     type="button"
