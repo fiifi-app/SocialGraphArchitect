@@ -22,10 +22,28 @@ interface CsvUploadDialogProps {
 
 interface ParsedContact {
   name: string;
+  firstName?: string;
+  lastName?: string;
   email?: string;
   title?: string;
   company?: string;
   linkedinUrl?: string;
+  location?: string;
+  phone?: string;
+  category?: string;
+  twitter?: string;
+  angellist?: string;
+  companyAddress?: string;
+  companyEmployees?: string;
+  companyFounded?: string;
+  companyUrl?: string;
+  companyLinkedin?: string;
+  companyTwitter?: string;
+  companyFacebook?: string;
+  companyAngellist?: string;
+  companyCrunchbase?: string;
+  companyOwler?: string;
+  youtubeVimeo?: string;
   isLp?: boolean;
   errors: string[];
 }
@@ -74,11 +92,34 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
           const errors: string[] = [];
           
           // Extract and validate fields (flexible column name matching)
-          const name = row.name || row.Name || row.full_name || row['Full Name'] || row.contact_name || '';
-          const email = row.email || row.Email || row.email_address || '';
+          const firstName = row['First Name'] || row.first_name || row.firstName || '';
+          const lastName = row['Last Name'] || row.last_name || row.lastName || '';
+          const name = firstName && lastName ? `${firstName} ${lastName}`.trim() : 
+                       row.name || row.Name || row.full_name || row['Full Name'] || row.contact_name || firstName || '';
+          
+          const email = row.email || row.Email || row.email_address || row['Email'] || '';
           const title = row.title || row.Title || row.position || row.Position || '';
-          const company = row.company || row.Company || row.organization || row.Organization || '';
-          const linkedin = row.linkedin || row.LinkedIn || row.linkedin_url || row['LinkedIn URL'] || '';
+          const company = row.company || row.Company || row['Company Name'] || row.organization || row.Organization || '';
+          const linkedin = row.linkedin || row.LinkedIn || row.Linkedin || row.linkedin_url || row['LinkedIn URL'] || '';
+          const location = row.location || row.Location || '';
+          const phone = row.phone || row.Phone || '';
+          const category = row.category || row.Category || row.Catagory || row.catagory || '';
+          const twitter = row.twitter || row.Twitter || '';
+          const angellist = row.angellist || row.Angellist || row['Angel List'] || row.angel_list || '';
+          
+          // Company information fields
+          const companyAddress = row['Company Address'] || row.company_address || '';
+          const companyEmployees = row['Company # of Employees'] || row.company_employees || '';
+          const companyFounded = row['Company Founded'] || row.company_founded || '';
+          const companyUrl = row['Company URL'] || row.company_url || '';
+          const companyLinkedin = row['Company Linkedin'] || row['Company LinkedIn'] || row.company_linkedin || '';
+          const companyTwitter = row['Company Twitter'] || row.company_twitter || '';
+          const companyFacebook = row['Company Facebook'] || row.company_facebook || '';
+          const companyAngellist = row['Company Angel list'] || row['Company Angellist'] || row.company_angellist || '';
+          const companyCrunchbase = row['Company Crunchbase'] || row.company_crunchbase || '';
+          const companyOwler = row['Company Owler'] || row.company_owler || '';
+          const youtubeVimeo = row['Youtube/Vimeo'] || row['YouTube/Vimeo'] || row.youtube_vimeo || '';
+          
           const isLp = row.is_lp === 'true' || row.is_lp === '1' || row.type?.toLowerCase() === 'lp';
 
           // Validate required field
@@ -98,10 +139,28 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
 
           return {
             name: name.trim(),
+            firstName: firstName.trim() || undefined,
+            lastName: lastName.trim() || undefined,
             email: email.trim() || undefined,
             title: title.trim() || undefined,
             company: company.trim() || undefined,
             linkedinUrl: linkedin ? normalizeLinkedInUrl(linkedin.trim()) : undefined,
+            location: location.trim() || undefined,
+            phone: phone.trim() || undefined,
+            category: category.trim() || undefined,
+            twitter: twitter.trim() || undefined,
+            angellist: angellist.trim() || undefined,
+            companyAddress: companyAddress.trim() || undefined,
+            companyEmployees: companyEmployees.trim() || undefined,
+            companyFounded: companyFounded.trim() || undefined,
+            companyUrl: companyUrl.trim() || undefined,
+            companyLinkedin: companyLinkedin.trim() || undefined,
+            companyTwitter: companyTwitter.trim() || undefined,
+            companyFacebook: companyFacebook.trim() || undefined,
+            companyAngellist: companyAngellist.trim() || undefined,
+            companyCrunchbase: companyCrunchbase.trim() || undefined,
+            companyOwler: companyOwler.trim() || undefined,
+            youtubeVimeo: youtubeVimeo.trim() || undefined,
             isLp: isLp || false,
             errors,
           };
@@ -308,10 +367,28 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
           // CREATE: New pending contact
           const newContact = {
             name: csvContact.name,
+            first_name: csvContact.firstName || null,
+            last_name: csvContact.lastName || null,
             email: csvContact.email || null,
             title: csvContact.title || null,
             company: csvContact.company || null,
             linkedin_url: csvContact.linkedinUrl || null,
+            location: csvContact.location || null,
+            phone: csvContact.phone || null,
+            category: csvContact.category || null,
+            twitter: csvContact.twitter || null,
+            angellist: csvContact.angellist || null,
+            company_address: csvContact.companyAddress || null,
+            company_employees: csvContact.companyEmployees || null,
+            company_founded: csvContact.companyFounded || null,
+            company_url: csvContact.companyUrl || null,
+            company_linkedin: csvContact.companyLinkedin || null,
+            company_twitter: csvContact.companyTwitter || null,
+            company_facebook: csvContact.companyFacebook || null,
+            company_angellist: csvContact.companyAngellist || null,
+            company_crunchbase: csvContact.companyCrunchbase || null,
+            company_owler: csvContact.companyOwler || null,
+            youtube_vimeo: csvContact.youtubeVimeo || null,
             owned_by_profile: user.id,
           };
           
