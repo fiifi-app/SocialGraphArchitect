@@ -259,7 +259,7 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
-              <ScrollArea className="flex-1 pr-4">
+              <div className="overflow-y-auto flex-1 pr-4">
                 <div className="space-y-4">
                   {/* Name */}
                   <div className="grid grid-cols-2 gap-4">
@@ -645,7 +645,7 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
                 </div>
               </div>
               </div>
-              </ScrollArea>
+              </div>
 
               <DialogFooter className="gap-2 mt-4 flex-shrink-0">
                 {isEditMode && (
