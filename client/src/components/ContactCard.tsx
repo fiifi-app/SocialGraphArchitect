@@ -8,6 +8,8 @@ import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import EnrichmentDialog from "@/components/EnrichmentDialog";
+import RoleTag from "@/components/RoleTag";
+import { formatCheckSizeRange } from "@/lib/currencyFormat";
 
 interface ContactCardProps {
   id: string;
@@ -44,17 +46,13 @@ interface ContactCardProps {
   lastInteractionAt?: string;
   onEdit: () => void;
   
-  // LP/Investor profiles (optional)
-  contactType?: 'investor' | 'lp';
+  // Investor Profile fields
+  contactType?: 'LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'Other';
   isLp?: boolean;
+  isInvestor?: boolean;
   checkSizeMin?: number;
   checkSizeMax?: number;
-  preferredStages?: string[];
-  preferredTeamSizes?: string[];
-  preferredTenure?: string[];
-  isFamilyOffice?: boolean;
-  investmentTypes?: string[];
-  avgCheckSize?: number;
+  investorNotes?: string;
 }
 
 export default function ContactCard({
@@ -87,40 +85,30 @@ export default function ContactCard({
   tags,
   lastInteractionAt,
   onEdit,
-  contactType = 'investor',
+  contactType,
   isLp = false,
+  isInvestor = false,
   checkSizeMin,
   checkSizeMax,
-  preferredStages,
-  preferredTeamSizes,
-  preferredTenure,
-  isFamilyOffice,
-  investmentTypes,
-  avgCheckSize,
+  investorNotes,
 }: ContactCardProps) {
   const [showEnrichDialog, setShowEnrichDialog] = useState(false);
   
   const hasCompanyInfo = !!(companyAddress || companyEmployees || companyFounded || companyUrl || 
     companyLinkedin || companyTwitter || companyFacebook || companyAngellist || 
     companyCrunchbase || companyOwler || youtubeVimeo);
-  
-  const formatCurrency = (amount: number) => {
-    if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
-    if (amount >= 1000) return `$${(amount / 1000).toFixed(0)}K`;
-    return `$${amount}`;
-  };
-
-  const displayType = isLp ? 'LP' : 'Investor';
-  const typeColor = isLp ? "bg-chart-4/20 text-chart-4" : "bg-chart-1/20 text-chart-1";
 
   return (
     <Card className="p-5 hover-elevate" data-testid={`contact-card-${id}`}>
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <h3 className="text-base font-semibold truncate" data-testid="text-contact-name">
-              {fullName}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-semibold truncate" data-testid="text-contact-name">
+                {fullName}
+              </h3>
+              {contactType && <RoleTag type={contactType} />}
+            </div>
           </div>
           <div className="flex gap-1">
             <Popover>
@@ -423,77 +411,15 @@ export default function ContactCard({
           )}
         </div>
 
-        {/* Investor-specific info */}
-        {!isLp && (checkSizeMin || checkSizeMax || (preferredStages && preferredStages.length > 0)) && (
+        {/* Investor info - check size */}
+        {(checkSizeMin || checkSizeMax) && (
           <>
             <Separator />
-            <div className="space-y-2">
-              {(checkSizeMin || checkSizeMax) && (
-                <div className="flex items-center gap-2 text-xs">
-                  <DollarSign className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="font-medium text-foreground" data-testid="text-check-size">
-                    {checkSizeMin && checkSizeMax 
-                      ? `${formatCurrency(checkSizeMin)} - ${formatCurrency(checkSizeMax)}`
-                      : checkSizeMin 
-                      ? `${formatCurrency(checkSizeMin)}+`
-                      : `Up to ${formatCurrency(checkSizeMax!)}`}
-                  </span>
-                </div>
-              )}
-              {preferredStages && preferredStages.length > 0 && (
-                <div className="flex items-start gap-2 text-xs">
-                  <TrendingUp className="w-3.5 h-3.5 text-muted-foreground mt-0.5" />
-                  <div className="flex flex-wrap gap-1">
-                    {preferredStages.map((stage, idx) => (
-                      <Badge key={idx} variant="secondary" className="text-xs px-1.5 py-0" data-testid={`badge-stage-${idx}`}>
-                        {stage}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {preferredTeamSizes && preferredTeamSizes.length > 0 && (
-                <div className="flex items-start gap-2 text-xs">
-                  <Users className="w-3.5 h-3.5 text-muted-foreground mt-0.5" />
-                  <span className="text-muted-foreground" data-testid="text-team-sizes">
-                    Team: {preferredTeamSizes.join(', ')}
-                  </span>
-                </div>
-              )}
-              {preferredTenure && preferredTenure.length > 0 && (
-                <div className="flex items-start gap-2 text-xs">
-                  <Calendar className="w-3.5 h-3.5 text-muted-foreground mt-0.5" />
-                  <span className="text-muted-foreground" data-testid="text-tenure">
-                    {preferredTenure.join(', ')}
-                  </span>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* LP-specific info */}
-        {isLp && (investmentTypes && investmentTypes.length > 0 || avgCheckSize) && (
-          <>
-            <Separator />
-            <div className="space-y-2">
-              {investmentTypes && investmentTypes.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {investmentTypes.map((type, idx) => (
-                    <Badge key={idx} variant="secondary" className="text-xs" data-testid={`badge-investment-type-${idx}`}>
-                      {type}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-              {avgCheckSize && (
-                <div className="flex items-center gap-2 text-xs">
-                  <DollarSign className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="font-medium text-foreground" data-testid="text-avg-check">
-                    Avg: {formatCurrency(avgCheckSize)}
-                  </span>
-                </div>
-              )}
+            <div className="flex items-center gap-2 text-sm">
+              <DollarSign className="w-4 h-4 text-muted-foreground" />
+              <span className="font-medium text-foreground" data-testid="text-check-size">
+                {formatCheckSizeRange(checkSizeMin, checkSizeMax)}
+              </span>
             </div>
           </>
         )}
