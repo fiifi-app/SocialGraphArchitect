@@ -495,6 +495,7 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
 
     // Invalidate contacts cache
     queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/contacts/count'] });
 
     // Start enrichment for all processed contacts
     await enrichContacts(insertedContactIds);
@@ -545,6 +546,7 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
 
     setStage('complete');
     queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/contacts/count'] });
 
     toast({
       title: "Enrichment complete!",

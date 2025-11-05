@@ -6,7 +6,7 @@ import ContactCard from "@/components/ContactCard";
 import ContactDialog from "@/components/ContactDialog";
 import CsvUploadDialog from "@/components/CsvUploadDialog";
 import { Plus, Search, Upload, Users } from "lucide-react";
-import { useContacts } from "@/hooks/useContacts";
+import { useContacts, useContactsCount } from "@/hooks/useContacts";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Contacts() {
@@ -18,13 +18,13 @@ export default function Contacts() {
   const CONTACTS_PER_PAGE = 50;
   
   const { data: contacts, isLoading } = useContacts();
+  const { data: totalCount } = useContactsCount();
 
   const stats = useMemo(() => {
-    if (!contacts) return { total: 0 };
     return {
-      total: contacts.length,
+      total: totalCount || 0,
     };
-  }, [contacts]);
+  }, [totalCount]);
 
   const filteredContacts = useMemo(() => {
     if (!contacts) return [];

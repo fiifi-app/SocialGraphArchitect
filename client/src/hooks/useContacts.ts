@@ -19,6 +19,20 @@ export function useContacts() {
   });
 }
 
+export function useContactsCount() {
+  return useQuery<number>({
+    queryKey: ['/api/contacts/count'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('contacts')
+        .select('*', { count: 'exact', head: true });
+      
+      if (error) throw error;
+      return count || 0;
+    },
+  });
+}
+
 export function useContact(id: string) {
   return useQuery<Contact>({
     queryKey: ['/api/contacts', id],
@@ -58,6 +72,7 @@ export function useCreateContact() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts/count'] });
     },
   });
 }
@@ -96,6 +111,7 @@ export function useDeleteContact() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts/count'] });
     },
   });
 }
