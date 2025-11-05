@@ -33,10 +33,17 @@ export const contacts = pgTable("contacts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   ownedByProfile: uuid("owned_by_profile").references(() => profiles.id, { onDelete: 'cascade' }),
   name: text("name").notNull(),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
   email: text("email"),
   company: text("company"),
   title: text("title"),
   linkedinUrl: text("linkedin_url"),
+  location: text("location"),
+  phone: text("phone"),
+  category: text("category"),
+  twitter: text("twitter"),
+  angellist: text("angellist"),
   isShared: boolean("is_shared").notNull().default(false),
   
   // Contact Type & LP Status

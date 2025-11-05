@@ -36,13 +36,19 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
 
-// Only use fields that exist in current database schema
+// Updated schema with all contact fields
 const contactFormSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().optional(),
   email: z.string().email("Invalid email").optional().or(z.literal("")),
   title: z.string().optional(),
   company: z.string().optional(),
   linkedinUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
+  location: z.string().optional(),
+  phone: z.string().optional(),
+  category: z.string().optional(),
+  twitter: z.string().optional(),
+  angellist: z.string().optional(),
 });
 
 type ContactFormData = z.infer<typeof contactFormSchema>;
@@ -64,11 +70,17 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
   const form = useForm<ContactFormData>({
     resolver: zodResolver(contactFormSchema),
     defaultValues: {
-      name: "",
+      firstName: "",
+      lastName: "",
       email: "",
       title: "",
       company: "",
       linkedinUrl: "",
+      location: "",
+      phone: "",
+      category: "",
+      twitter: "",
+      angellist: "",
     },
   });
 
@@ -76,51 +88,70 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
   useEffect(() => {
     if (contact && open) {
       form.reset({
-        name: contact.name,
+        firstName: contact.firstName || contact.name.split(" ")[0] || "",
+        lastName: contact.lastName || contact.name.split(" ").slice(1).join(" ") || "",
         email: contact.email || "",
         title: contact.title || "",
         company: contact.company || "",
         linkedinUrl: contact.linkedinUrl || "",
+        location: contact.location || "",
+        phone: contact.phone || "",
+        category: contact.category || "",
+        twitter: contact.twitter || "",
+        angellist: contact.angellist || "",
       });
     } else if (!open) {
       form.reset({
-        name: "",
+        firstName: "",
+        lastName: "",
         email: "",
         title: "",
         company: "",
         linkedinUrl: "",
+        location: "",
+        phone: "",
+        category: "",
+        twitter: "",
+        angellist: "",
       });
     }
   }, [contact, open, form]);
 
   const onSubmit = async (data: ContactFormData) => {
     try {
+      const fullName = `${data.firstName}${data.lastName ? ' ' + data.lastName : ''}`;
+      
+      const contactData = {
+        name: fullName,
+        firstName: data.firstName,
+        lastName: data.lastName || undefined,
+        email: data.email || undefined,
+        title: data.title || undefined,
+        company: data.company || undefined,
+        linkedinUrl: data.linkedinUrl || undefined,
+        location: data.location || undefined,
+        phone: data.phone || undefined,
+        category: data.category || undefined,
+        twitter: data.twitter || undefined,
+        angellist: data.angellist || undefined,
+      };
+      
       if (isEditMode) {
         await updateContact.mutateAsync({
           id: contact.id,
-          name: data.name,
-          email: data.email || undefined,
-          title: data.title || undefined,
-          company: data.company || undefined,
-          linkedinUrl: data.linkedinUrl || undefined,
+          ...contactData,
         });
 
         toast({
           title: "Contact updated!",
-          description: `${data.name} has been updated`,
+          description: `${fullName} has been updated`,
         });
       } else {
-        await createContact.mutateAsync({
-          name: data.name,
-          email: data.email || undefined,
-          title: data.title || undefined,
-          company: data.company || undefined,
-          linkedinUrl: data.linkedinUrl || undefined,
-        });
+        await createContact.mutateAsync(contactData);
 
         toast({
           title: "Contact created!",
-          description: `${data.name} has been added to your contacts`,
+          description: `${fullName} has been added to your contacts`,
         });
       }
 
@@ -170,18 +201,19 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              {/* Name */}
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="name"
+                  name="firstName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Full Name *</FormLabel>
+                      <FormLabel>First Name *</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
-                          placeholder="John Doe"
-                          data-testid="input-contact-name"
+                          placeholder="John"
+                          data-testid="input-contact-firstname"
                         />
                       </FormControl>
                       <FormMessage />
@@ -191,16 +223,15 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
 
                 <FormField
                   control={form.control}
-                  name="email"
+                  name="lastName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>Last Name</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
-                          type="email"
-                          placeholder="john@example.com"
-                          data-testid="input-contact-email"
+                          placeholder="Doe"
+                          data-testid="input-contact-lastname"
                         />
                       </FormControl>
                       <FormMessage />
@@ -209,6 +240,27 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
                 />
               </div>
 
+              {/* Email */}
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="email"
+                        placeholder="john@example.com"
+                        data-testid="input-contact-email"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Title & Company */}
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -247,23 +299,122 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="linkedinUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>LinkedIn URL</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="https://linkedin.com/in/johndoe"
-                        data-testid="input-contact-linkedin"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* LinkedIn & Location */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="linkedinUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>LinkedIn URL</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="https://linkedin.com/in/johndoe"
+                          data-testid="input-contact-linkedin"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Location</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="San Francisco, CA"
+                          data-testid="input-contact-location"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Phone & Category */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="+1 (555) 123-4567"
+                          data-testid="input-contact-phone"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="Investor, LP, Founder, etc."
+                          data-testid="input-contact-category"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {/* Twitter & AngelList */}
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="twitter"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Twitter</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="@username or URL"
+                          data-testid="input-contact-twitter"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="angellist"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>AngelList</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="AngelList profile URL"
+                          data-testid="input-contact-angellist"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <DialogFooter className="gap-2">
                 {isEditMode && (

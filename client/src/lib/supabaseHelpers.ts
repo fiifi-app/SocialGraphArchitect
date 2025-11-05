@@ -13,10 +13,17 @@ export function contactFromDb(dbRow: any): Contact {
     id: dbRow.id,
     ownedByProfile: dbRow.owned_by_profile,
     name: dbRow.name,
+    firstName: dbRow.first_name,
+    lastName: dbRow.last_name,
     email: dbRow.email,
     company: dbRow.company,
     title: dbRow.title,
     linkedinUrl: dbRow.linkedin_url,
+    location: dbRow.location,
+    phone: dbRow.phone,
+    category: dbRow.category,
+    twitter: dbRow.twitter,
+    angellist: dbRow.angellist,
     isShared: dbRow.is_shared,
     isLp: dbRow.is_lp ?? false,
     contactType: dbRow.contact_type ?? 'investor',
@@ -39,10 +46,17 @@ export function contactToDb(contact: Partial<Contact>): any {
   if (contact.id !== undefined) dbRow.id = contact.id;
   if (contact.ownedByProfile !== undefined) dbRow.owned_by_profile = contact.ownedByProfile;
   if (contact.name !== undefined) dbRow.name = contact.name;
+  if (contact.firstName !== undefined) dbRow.first_name = contact.firstName;
+  if (contact.lastName !== undefined) dbRow.last_name = contact.lastName;
   if (contact.email !== undefined) dbRow.email = contact.email;
   if (contact.company !== undefined) dbRow.company = contact.company;
   if (contact.title !== undefined) dbRow.title = contact.title;
   if (contact.linkedinUrl !== undefined) dbRow.linkedin_url = contact.linkedinUrl;
+  if (contact.location !== undefined) dbRow.location = contact.location;
+  if (contact.phone !== undefined) dbRow.phone = contact.phone;
+  if (contact.category !== undefined) dbRow.category = contact.category;
+  if (contact.twitter !== undefined) dbRow.twitter = contact.twitter;
+  if (contact.angellist !== undefined) dbRow.angellist = contact.angellist;
   if (contact.isShared !== undefined) dbRow.is_shared = contact.isShared;
   if (contact.isLp !== undefined) dbRow.is_lp = contact.isLp;
   if (contact.contactType !== undefined) dbRow.contact_type = contact.contactType;

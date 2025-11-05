@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, Edit, DollarSign, TrendingUp, Users, Calendar, Sparkles, Mail, Linkedin } from "lucide-react";
+import { Building2, Edit, DollarSign, TrendingUp, Users, Calendar, Sparkles, Mail, Linkedin, MapPin, Phone, Tag, Twitter as TwitterIcon, ChevronDown, ChevronUp } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import EnrichmentDialog from "@/components/EnrichmentDialog";
@@ -10,17 +10,26 @@ import EnrichmentDialog from "@/components/EnrichmentDialog";
 interface ContactCardProps {
   id: string;
   fullName: string;
+  firstName?: string;
+  lastName?: string;
   role: string;
   org?: string;
   email?: string;
+  linkedinUrl?: string;
+  location?: string;
+  phone?: string;
+  category?: string;
+  twitter?: string;
+  angellist?: string;
+  
+  // Legacy fields
   geo?: string;
   relationshipStrength: number;
   tags: string[];
   lastInteractionAt?: string;
   onEdit: () => void;
   
-  // New fields for LP/Investor profiles
-  linkedinUrl?: string;
+  // LP/Investor profiles (optional)
   contactType?: 'investor' | 'lp';
   isLp?: boolean;
   checkSizeMin?: number;
@@ -36,15 +45,22 @@ interface ContactCardProps {
 export default function ContactCard({
   id,
   fullName,
+  firstName,
+  lastName,
   role,
   org,
   email,
+  linkedinUrl,
+  location,
+  phone,
+  category,
+  twitter,
+  angellist,
   geo,
   relationshipStrength,
   tags,
   lastInteractionAt,
   onEdit,
-  linkedinUrl,
   contactType = 'investor',
   isLp = false,
   checkSizeMin,
@@ -57,6 +73,7 @@ export default function ContactCard({
   avgCheckSize,
 }: ContactCardProps) {
   const [showEnrichDialog, setShowEnrichDialog] = useState(false);
+  const [showMoreInfo, setShowMoreInfo] = useState(false);
   
   const formatCurrency = (amount: number) => {
     if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
@@ -104,16 +121,11 @@ export default function ContactCard({
           onOpenChange={setShowEnrichDialog}
         />
 
-        <div className="space-y-1.5">
-          <p className="text-sm text-muted-foreground">{role}</p>
+        {/* Main Contact Information */}
+        <div className="space-y-2">
+          {/* 1. Name - already displayed in header */}
           
-          {org && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Building2 className="w-4 h-4 flex-shrink-0" />
-              <span className="truncate">{org}</span>
-            </div>
-          )}
-          
+          {/* 2. Email */}
           {email && (
             <div className="flex items-center gap-2 text-sm">
               <Mail className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
@@ -127,6 +139,23 @@ export default function ContactCard({
             </div>
           )}
           
+          {/* 3. Title */}
+          {role && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Tag className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">{role}</span>
+            </div>
+          )}
+          
+          {/* 4. Company */}
+          {org && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Building2 className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">{org}</span>
+            </div>
+          )}
+          
+          {/* 5. LinkedIn */}
           {linkedinUrl && (
             <div className="flex items-center gap-2 text-sm">
               <Linkedin className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
@@ -141,7 +170,99 @@ export default function ContactCard({
               </a>
             </div>
           )}
+          
+          {/* 6. Location */}
+          {location && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <MapPin className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">{location}</span>
+            </div>
+          )}
+          
+          {/* 7. Phone */}
+          {phone && (
+            <div className="flex items-center gap-2 text-sm">
+              <Phone className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+              <a
+                href={`tel:${phone}`}
+                className="truncate text-primary hover:underline"
+                data-testid="link-phone"
+              >
+                {phone}
+              </a>
+            </div>
+          )}
+          
+          {/* 8. Category */}
+          {category && (
+            <div className="flex items-center gap-2 text-sm">
+              <Badge variant="secondary" className="text-xs" data-testid="badge-category">
+                {category}
+              </Badge>
+            </div>
+          )}
+          
+          {/* 9. Twitter */}
+          {twitter && (
+            <div className="flex items-center gap-2 text-sm">
+              <TwitterIcon className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+              <a
+                href={twitter.startsWith('http') ? twitter : `https://twitter.com/${twitter.replace('@', '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="truncate text-primary hover:underline"
+                data-testid="link-twitter"
+              >
+                {twitter}
+              </a>
+            </div>
+          )}
+          
+          {/* 10. AngelList */}
+          {angellist && (
+            <div className="flex items-center gap-2 text-sm">
+              <Users className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+              <a
+                href={angellist}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="truncate text-primary hover:underline"
+                data-testid="link-angellist"
+              >
+                AngelList Profile
+              </a>
+            </div>
+          )}
         </div>
+        
+        {/* Expandable More Information Section */}
+        {(lastInteractionAt || (preferredStages && preferredStages.length > 0) || checkSizeMin || checkSizeMax) && (
+          <>
+            <Separator />
+            <div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowMoreInfo(!showMoreInfo)}
+                className="w-full justify-between hover-elevate"
+                data-testid="button-toggle-more-info"
+              >
+                <span className="text-sm font-medium">More Information</span>
+                {showMoreInfo ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </Button>
+              
+              {showMoreInfo && (
+                <div className="mt-3 space-y-2 pl-2">
+                  {lastInteractionAt && (
+                    <div className="text-xs text-muted-foreground">
+                      Last interaction: {new Date(lastInteractionAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </>
+        )}
 
         {/* Investor-specific info */}
         {!isLp && (checkSizeMin || checkSizeMax || (preferredStages && preferredStages.length > 0)) && (

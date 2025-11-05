@@ -152,9 +152,17 @@ export default function Contacts() {
                 key={contact.id}
                 id={contact.id}
                 fullName={contact.name}
+                firstName={contact.firstName || undefined}
+                lastName={contact.lastName || undefined}
                 role={contact.title || 'Contact'}
                 org={contact.company || undefined}
                 email={contact.email || undefined}
+                linkedinUrl={contact.linkedinUrl || undefined}
+                location={contact.location || undefined}
+                phone={contact.phone || undefined}
+                category={contact.category || undefined}
+                twitter={contact.twitter || undefined}
+                angellist={contact.angellist || undefined}
                 geo={undefined}
                 relationshipStrength={0.5}
                 tags={[]}
@@ -163,7 +171,6 @@ export default function Contacts() {
                   setEditingContact(contact);
                   setShowContactDialog(true);
                 }}
-                linkedinUrl={contact.linkedinUrl || undefined}
               />
             ))}
           </div>
