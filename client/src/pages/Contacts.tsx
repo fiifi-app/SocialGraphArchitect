@@ -178,6 +178,12 @@ export default function Contacts() {
                 relationshipStrength={0.5}
                 tags={[]}
                 lastInteractionAt={contact.updatedAt.toISOString()}
+                contactType={contact.contactType || undefined}
+                isLp={contact.isLp || false}
+                isInvestor={contact.isInvestor || false}
+                checkSizeMin={contact.checkSizeMin || undefined}
+                checkSizeMax={contact.checkSizeMax || undefined}
+                investorNotes={contact.investorNotes || undefined}
                 onEdit={() => {
                   setEditingContact(contact);
                   setShowContactDialog(true);
