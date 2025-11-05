@@ -39,7 +39,8 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
   const [progress, setProgress] = useState(0);
   const [stats, setStats] = useState({
     total: 0,
-    imported: 0,
+    created: 0,
+    merged: 0,
     enriched: 0,
     failed: 0,
     enrichmentFailed: 0,
@@ -143,63 +144,271 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
       return;
     }
 
-    // Batch insert contacts (Supabase handles up to 1000 at a time efficiently)
-    const BATCH_SIZE = 500;
-    let imported = 0;
+    // Fetch all existing contacts for this user to check for duplicates
+    const { data: existingContacts, error: fetchError } = await supabase
+      .from('contacts')
+      .select('id, name, email, company, title, linkedin_url')
+      .eq('owned_by_profile', user.id);
+
+    if (fetchError) {
+      console.error('Error fetching existing contacts:', fetchError);
+      toast({
+        title: "Error checking duplicates",
+        description: "Could not check for duplicate contacts",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Build lookup maps for existing contacts
+    const existingByEmail = new Map<string, any>();
+    const existingByNameCompany = new Map<string, any>();
+    
+    existingContacts?.forEach(contact => {
+      if (contact.email) {
+        existingByEmail.set(contact.email.toLowerCase(), contact);
+      }
+      if (contact.name && contact.company) {
+        const key = `${contact.name.toLowerCase()}|${contact.company.toLowerCase()}`;
+        existingByNameCompany.set(key, contact);
+      }
+    });
+
+    // Primary storage for pending new contacts (to merge same-CSV duplicates)
+    const pendingContacts: any[] = [];
+    const pendingByEmail = new Map<string, any>();
+    const pendingByNameCompany = new Map<string, any>();
+    const pendingByName = new Map<string, any[]>(); // Array because name alone might not be unique
+
+    let merged = 0;
     let failed = 0;
     const insertedContactIds: string[] = [];
     const warnings: string[] = [];
+    const toUpdate: Array<{ id: string; data: any }> = [];
 
-    for (let i = 0; i < contactsToImport.length; i += BATCH_SIZE) {
-      const batch = contactsToImport.slice(i, i + BATCH_SIZE);
+    // Helper to update pending lookup maps
+    const updatePendingMaps = (contact: any) => {
+      if (contact.email) {
+        pendingByEmail.set(contact.email.toLowerCase(), contact);
+      }
+      if (contact.name && contact.company) {
+        const key = `${contact.name.toLowerCase()}|${contact.company.toLowerCase()}`;
+        pendingByNameCompany.set(key, contact);
+      }
+      // Always index by name for fallback matching
+      // Use Set to ensure no duplicate references
+      if (contact.name) {
+        const nameKey = contact.name.toLowerCase();
+        const existingArray = pendingByName.get(nameKey) || [];
+        const existingSet = new Set(existingArray);
+        existingSet.add(contact);
+        pendingByName.set(nameKey, Array.from(existingSet));
+      }
+    };
+
+    // Process all CSV contacts and build insert/update batches
+    for (let i = 0; i < contactsToImport.length; i++) {
+      const csvContact = contactsToImport[i];
       
-      // Import ALL contacts, even with missing/invalid data
-      const contactsData = batch
-        .filter(c => c.name && c.name.trim().length > 0) // Only require name
-        .map(c => {
-          // Track validation warnings but still import
-          if (c.errors.length > 0) {
-            warnings.push(`${c.name}: ${c.errors.join(', ')}`);
+      // Skip if no name
+      if (!csvContact.name || csvContact.name.trim().length === 0) {
+        failed++;
+        continue;
+      }
+
+      // Track validation warnings
+      if (csvContact.errors.length > 0) {
+        warnings.push(`${csvContact.name}: ${csvContact.errors.join(', ')}`);
+      }
+
+      // Check for duplicate in EXISTING contacts first
+      let existingDuplicate = null;
+      
+      if (csvContact.email) {
+        existingDuplicate = existingByEmail.get(csvContact.email.toLowerCase());
+      }
+      
+      if (!existingDuplicate && csvContact.company) {
+        const key = `${csvContact.name.toLowerCase()}|${csvContact.company.toLowerCase()}`;
+        existingDuplicate = existingByNameCompany.get(key);
+      }
+
+      if (existingDuplicate) {
+        // MERGE with EXISTING contact: Prepare update (only fill in missing fields)
+        const updateData: any = {};
+        
+        if (csvContact.email && !existingDuplicate.email) updateData.email = csvContact.email;
+        if (csvContact.title && !existingDuplicate.title) updateData.title = csvContact.title;
+        if (csvContact.company && !existingDuplicate.company) updateData.company = csvContact.company;
+        if (csvContact.linkedinUrl && !existingDuplicate.linkedin_url) updateData.linkedin_url = csvContact.linkedinUrl;
+
+        // Only queue update if there are fields to merge
+        if (Object.keys(updateData).length > 0) {
+          toUpdate.push({ id: existingDuplicate.id, data: updateData });
+        }
+        
+        merged++;
+        insertedContactIds.push(existingDuplicate.id);
+      } else {
+        // Check for duplicate in PENDING new contacts (same CSV)
+        let pendingDuplicate = null;
+        
+        // 1. Try exact email match (highest confidence)
+        if (csvContact.email) {
+          pendingDuplicate = pendingByEmail.get(csvContact.email.toLowerCase());
+        }
+        
+        // 2. Try exact name+company match
+        if (!pendingDuplicate && csvContact.company) {
+          const key = `${csvContact.name.toLowerCase()}|${csvContact.company.toLowerCase()}`;
+          pendingDuplicate = pendingByNameCompany.get(key);
+        }
+        
+        // 3. Fallback: Try name-only match (ONLY for complementary partial data)
+        if (!pendingDuplicate && csvContact.name) {
+          const nameMatches = pendingByName.get(csvContact.name.toLowerCase()) || [];
+          // Only merge if:
+          // - Exactly one match by name
+          // - The existing contact is missing key fields (partial data)
+          // - No conflicts between the two records
+          if (nameMatches.length === 1) {
+            const candidate = nameMatches[0];
+            const isPartial = !candidate.email || !candidate.company;
+            const hasConflicts = 
+              (candidate.email && csvContact.email && candidate.email !== csvContact.email) ||
+              (candidate.company && csvContact.company && candidate.company.toLowerCase() !== csvContact.company.toLowerCase());
+            
+            // Only merge complementary partial records (no conflicts)
+            if (isPartial && !hasConflicts) {
+              pendingDuplicate = candidate;
+            }
+          }
+        }
+
+        if (pendingDuplicate) {
+          // MERGE with PENDING contact: Update the pending contact object
+          if (csvContact.email && !pendingDuplicate.email) {
+            pendingDuplicate.email = csvContact.email;
+          }
+          if (csvContact.title && !pendingDuplicate.title) {
+            pendingDuplicate.title = csvContact.title;
+          }
+          if (csvContact.company && !pendingDuplicate.company) {
+            pendingDuplicate.company = csvContact.company;
+          }
+          if (csvContact.linkedinUrl && !pendingDuplicate.linkedin_url) {
+            pendingDuplicate.linkedin_url = csvContact.linkedinUrl;
           }
           
-          // Only use core fields that exist in current Supabase schema
-          // Note: is_lp and contact_type will be added after migration
-          return {
-            name: c.name,
-            email: c.email || null,
-            title: c.title || null,
-            company: c.company || null,
-            linkedin_url: c.linkedinUrl || null,
+          // Update lookup maps with newly added fields
+          updatePendingMaps(pendingDuplicate);
+          
+          merged++;
+        } else {
+          // CREATE: New pending contact
+          const newContact = {
+            name: csvContact.name,
+            email: csvContact.email || null,
+            title: csvContact.title || null,
+            company: csvContact.company || null,
+            linkedin_url: csvContact.linkedinUrl || null,
             owned_by_profile: user.id,
           };
-        });
+          
+          pendingContacts.push(newContact);
+          updatePendingMaps(newContact);
+        }
+      }
 
+      // Update progress during processing
+      if (i % 100 === 0) {
+        setProgress((i / contactsToImport.length) * 50); // First 50% for processing
+        setStats(prev => ({ ...prev, created: pendingContacts.length, merged, failed })); // Use length here as inserts haven't started
+      }
+    }
+
+    // toInsert is just the pending contacts array (already merged)
+    const toInsert = pendingContacts;
+
+    // Execute batched inserts
+    const BATCH_SIZE = 500;
+    let createdCount = 0;  // Track actual successfully inserted contacts
+    
+    for (let i = 0; i < toInsert.length; i += BATCH_SIZE) {
+      const batch = toInsert.slice(i, i + BATCH_SIZE);
+      
       try {
         const { data, error } = await supabase
           .from('contacts')
-          .insert(contactsData)
+          .insert(batch)
           .select('id');
 
         if (error) throw error;
         
-        imported += contactsData.length;
         if (data) {
           insertedContactIds.push(...data.map(c => c.id));
+          createdCount += data.length;  // Increment only on success
         }
       } catch (error: any) {
-        console.error('Batch import error:', error);
+        console.error('Batch insert error:', error);
         failed += batch.length;
       }
 
-      setProgress(((i + batch.length) / contactsToImport.length) * 100);
-      setStats(prev => ({ ...prev, imported, failed }));
+      const batchProgress = 50 + ((i + batch.length) / toInsert.length) * 25; // 50-75% for inserts
+      setProgress(batchProgress);
+      // Update stats after each batch to reflect actual successes/failures
+      setStats({
+        total: contactsToImport.length,
+        created: createdCount,  // Use actual count, not pendingContacts.length
+        merged,
+        failed,
+        enriched: 0,
+        enrichmentFailed: 0
+      });
     }
+
+    // Execute batched updates
+    for (let i = 0; i < toUpdate.length; i += BATCH_SIZE) {
+      const batch = toUpdate.slice(i, i + BATCH_SIZE);
+      
+      try {
+        // Supabase doesn't support batch updates, so we do them in parallel
+        await Promise.all(
+          batch.map(({ id, data }) =>
+            supabase.from('contacts').update(data).eq('id', id)
+          )
+        );
+      } catch (error: any) {
+        console.error('Batch update error:', error);
+      }
+
+      const updateProgress = 75 + ((i + batch.length) / Math.max(toUpdate.length, 1)) * 25; // 75-100%
+      setProgress(updateProgress);
+    }
+    
+    // Final stats update after all batches complete
+    setStats({
+      total: contactsToImport.length,
+      created: createdCount,  // Use actual count
+      merged,
+      failed,
+      enriched: 0,
+      enrichmentFailed: 0
+    });
 
     const contactsWithoutName = contactsToImport.filter(c => !c.name || c.name.trim().length === 0).length;
     
+    // Build toast message with all stats
+    const parts = [];
+    parts.push(`Created ${createdCount} new contacts`);  // Use actual count
+    if (merged > 0) parts.push(`merged ${merged} duplicates`);
+    if (failed > 0) parts.push(`${failed} failed`);
+    if (contactsWithoutName > 0) parts.push(`${contactsWithoutName} skipped (no name)`);
+    if (warnings.length > 0) parts.push(`${warnings.length} with warnings`);
+    
     toast({
       title: "Contacts imported!",
-      description: `Successfully imported ${imported} contacts. ${contactsWithoutName} skipped (no name). ${warnings.length} with validation warnings.`,
+      description: parts.join(', ') + '.',
     });
 
     // Store warnings for display in complete stage
@@ -210,7 +419,7 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
     // Invalidate contacts cache
     queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
 
-    // Start enrichment for contacts with emails
+    // Start enrichment for all processed contacts
     await enrichContacts(insertedContactIds);
   };
 
@@ -302,7 +511,7 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
     setStage('upload');
     setContacts([]);
     setProgress(0);
-    setStats({ total: 0, imported: 0, enriched: 0, failed: 0, enrichmentFailed: 0 });
+    setStats({ total: 0, created: 0, merged: 0, enriched: 0, failed: 0, enrichmentFailed: 0 });
     onOpenChange(false);
   };
 
@@ -383,7 +592,7 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
                 <div className="flex-1">
                   <p className="font-medium">Importing contacts...</p>
                   <p className="text-sm text-muted-foreground">
-                    {stats.imported} of {stats.total} imported
+                    {stats.created + stats.merged} of {stats.total} processed ({stats.created} created, {stats.merged} merged)
                   </p>
                 </div>
               </div>
@@ -424,12 +633,16 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
                   <p className="text-2xl font-semibold">{stats.total}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Imported</p>
-                  <p className="text-2xl font-semibold text-green-600">{stats.imported}</p>
+                  <p className="text-sm text-muted-foreground">Created</p>
+                  <p className="text-2xl font-semibold text-green-600">{stats.created}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Merged</p>
+                  <p className="text-2xl font-semibold text-blue-600">{stats.merged}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Enriched</p>
-                  <p className="text-2xl font-semibold text-blue-600">{stats.enriched}</p>
+                  <p className="text-2xl font-semibold text-purple-600">{stats.enriched}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Failed</p>
