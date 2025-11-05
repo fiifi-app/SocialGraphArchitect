@@ -37,9 +37,11 @@ export function contactFromDb(dbRow: any): Contact {
     youtubeVimeo: dbRow.youtube_vimeo,
     isShared: dbRow.is_shared,
     isLp: dbRow.is_lp ?? false,
-    contactType: dbRow.contact_type ?? 'investor',
+    isInvestor: dbRow.is_investor ?? false,
+    contactType: dbRow.contact_type,
     checkSizeMin: dbRow.check_size_min,
     checkSizeMax: dbRow.check_size_max,
+    investorNotes: dbRow.investor_notes,
     preferredStages: dbRow.preferred_stages,
     preferredTeamSizes: dbRow.preferred_team_sizes,
     preferredTenure: dbRow.preferred_tenure,
@@ -82,9 +84,11 @@ export function contactToDb(contact: Partial<Contact>): any {
   if ('youtubeVimeo' in contact) dbRow.youtube_vimeo = contact.youtubeVimeo;
   if (contact.isShared !== undefined) dbRow.is_shared = contact.isShared;
   if (contact.isLp !== undefined) dbRow.is_lp = contact.isLp;
-  if (contact.contactType !== undefined) dbRow.contact_type = contact.contactType;
-  if (contact.checkSizeMin !== undefined) dbRow.check_size_min = contact.checkSizeMin;
-  if (contact.checkSizeMax !== undefined) dbRow.check_size_max = contact.checkSizeMax;
+  if (contact.isInvestor !== undefined) dbRow.is_investor = contact.isInvestor;
+  if ('contactType' in contact) dbRow.contact_type = contact.contactType;
+  if ('checkSizeMin' in contact) dbRow.check_size_min = contact.checkSizeMin;
+  if ('checkSizeMax' in contact) dbRow.check_size_max = contact.checkSizeMax;
+  if ('investorNotes' in contact) dbRow.investor_notes = contact.investorNotes;
   if (contact.preferredStages !== undefined) dbRow.preferred_stages = contact.preferredStages;
   if (contact.preferredTeamSizes !== undefined) dbRow.preferred_team_sizes = contact.preferredTeamSizes;
   if (contact.preferredTenure !== undefined) dbRow.preferred_tenure = contact.preferredTenure;
