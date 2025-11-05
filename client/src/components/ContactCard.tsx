@@ -138,8 +138,8 @@ export default function ContactCard({
                 <div className="p-4 border-b">
                   <h4 className="font-semibold text-sm">Company Information</h4>
                 </div>
-                <ScrollArea className="h-96">
-                  <div className="p-4 space-y-3 text-sm">
+                <ScrollArea className="max-h-96">
+                  <div className="p-4 space-y-3 text-sm min-h-0">
                     {!hasCompanyInfo ? (
                       <div className="text-sm text-muted-foreground text-center py-8">
                         No company information available
