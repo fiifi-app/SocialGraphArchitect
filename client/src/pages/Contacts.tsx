@@ -163,6 +163,17 @@ export default function Contacts() {
                 category={contact.category || undefined}
                 twitter={contact.twitter || undefined}
                 angellist={contact.angellist || undefined}
+                companyAddress={contact.companyAddress || undefined}
+                companyEmployees={contact.companyEmployees || undefined}
+                companyFounded={contact.companyFounded || undefined}
+                companyUrl={contact.companyUrl || undefined}
+                companyLinkedin={contact.companyLinkedin || undefined}
+                companyTwitter={contact.companyTwitter || undefined}
+                companyFacebook={contact.companyFacebook || undefined}
+                companyAngellist={contact.companyAngellist || undefined}
+                companyCrunchbase={contact.companyCrunchbase || undefined}
+                companyOwler={contact.companyOwler || undefined}
+                youtubeVimeo={contact.youtubeVimeo || undefined}
                 geo={undefined}
                 relationshipStrength={0.5}
                 tags={[]}

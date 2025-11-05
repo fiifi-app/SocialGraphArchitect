@@ -44,6 +44,20 @@ export const contacts = pgTable("contacts", {
   category: text("category"),
   twitter: text("twitter"),
   angellist: text("angellist"),
+  
+  // Company information (hidden in "More Information")
+  companyAddress: text("company_address"),
+  companyEmployees: text("company_employees"),
+  companyFounded: text("company_founded"),
+  companyUrl: text("company_url"),
+  companyLinkedin: text("company_linkedin"),
+  companyTwitter: text("company_twitter"),
+  companyFacebook: text("company_facebook"),
+  companyAngellist: text("company_angellist"),
+  companyCrunchbase: text("company_crunchbase"),
+  companyOwler: text("company_owler"),
+  youtubeVimeo: text("youtube_vimeo"),
+  
   isShared: boolean("is_shared").notNull().default(false),
   
   // Contact Type & LP Status

@@ -24,6 +24,17 @@ export function contactFromDb(dbRow: any): Contact {
     category: dbRow.category,
     twitter: dbRow.twitter,
     angellist: dbRow.angellist,
+    companyAddress: dbRow.company_address,
+    companyEmployees: dbRow.company_employees,
+    companyFounded: dbRow.company_founded,
+    companyUrl: dbRow.company_url,
+    companyLinkedin: dbRow.company_linkedin,
+    companyTwitter: dbRow.company_twitter,
+    companyFacebook: dbRow.company_facebook,
+    companyAngellist: dbRow.company_angellist,
+    companyCrunchbase: dbRow.company_crunchbase,
+    companyOwler: dbRow.company_owler,
+    youtubeVimeo: dbRow.youtube_vimeo,
     isShared: dbRow.is_shared,
     isLp: dbRow.is_lp ?? false,
     contactType: dbRow.contact_type ?? 'investor',
@@ -43,20 +54,32 @@ export function contactFromDb(dbRow: any): Contact {
 export function contactToDb(contact: Partial<Contact>): any {
   const dbRow: any = {};
   
+  // Always include fields if they're present (including null to allow clearing)
   if (contact.id !== undefined) dbRow.id = contact.id;
   if (contact.ownedByProfile !== undefined) dbRow.owned_by_profile = contact.ownedByProfile;
   if (contact.name !== undefined) dbRow.name = contact.name;
-  if (contact.firstName !== undefined) dbRow.first_name = contact.firstName;
-  if (contact.lastName !== undefined) dbRow.last_name = contact.lastName;
-  if (contact.email !== undefined) dbRow.email = contact.email;
-  if (contact.company !== undefined) dbRow.company = contact.company;
-  if (contact.title !== undefined) dbRow.title = contact.title;
-  if (contact.linkedinUrl !== undefined) dbRow.linkedin_url = contact.linkedinUrl;
-  if (contact.location !== undefined) dbRow.location = contact.location;
-  if (contact.phone !== undefined) dbRow.phone = contact.phone;
-  if (contact.category !== undefined) dbRow.category = contact.category;
-  if (contact.twitter !== undefined) dbRow.twitter = contact.twitter;
-  if (contact.angellist !== undefined) dbRow.angellist = contact.angellist;
+  if ('firstName' in contact) dbRow.first_name = contact.firstName;
+  if ('lastName' in contact) dbRow.last_name = contact.lastName;
+  if ('email' in contact) dbRow.email = contact.email;
+  if ('company' in contact) dbRow.company = contact.company;
+  if ('title' in contact) dbRow.title = contact.title;
+  if ('linkedinUrl' in contact) dbRow.linkedin_url = contact.linkedinUrl;
+  if ('location' in contact) dbRow.location = contact.location;
+  if ('phone' in contact) dbRow.phone = contact.phone;
+  if ('category' in contact) dbRow.category = contact.category;
+  if ('twitter' in contact) dbRow.twitter = contact.twitter;
+  if ('angellist' in contact) dbRow.angellist = contact.angellist;
+  if ('companyAddress' in contact) dbRow.company_address = contact.companyAddress;
+  if ('companyEmployees' in contact) dbRow.company_employees = contact.companyEmployees;
+  if ('companyFounded' in contact) dbRow.company_founded = contact.companyFounded;
+  if ('companyUrl' in contact) dbRow.company_url = contact.companyUrl;
+  if ('companyLinkedin' in contact) dbRow.company_linkedin = contact.companyLinkedin;
+  if ('companyTwitter' in contact) dbRow.company_twitter = contact.companyTwitter;
+  if ('companyFacebook' in contact) dbRow.company_facebook = contact.companyFacebook;
+  if ('companyAngellist' in contact) dbRow.company_angellist = contact.companyAngellist;
+  if ('companyCrunchbase' in contact) dbRow.company_crunchbase = contact.companyCrunchbase;
+  if ('companyOwler' in contact) dbRow.company_owler = contact.companyOwler;
+  if ('youtubeVimeo' in contact) dbRow.youtube_vimeo = contact.youtubeVimeo;
   if (contact.isShared !== undefined) dbRow.is_shared = contact.isShared;
   if (contact.isLp !== undefined) dbRow.is_lp = contact.isLp;
   if (contact.contactType !== undefined) dbRow.contact_type = contact.contactType;

@@ -22,6 +22,19 @@ interface ContactCardProps {
   twitter?: string;
   angellist?: string;
   
+  // Company Information (shown in More Information)
+  companyAddress?: string;
+  companyEmployees?: string;
+  companyFounded?: string;
+  companyUrl?: string;
+  companyLinkedin?: string;
+  companyTwitter?: string;
+  companyFacebook?: string;
+  companyAngellist?: string;
+  companyCrunchbase?: string;
+  companyOwler?: string;
+  youtubeVimeo?: string;
+  
   // Legacy fields
   geo?: string;
   relationshipStrength: number;
@@ -56,6 +69,17 @@ export default function ContactCard({
   category,
   twitter,
   angellist,
+  companyAddress,
+  companyEmployees,
+  companyFounded,
+  companyUrl,
+  companyLinkedin,
+  companyTwitter,
+  companyFacebook,
+  companyAngellist,
+  companyCrunchbase,
+  companyOwler,
+  youtubeVimeo,
   geo,
   relationshipStrength,
   tags,
@@ -74,6 +98,10 @@ export default function ContactCard({
 }: ContactCardProps) {
   const [showEnrichDialog, setShowEnrichDialog] = useState(false);
   const [showMoreInfo, setShowMoreInfo] = useState(false);
+  
+  const hasCompanyInfo = !!(companyAddress || companyEmployees || companyFounded || companyUrl || 
+    companyLinkedin || companyTwitter || companyFacebook || companyAngellist || 
+    companyCrunchbase || companyOwler || youtubeVimeo);
   
   const formatCurrency = (amount: number) => {
     if (amount >= 1000000) return `$${(amount / 1000000).toFixed(1)}M`;
@@ -235,8 +263,8 @@ export default function ContactCard({
           )}
         </div>
         
-        {/* Expandable More Information Section */}
-        {(lastInteractionAt || (preferredStages && preferredStages.length > 0) || checkSizeMin || checkSizeMax) && (
+        {/* Expandable More Information Section - Company Details */}
+        {hasCompanyInfo && (
           <>
             <Separator />
             <div>
@@ -252,10 +280,135 @@ export default function ContactCard({
               </Button>
               
               {showMoreInfo && (
-                <div className="mt-3 space-y-2 pl-2">
-                  {lastInteractionAt && (
-                    <div className="text-xs text-muted-foreground">
-                      Last interaction: {new Date(lastInteractionAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                <div className="mt-3 space-y-2 text-sm">
+                  {companyAddress && (
+                    <div className="flex items-start gap-2">
+                      <MapPin className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                      <div>
+                        <div className="text-xs text-muted-foreground">Company Address</div>
+                        <div>{companyAddress}</div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {companyEmployees && (
+                    <div className="flex items-start gap-2">
+                      <Users className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                      <div>
+                        <div className="text-xs text-muted-foreground"># of Employees</div>
+                        <div>{companyEmployees}</div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {companyFounded && (
+                    <div className="flex items-start gap-2">
+                      <Calendar className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                      <div>
+                        <div className="text-xs text-muted-foreground">Founded</div>
+                        <div>{companyFounded}</div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {companyUrl && (
+                    <div className="flex items-start gap-2">
+                      <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                      <div>
+                        <div className="text-xs text-muted-foreground">Company Website</div>
+                        <a href={companyUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">
+                          {companyUrl}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {companyLinkedin && (
+                    <div className="flex items-start gap-2">
+                      <Linkedin className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                      <div>
+                        <div className="text-xs text-muted-foreground">Company LinkedIn</div>
+                        <a href={companyLinkedin} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">
+                          LinkedIn Profile
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {companyTwitter && (
+                    <div className="flex items-start gap-2">
+                      <TwitterIcon className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                      <div>
+                        <div className="text-xs text-muted-foreground">Company Twitter</div>
+                        <a
+                          href={companyTwitter.startsWith('http') ? companyTwitter : `https://twitter.com/${companyTwitter.replace('@', '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline truncate"
+                        >
+                          {companyTwitter}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {companyFacebook && (
+                    <div className="flex items-start gap-2">
+                      <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                      <div>
+                        <div className="text-xs text-muted-foreground">Company Facebook</div>
+                        <a href={companyFacebook} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">
+                          Facebook Page
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {companyAngellist && (
+                    <div className="flex items-start gap-2">
+                      <Users className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                      <div>
+                        <div className="text-xs text-muted-foreground">Company AngelList</div>
+                        <a href={companyAngellist} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">
+                          AngelList Profile
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {companyCrunchbase && (
+                    <div className="flex items-start gap-2">
+                      <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                      <div>
+                        <div className="text-xs text-muted-foreground">Company Crunchbase</div>
+                        <a href={companyCrunchbase} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">
+                          Crunchbase Profile
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {companyOwler && (
+                    <div className="flex items-start gap-2">
+                      <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                      <div>
+                        <div className="text-xs text-muted-foreground">Company Owler</div>
+                        <a href={companyOwler} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">
+                          Owler Profile
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {youtubeVimeo && (
+                    <div className="flex items-start gap-2">
+                      <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                      <div>
+                        <div className="text-xs text-muted-foreground">YouTube/Vimeo</div>
+                        <a href={youtubeVimeo} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">
+                          Video Channel
+                        </a>
+                      </div>
                     </div>
                   )}
                 </div>

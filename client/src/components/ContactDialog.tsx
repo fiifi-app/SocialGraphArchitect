@@ -49,6 +49,19 @@ const contactFormSchema = z.object({
   category: z.string().optional(),
   twitter: z.string().optional(),
   angellist: z.string().optional(),
+  
+  // Company information fields
+  companyAddress: z.string().optional(),
+  companyEmployees: z.string().optional(),
+  companyFounded: z.string().optional(),
+  companyUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
+  companyLinkedin: z.string().url("Invalid URL").optional().or(z.literal("")),
+  companyTwitter: z.string().optional(),
+  companyFacebook: z.string().optional(),
+  companyAngellist: z.string().optional(),
+  companyCrunchbase: z.string().optional(),
+  companyOwler: z.string().optional(),
+  youtubeVimeo: z.string().optional(),
 });
 
 type ContactFormData = z.infer<typeof contactFormSchema>;
@@ -81,6 +94,17 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
       category: "",
       twitter: "",
       angellist: "",
+      companyAddress: "",
+      companyEmployees: "",
+      companyFounded: "",
+      companyUrl: "",
+      companyLinkedin: "",
+      companyTwitter: "",
+      companyFacebook: "",
+      companyAngellist: "",
+      companyCrunchbase: "",
+      companyOwler: "",
+      youtubeVimeo: "",
     },
   });
 
@@ -99,6 +123,17 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
         category: contact.category || "",
         twitter: contact.twitter || "",
         angellist: contact.angellist || "",
+        companyAddress: contact.companyAddress || "",
+        companyEmployees: contact.companyEmployees || "",
+        companyFounded: contact.companyFounded || "",
+        companyUrl: contact.companyUrl || "",
+        companyLinkedin: contact.companyLinkedin || "",
+        companyTwitter: contact.companyTwitter || "",
+        companyFacebook: contact.companyFacebook || "",
+        companyAngellist: contact.companyAngellist || "",
+        companyCrunchbase: contact.companyCrunchbase || "",
+        companyOwler: contact.companyOwler || "",
+        youtubeVimeo: contact.youtubeVimeo || "",
       });
     } else if (!open) {
       form.reset({
@@ -113,6 +148,17 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
         category: "",
         twitter: "",
         angellist: "",
+        companyAddress: "",
+        companyEmployees: "",
+        companyFounded: "",
+        companyUrl: "",
+        companyLinkedin: "",
+        companyTwitter: "",
+        companyFacebook: "",
+        companyAngellist: "",
+        companyCrunchbase: "",
+        companyOwler: "",
+        youtubeVimeo: "",
       });
     }
   }, [contact, open, form]);
@@ -124,16 +170,27 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
       const contactData = {
         name: fullName,
         firstName: data.firstName,
-        lastName: data.lastName || undefined,
-        email: data.email || undefined,
-        title: data.title || undefined,
-        company: data.company || undefined,
-        linkedinUrl: data.linkedinUrl || undefined,
-        location: data.location || undefined,
-        phone: data.phone || undefined,
-        category: data.category || undefined,
-        twitter: data.twitter || undefined,
-        angellist: data.angellist || undefined,
+        lastName: data.lastName || null,
+        email: data.email || null,
+        title: data.title || null,
+        company: data.company || null,
+        linkedinUrl: data.linkedinUrl || null,
+        location: data.location || null,
+        phone: data.phone || null,
+        category: data.category || null,
+        twitter: data.twitter || null,
+        angellist: data.angellist || null,
+        companyAddress: data.companyAddress || null,
+        companyEmployees: data.companyEmployees || null,
+        companyFounded: data.companyFounded || null,
+        companyUrl: data.companyUrl || null,
+        companyLinkedin: data.companyLinkedin || null,
+        companyTwitter: data.companyTwitter || null,
+        companyFacebook: data.companyFacebook || null,
+        companyAngellist: data.companyAngellist || null,
+        companyCrunchbase: data.companyCrunchbase || null,
+        companyOwler: data.companyOwler || null,
+        youtubeVimeo: data.youtubeVimeo || null,
       };
       
       if (isEditMode) {
@@ -414,6 +471,175 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
                     </FormItem>
                   )}
                 />
+              </div>
+
+              {/* Company Information Section */}
+              <div className="pt-4 border-t">
+                <h4 className="text-sm font-medium mb-3">Company Information (Optional)</h4>
+                
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="companyAddress"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Company Address</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="123 Main St, City, State" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="companyEmployees"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel># of Employees</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="1-10, 50-200, etc." />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="companyFounded"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Year Founded</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="2020" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="companyUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Company Website</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="https://company.com" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="companyLinkedin"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Company LinkedIn</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="https://linkedin.com/company/..." />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="companyTwitter"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Company Twitter</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="@companyname" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="companyFacebook"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Company Facebook</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Facebook URL or handle" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="companyAngellist"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Company AngelList</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="AngelList URL" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="companyCrunchbase"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Company Crunchbase</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Crunchbase URL" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="companyOwler"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Company Owler</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Owler URL" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="youtubeVimeo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>YouTube/Vimeo</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Video channel or profile URL" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
 
               <DialogFooter className="gap-2">

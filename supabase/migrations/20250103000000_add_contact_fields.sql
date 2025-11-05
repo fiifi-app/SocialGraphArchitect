@@ -1,5 +1,8 @@
 -- Add new fields to contacts table
--- This migration adds: firstName, lastName, phone, location, category, twitter, angellist
+-- Personal fields: firstName, lastName, phone, location, category, twitter, angellist
+-- Company fields: company_address, company_employees, company_founded, company_url, 
+--                 company_linkedin, company_twitter, company_facebook, company_angellist,
+--                 company_crunchbase, company_owler, youtube_vimeo
 
 ALTER TABLE contacts
   ADD COLUMN first_name TEXT,
@@ -8,7 +11,18 @@ ALTER TABLE contacts
   ADD COLUMN location TEXT,
   ADD COLUMN category TEXT,
   ADD COLUMN twitter TEXT,
-  ADD COLUMN angellist TEXT;
+  ADD COLUMN angellist TEXT,
+  ADD COLUMN company_address TEXT,
+  ADD COLUMN company_employees TEXT,
+  ADD COLUMN company_founded TEXT,
+  ADD COLUMN company_url TEXT,
+  ADD COLUMN company_linkedin TEXT,
+  ADD COLUMN company_twitter TEXT,
+  ADD COLUMN company_facebook TEXT,
+  ADD COLUMN company_angellist TEXT,
+  ADD COLUMN company_crunchbase TEXT,
+  ADD COLUMN company_owler TEXT,
+  ADD COLUMN youtube_vimeo TEXT;
 
 -- Create indexes for commonly searched fields
 CREATE INDEX IF NOT EXISTS idx_contacts_first_name ON contacts(first_name);
