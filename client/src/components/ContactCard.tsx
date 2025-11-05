@@ -6,6 +6,7 @@ import { Building2, Edit, DollarSign, TrendingUp, Users, Calendar, Sparkles, Mai
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import EnrichmentDialog from "@/components/EnrichmentDialog";
 
 interface ContactCardProps {
@@ -134,11 +135,12 @@ export default function ContactCard({
                     <Info className="w-4 h-4" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 p-0" align="end">
+                <PopoverContent className="w-80 p-0" align="end" sideOffset={5}>
                   <div className="p-4 border-b">
                     <h4 className="font-semibold text-sm">Company Information</h4>
                   </div>
-                  <div className="max-h-96 overflow-y-auto p-4 space-y-3 text-sm">
+                  <ScrollArea className="h-96">
+                    <div className="p-4 space-y-3 text-sm">
                     {companyAddress && (
                       <div className="flex items-start gap-2">
                         <MapPin className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
@@ -269,7 +271,8 @@ export default function ContactCard({
                         </div>
                       </div>
                     )}
-                  </div>
+                    </div>
+                  </ScrollArea>
                 </PopoverContent>
               </Popover>
             )}
