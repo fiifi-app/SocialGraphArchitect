@@ -1,0 +1,115 @@
+Prompt: Re-enable Investor/LP Fields + Colored Role Tags after Migration
+
+You are a senior full-stack engineer. The database migration is now COMPLETE. Reintroduce previously removed investor fields and add colored role tags in the UI. Follow the specs below and deliver code + tests.
+
+Objectives
+
+Restore investor fields in the data model, API, and UI.
+
+Add role tags (GP / Startup / Angel) with color mapping across list views, record detail, and editor forms.
+
+Gate rollout behind a feature toggle that activates only when the migration version is ≥ 2025_11_05_investor_fields.
+
+Data Model (back end)
+
+Add/confirm columns:
+
+is_lp (BOOLEAN, default false)
+
+is_investor (BOOLEAN, default false)
+
+contact_type (ENUM: LP, GP, Angel, FamilyOffice, Startup, Other; nullable)
+
+check_size_min (INTEGER or DECIMAL; nullable)
+
+check_size_max (INTEGER or DECIMAL; nullable)
+
+investor_notes (TEXT; nullable)
+
+Constraints:
+
+If check_size_min and check_size_max both present, enforce min ≤ max.
+
+If contact_type = LP then is_lp = true (coerce on save).
+
+API
+
+Update create/update/read endpoints to include the fields above.
+
+Validation errors:
+
+check_size_min_gt_max with message “Min check size cannot exceed max.”
+
+invalid_contact_type if value not in ENUM.
+
+Backward compatibility: if payload omits the new fields, do not fail—use defaults.
+
+Feature Flag
+
+Add feature.enableInvestorFields (bool).
+
+Auto-enable when migration version table shows >= 2025_11_05_investor_fields.
+
+If flag is OFF:
+
+Hide fields in UI.
+
+API still accepts/returns them for existing records but editor forms don’t render them.
+
+UI/UX
+
+Editor form (Contact):
+
+Section: Investor Profile
+
+Toggle: Is LP (is_lp)
+
+Toggle: Is Investor (is_investor)
+
+Select: Contact Type (contact_type) with options: LP, GP, Angel, Family Office, Startup, Other
+
+Number inputs: Check Size (Min/Max) with currency adorners and inline validation
+
+Multiline: Investor Notes
+
+Colored role tags (display anywhere we render a contact “pill”):
+
+GP — #0EA5E9 (cyan)
+
+Startup — #22C55E (green)
+
+Angel — #A855F7 (purple)
+
+(Optional, if shown) LP — #F59E0B, Family Office — #F43F5E
+
+List view:
+
+Columns: Name, Title, Company, Contact Type (tag), Check Size (Min–Max), Is LP (✓/—).
+
+Add filter chips: LP, GP, Angel, Family Office, Startup, Investor.
+
+Record detail:
+
+Show tag next to name.
+
+Show check sizes as “$X–$Y” (compact notation, e.g., $250k–$2M).
+
+Formatting & Helpers
+
+Currency display:
+
+$0–$250k, $250k–$2M, etc. Use compact formatter (k/M).
+
+Derivation:
+
+If contact_type = LP, auto-set is_investor = true.
+
+Search:
+
+Index contact_type, is_lp, is_investor for fast filtering.
+
+Telemetry
+
+Log UI events: contact.tag.clicked, contact.investorFields.saved, with contact_id and changed fields.
+
+Track validation error rates for check_size_min_gt_max.

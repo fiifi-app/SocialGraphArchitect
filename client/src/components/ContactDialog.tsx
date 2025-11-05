@@ -20,11 +20,15 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCreateContact, useUpdateContact, useDeleteContact } from "@/hooks/useContacts";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Trash2 } from "lucide-react";
 import type { Contact } from "@shared/schema";
+import { useFeatureFlags } from "@/lib/featureFlags";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,7 +67,27 @@ const contactFormSchema = z.object({
   companyCrunchbase: z.string().optional(),
   companyOwler: z.string().optional(),
   youtubeVimeo: z.string().optional(),
-});
+  
+  // Investor Profile fields
+  isLp: z.boolean().default(false),
+  isInvestor: z.boolean().default(false),
+  contactType: z.enum(['LP', 'GP', 'Angel', 'FamilyOffice', 'Startup', 'Other']).optional(),
+  checkSizeMin: z.number().int().positive().optional().or(z.literal(0)),
+  checkSizeMax: z.number().int().positive().optional().or(z.literal(0)),
+  investorNotes: z.string().optional(),
+}).refine(
+  (data) => {
+    // Validate check_size_min <= check_size_max
+    if (data.checkSizeMin && data.checkSizeMax && data.checkSizeMin > 0 && data.checkSizeMax > 0) {
+      return data.checkSizeMin <= data.checkSizeMax;
+    }
+    return true;
+  },
+  {
+    message: "Min check size cannot exceed max",
+    path: ["checkSizeMin"],
+  }
+);
 
 type ContactFormData = z.infer<typeof contactFormSchema>;
 
@@ -80,6 +104,7 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
   const deleteContact = useDeleteContact();
   const { toast } = useToast();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const { data: featureFlags } = useFeatureFlags();
 
   const form = useForm<ContactFormData>({
     resolver: zodResolver(contactFormSchema),
@@ -106,6 +131,12 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
       companyCrunchbase: "",
       companyOwler: "",
       youtubeVimeo: "",
+      isLp: false,
+      isInvestor: false,
+      contactType: undefined,
+      checkSizeMin: 0,
+      checkSizeMax: 0,
+      investorNotes: "",
     },
   });
 
@@ -135,6 +166,12 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
         companyCrunchbase: contact.companyCrunchbase || "",
         companyOwler: contact.companyOwler || "",
         youtubeVimeo: contact.youtubeVimeo || "",
+        isLp: contact.isLp || false,
+        isInvestor: contact.isInvestor || false,
+        contactType: contact.contactType || undefined,
+        checkSizeMin: contact.checkSizeMin || 0,
+        checkSizeMax: contact.checkSizeMax || 0,
+        investorNotes: contact.investorNotes || "",
       });
     } else if (!open) {
       form.reset({
@@ -160,6 +197,12 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
         companyCrunchbase: "",
         companyOwler: "",
         youtubeVimeo: "",
+        isLp: false,
+        isInvestor: false,
+        contactType: undefined,
+        checkSizeMin: 0,
+        checkSizeMax: 0,
+        investorNotes: "",
       });
     }
   }, [contact, open, form]);
@@ -192,6 +235,12 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
         companyCrunchbase: data.companyCrunchbase || null,
         companyOwler: data.companyOwler || null,
         youtubeVimeo: data.youtubeVimeo || null,
+        isLp: data.isLp || false,
+        isInvestor: data.isInvestor || false,
+        contactType: data.contactType || null,
+        checkSizeMin: (data.checkSizeMin && data.checkSizeMin > 0) ? data.checkSizeMin : null,
+        checkSizeMax: (data.checkSizeMax && data.checkSizeMax > 0) ? data.checkSizeMax : null,
+        investorNotes: data.investorNotes || null,
       };
       
       if (isEditMode) {
@@ -646,6 +695,147 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
               </div>
               </div>
               </div>
+
+              {/* Investor Profile Section - Feature Flagged */}
+              {featureFlags?.enableInvestorFields && (
+                <div className="border-t pt-4">
+                  <h3 className="text-sm font-semibold mb-4">Investor Profile</h3>
+                  
+                  <div className="space-y-4">
+                    {/* Toggles Row */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="isLp"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                            <div className="space-y-0.5">
+                              <FormLabel>Is LP</FormLabel>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                data-testid="toggle-is-lp"
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="isInvestor"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                            <div className="space-y-0.5">
+                              <FormLabel>Is Investor</FormLabel>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                data-testid="toggle-is-investor"
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* Contact Type */}
+                    <FormField
+                      control={form.control}
+                      name="contactType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Contact Type</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-contact-type">
+                                <SelectValue placeholder="Select type..." />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="LP">LP</SelectItem>
+                              <SelectItem value="GP">GP</SelectItem>
+                              <SelectItem value="Angel">Angel</SelectItem>
+                              <SelectItem value="FamilyOffice">Family Office</SelectItem>
+                              <SelectItem value="Startup">Startup</SelectItem>
+                              <SelectItem value="Other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Check Size Range */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="checkSizeMin"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Check Size Min ($)</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                type="number"
+                                placeholder="e.g., 250000"
+                                onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : 0)}
+                                data-testid="input-check-size-min"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="checkSizeMax"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Check Size Max ($)</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                type="number"
+                                placeholder="e.g., 2000000"
+                                onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : 0)}
+                                data-testid="input-check-size-max"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* Investor Notes */}
+                    <FormField
+                      control={form.control}
+                      name="investorNotes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Investor Notes</FormLabel>
+                          <FormControl>
+                            <Textarea
+                              {...field}
+                              placeholder="Investment preferences, notes, etc."
+                              className="resize-none"
+                              rows={3}
+                              data-testid="textarea-investor-notes"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              )}
 
               <DialogFooter className="gap-2 mt-4 flex-shrink-0">
                 {isEditMode && (
