@@ -345,7 +345,7 @@ export default function Record() {
                       <div className="flex items-center gap-2">
                         <Users className="h-4 w-4" />
                         <span data-testid="text-event-attendees">
-                          {calendarEvent.attendees.length} attendee{calendarEvent.attendees.length !== 1 ? 's' : ''}
+                          {(calendarEvent.attendees as any[]).length} attendee{(calendarEvent.attendees as any[]).length !== 1 ? 's' : ''}
                         </span>
                       </div>
                     )}

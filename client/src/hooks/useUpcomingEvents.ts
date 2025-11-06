@@ -33,7 +33,7 @@ export function useTodaysEvents() {
     queryKey: ['/calendar-events/today'],
     queryFn: async () => {
       const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error('Unauthorized');
+      if (!userData.user) return []; // Return empty array for unauthenticated users
 
       const now = new Date();
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());

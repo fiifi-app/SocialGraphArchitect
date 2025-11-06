@@ -14,10 +14,17 @@ The design draws inspiration from Granola and Linear, emphasizing high informati
 
 **Technical Implementations:**
 - **Data Access:** Frontend CRUD operations directly access Supabase via its SDK, protected by RLS. AI-driven operations utilize Supabase Edge Functions with service role privileges.
-- **Database Schema:** Comprises 14 tables with RLS, covering user profiles, contacts, investment theses, conversations, entity extraction, match suggestions, and introduction workflows.
+- **Database Schema:** Comprises 15 tables with RLS, covering user profiles, contacts, investment theses, calendar events, conversations, entity extraction, match suggestions, and introduction workflows.
 - **Contact Management:** Includes full CRUD for contacts, pagination, searching, real-time updates, toast notifications, and comprehensive CSV bulk import with validation and enrichment.
 - **Contact Enrichment:** An Edge Function uses Hunter.io and People Data Labs APIs for email verification and person enrichment, with a preview showing original vs. enriched data.
 - **Investor Profile Feature:** Incorporates an `is_investor` flag, extended contact types (GP/Angel/FamilyOffice/Startup/Other), check size ranges, and investor notes, conditionally visible based on selected contact types. A feature flag system manages the visibility of these fields based on database migration status.
+- **Calendar Integration (Granola-style):** Manual calendar event management system with Granola-inspired workflow:
+  - calendar_events table for storing meeting metadata (title, time, attendees, location, meeting URL)
+  - "Coming Up" section on Home page showing today's upcoming meetings with one-click "Record" buttons
+  - Event details displayed prominently on Record page (title, time, location, attendees) before recording starts
+  - Conversations automatically linked to calendar events via event_id foreign key
+  - Event titles auto-populate conversation titles when recording from calendar
+  - NOTE: Google Calendar integration connector was available but dismissed by user; manual event entry is current approach. For future Google Calendar sync, use external_event_id field and implement OAuth flow with Google Calendar API outside of Replit integration system.
 - **Real-Time Conversation Recording:** Production-ready implementation featuring:
   - Browser audio capture via MediaRecorder API with 5-second chunking
   - Real-time transcription using OpenAI Whisper API (transcribe-audio Edge Function)

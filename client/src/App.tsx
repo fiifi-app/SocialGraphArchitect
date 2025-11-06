@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import ThemeToggle from "@/components/ThemeToggle";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { useMeetingNotifications } from "@/hooks/useMeetingNotifications";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import Record from "@/pages/Record";
@@ -75,18 +76,13 @@ function Router() {
   );
 }
 
-function AppContent() {
-  const { user } = useAuth();
-  const [location] = useLocation();
+function AuthenticatedApp() {
+  // Enable meeting notifications for authenticated users only
+  useMeetingNotifications();
+  
   const style = {
     "--sidebar-width": "16rem",
   };
-
-  const isAuthPage = location === "/login" || location === "/signup" || location === "/forgot-password" || location === "/reset-password";
-
-  if (isAuthPage) {
-    return <Router />;
-  }
 
   return (
     <SidebarProvider style={style as React.CSSProperties}>
@@ -104,6 +100,19 @@ function AppContent() {
       </div>
     </SidebarProvider>
   );
+}
+
+function AppContent() {
+  const { user } = useAuth();
+  const [location] = useLocation();
+
+  const isAuthPage = location === "/login" || location === "/signup" || location === "/forgot-password" || location === "/reset-password";
+
+  if (isAuthPage || !user) {
+    return <Router />;
+  }
+
+  return <AuthenticatedApp />;
 }
 
 function App() {
