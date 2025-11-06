@@ -105,9 +105,9 @@ export default function ContactCard({
               <h3 className="text-base font-semibold truncate" data-testid="text-contact-name">
                 {fullName}
               </h3>
-              {contactType && contactType.length > 0 && (
+              {contactType && (
                 <div className="flex items-center gap-1 flex-wrap">
-                  {contactType.map((type) => (
+                  {(Array.isArray(contactType) ? contactType : [contactType]).map((type) => (
                     <RoleTag key={type} type={type} />
                   ))}
                 </div>
