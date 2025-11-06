@@ -307,8 +307,8 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
           </DialogHeader>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
-              <ScrollArea className="flex-1 pr-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+              <ScrollArea className="h-[calc(90vh-220px)] pr-4">
                 <div className="pr-2">
                 <div className="space-y-4">
                   {/* Name */}
