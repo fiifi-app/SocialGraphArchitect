@@ -2,7 +2,7 @@
  * Serialization helpers to convert between Supabase snake_case and TypeScript camelCase
  */
 
-import type { Contact, Conversation, Profile, UserPreferences, ConversationSegment, MatchSuggestion } from '@shared/schema';
+import type { Contact, Conversation, Profile, UserPreferences, ConversationSegment, MatchSuggestion, CalendarEvent } from '@shared/schema';
 
 // ============================================================================
 // CONTACTS
@@ -103,10 +103,49 @@ export function contactToDb(contact: Partial<Contact>): any {
 // CONVERSATIONS
 // ============================================================================
 
+// ============================================================================
+// CALENDAR EVENTS
+// ============================================================================
+
+export function calendarEventFromDb(dbRow: any): CalendarEvent {
+  return {
+    id: dbRow.id,
+    ownedByProfile: dbRow.owned_by_profile,
+    title: dbRow.title,
+    description: dbRow.description,
+    startTime: new Date(dbRow.start_time),
+    endTime: new Date(dbRow.end_time),
+    attendees: dbRow.attendees || [],
+    location: dbRow.location,
+    meetingUrl: dbRow.meeting_url,
+    externalEventId: dbRow.external_event_id,
+    createdAt: new Date(dbRow.created_at),
+    updatedAt: new Date(dbRow.updated_at),
+  };
+}
+
+export function calendarEventToDb(event: Partial<CalendarEvent>): any {
+  const dbRow: any = {};
+  
+  if (event.id !== undefined) dbRow.id = event.id;
+  if (event.ownedByProfile !== undefined) dbRow.owned_by_profile = event.ownedByProfile;
+  if (event.title !== undefined) dbRow.title = event.title;
+  if ('description' in event) dbRow.description = event.description;
+  if (event.startTime !== undefined) dbRow.start_time = event.startTime.toISOString();
+  if (event.endTime !== undefined) dbRow.end_time = event.endTime.toISOString();
+  if (event.attendees !== undefined) dbRow.attendees = event.attendees;
+  if ('location' in event) dbRow.location = event.location;
+  if ('meetingUrl' in event) dbRow.meeting_url = event.meetingUrl;
+  if ('externalEventId' in event) dbRow.external_event_id = event.externalEventId;
+  
+  return dbRow;
+}
+
 export function conversationFromDb(dbRow: any): Conversation {
   return {
     id: dbRow.id,
     ownedByProfile: dbRow.owned_by_profile,
+    eventId: dbRow.event_id,
     title: dbRow.title,
     durationSeconds: dbRow.duration_seconds,
     recordedAt: new Date(dbRow.recorded_at),
@@ -120,6 +159,7 @@ export function conversationToDb(conversation: Partial<Conversation>): any {
   
   if (conversation.id !== undefined) dbRow.id = conversation.id;
   if (conversation.ownedByProfile !== undefined) dbRow.owned_by_profile = conversation.ownedByProfile;
+  if ('eventId' in conversation) dbRow.event_id = conversation.eventId;
   if (conversation.title !== undefined) dbRow.title = conversation.title;
   if (conversation.durationSeconds !== undefined) dbRow.duration_seconds = conversation.durationSeconds;
   if (conversation.recordedAt !== undefined) dbRow.recorded_at = conversation.recordedAt.toISOString();

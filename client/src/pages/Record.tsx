@@ -6,9 +6,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import RecordingIndicator from "@/components/RecordingIndicator";
 import TranscriptView from "@/components/TranscriptView";
 import SuggestionCard from "@/components/SuggestionCard";
-import { Mic } from "lucide-react";
+import { Mic, Calendar, Clock, MapPin, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { 
   useCreateConversation, 
@@ -23,6 +23,9 @@ import {
   processParticipants 
 } from "@/lib/edgeFunctions";
 import { supabase } from "@/lib/supabase";
+import { calendarEventFromDb } from "@/lib/supabaseHelpers";
+import type { CalendarEvent } from "@shared/schema";
+import { format } from "date-fns";
 
 interface TranscriptEntry {
   t: string;
@@ -37,12 +40,16 @@ interface Suggestion {
 }
 
 export default function Record() {
+  const searchParams = useSearch();
+  const eventId = new URLSearchParams(searchParams).get('eventId');
+  
   const [consentChecked, setConsentChecked] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [calendarEvent, setCalendarEvent] = useState<CalendarEvent | null>(null);
   const lastExtractTimeRef = useRef<number>(0);
   const lastMatchTimeRef = useRef<number>(0);
   const audioQueueRef = useRef<Blob[]>([]);
@@ -52,6 +59,22 @@ export default function Record() {
   const [, setLocation] = useLocation();
   const createConversation = useCreateConversation();
   const updateConversation = useUpdateConversation();
+
+  // Load calendar event if eventId is provided
+  useEffect(() => {
+    if (eventId) {
+      supabase
+        .from('calendar_events')
+        .select('*')
+        .eq('id', eventId)
+        .single()
+        .then(({ data, error }) => {
+          if (data && !error) {
+            setCalendarEvent(calendarEventFromDb(data));
+          }
+        });
+    }
+  }, [eventId]);
 
   // Audio chunk handler
   const handleAudioData = useCallback(async (audioBlob: Blob) => {
@@ -188,9 +211,10 @@ export default function Record() {
     try {
       // Create conversation in database
       const conversation = await createConversation.mutateAsync({
-        title: `Conversation - ${new Date().toLocaleString()}`,
+        title: calendarEvent ? calendarEvent.title : `Conversation - ${new Date().toLocaleString()}`,
         recordedAt: new Date(),
         status: 'recording',
+        eventId: eventId || null,
         ownedByProfile: '', // Added by the hook automatically
       } as any);
       
@@ -293,9 +317,48 @@ export default function Record() {
   if (!audioState.isRecording) {
     return (
       <div className="flex items-center justify-center min-h-screen p-8">
-        <div className="text-center max-w-xl">
+        <div className="text-center max-w-2xl w-full">
+          {calendarEvent && (
+            <Card className="mb-8 p-6 text-left" data-testid="card-event-details">
+              <div className="flex items-start gap-4">
+                <div className="p-3 rounded-lg bg-primary/10">
+                  <Calendar className="h-6 w-6 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-xl font-semibold mb-2" data-testid="text-event-title">
+                    {calendarEvent.title}
+                  </h2>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      <span data-testid="text-event-time">
+                        {format(calendarEvent.startTime, 'EEEE, MMMM d, yyyy • h:mm a')} - {format(calendarEvent.endTime, 'h:mm a')}
+                      </span>
+                    </div>
+                    {calendarEvent.location && (
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        <span data-testid="text-event-location">{calendarEvent.location}</span>
+                      </div>
+                    )}
+                    {calendarEvent.attendees && Array.isArray(calendarEvent.attendees) && calendarEvent.attendees.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        <span data-testid="text-event-attendees">
+                          {calendarEvent.attendees.length} attendee{calendarEvent.attendees.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
+
           <div className="mb-12">
-            <h1 className="text-2xl font-semibold mb-3">Start a New Recording</h1>
+            <h1 className="text-2xl font-semibold mb-3">
+              {calendarEvent ? 'Ready to Record' : 'Start a New Recording'}
+            </h1>
             <p className="text-muted-foreground">
               Record conversations to get AI-powered intro suggestions in real-time
             </p>

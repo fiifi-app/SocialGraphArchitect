@@ -111,12 +111,32 @@ export const theses = pgTable("theses", {
 });
 
 // ============================================================================
+// CALENDAR EVENTS
+// ============================================================================
+
+export const calendarEvents = pgTable("calendar_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ownedByProfile: uuid("owned_by_profile").notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  title: text("title").notNull(),
+  description: text("description"),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time").notNull(),
+  attendees: jsonb("attendees").default(sql`'[]'::jsonb`), // Array of {name, email}
+  location: text("location"),
+  meetingUrl: text("meeting_url"),
+  externalEventId: text("external_event_id"), // For future Google Calendar sync
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// ============================================================================
 // CONVERSATIONS & TRANSCRIPTS
 // ============================================================================
 
 export const conversations = pgTable("conversations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   ownedByProfile: uuid("owned_by_profile").notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  eventId: varchar("event_id").references(() => calendarEvents.id, { onDelete: 'set null' }),
   title: text("title"),
   durationSeconds: integer("duration_seconds"),
   recordedAt: timestamp("recorded_at").notNull().defaultNow(),
@@ -253,6 +273,12 @@ export const insertThesisSchema = createInsertSchema(theses).omit({
   updatedAt: true,
 });
 
+export const insertCalendarEventSchema = createInsertSchema(calendarEvents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertConversationSchema = createInsertSchema(conversations).omit({
   id: true,
   createdAt: true,
@@ -317,6 +343,9 @@ export type InsertContactShare = z.infer<typeof insertContactShareSchema>;
 
 export type Thesis = typeof theses.$inferSelect;
 export type InsertThesis = z.infer<typeof insertThesisSchema>;
+
+export type CalendarEvent = typeof calendarEvents.$inferSelect;
+export type InsertCalendarEvent = z.infer<typeof insertCalendarEventSchema>;
 
 export type Conversation = typeof conversations.$inferSelect;
 export type InsertConversation = z.infer<typeof insertConversationSchema>;
