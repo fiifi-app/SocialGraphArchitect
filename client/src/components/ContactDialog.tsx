@@ -91,6 +91,11 @@ const contactFormSchema = z.object({
 
 type ContactFormData = z.infer<typeof contactFormSchema>;
 
+// Helper function to determine if a contact type indicates an investor
+const isInvestorType = (contactType: string | undefined): boolean => {
+  return contactType === 'GP' || contactType === 'Angel' || contactType === 'FamilyOffice';
+};
+
 interface ContactDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -207,9 +212,23 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
     }
   }, [contact, open, form]);
 
+  // Auto-update isInvestor when contactType changes
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'contactType') {
+        const shouldBeInvestor = isInvestorType(value.contactType);
+        form.setValue('isInvestor', shouldBeInvestor);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
+
   const onSubmit = async (data: ContactFormData) => {
     try {
       const fullName = `${data.firstName}${data.lastName ? ' ' + data.lastName : ''}`;
+      
+      // Derive isInvestor from contactType to ensure consistency
+      const derivedIsInvestor = isInvestorType(data.contactType);
       
       const contactData = {
         name: fullName,
@@ -236,7 +255,7 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
         companyOwler: data.companyOwler || null,
         youtubeVimeo: data.youtubeVimeo || null,
         isLp: data.isLp || false,
-        isInvestor: data.isInvestor || false,
+        isInvestor: derivedIsInvestor, // Use derived value instead of form value
         contactType: data.contactType || null,
         checkSizeMin: (data.checkSizeMin && data.checkSizeMin > 0) ? data.checkSizeMin : null,
         checkSizeMax: (data.checkSizeMax && data.checkSizeMax > 0) ? data.checkSizeMax : null,
@@ -526,6 +545,139 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
                 />
               </div>
 
+              {/* Investor Profile Section - Feature Flagged */}
+              {featureFlags?.enableInvestorFields && (
+                <div className="border-t pt-4">
+                  <h3 className="text-sm font-semibold mb-4">Investor Profile</h3>
+                  
+                  <div className="space-y-4">
+                    {/* Contact Type - Toggle Buttons */}
+                    <FormField
+                      control={form.control}
+                      name="contactType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Contact Type</FormLabel>
+                          <div className="grid grid-cols-3 gap-2">
+                            {[
+                              { value: 'LP', label: 'LP' },
+                              { value: 'GP', label: 'GP' },
+                              { value: 'Angel', label: 'Angel' },
+                              { value: 'FamilyOffice', label: 'Family Office' },
+                              { value: 'Startup', label: 'Startup' },
+                              { value: 'Other', label: 'Other' },
+                            ].map((type) => (
+                              <Button
+                                key={type.value}
+                                type="button"
+                                variant={field.value === type.value ? 'default' : 'outline'}
+                                className="toggle-elevate"
+                                onClick={() => field.onChange(type.value)}
+                                data-testid={`button-contact-type-${type.value.toLowerCase()}`}
+                              >
+                                {type.label}
+                              </Button>
+                            ))}
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Conditional Investor Fields - Show only for GP, Angel, FamilyOffice */}
+                    {(form.watch('contactType') === 'GP' || 
+                      form.watch('contactType') === 'Angel' || 
+                      form.watch('contactType') === 'FamilyOffice') && (
+                      <>
+                        {/* Is LP Toggle */}
+                        <FormField
+                          control={form.control}
+                          name="isLp"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                              <div className="space-y-0.5">
+                                <FormLabel>Is LP</FormLabel>
+                              </div>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                  data-testid="toggle-is-lp"
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Check Size Range */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="checkSizeMin"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Check Size Min ($)</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    type="number"
+                                    placeholder="e.g., 250000"
+                                    onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : 0)}
+                                    data-testid="input-check-size-min"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="checkSizeMax"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Check Size Max ($)</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    {...field}
+                                    type="number"
+                                    placeholder="e.g., 2000000"
+                                    onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : 0)}
+                                    data-testid="input-check-size-max"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        {/* Investor Notes */}
+                        <FormField
+                          control={form.control}
+                          name="investorNotes"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Investor Notes</FormLabel>
+                              <FormControl>
+                                <Textarea
+                                  {...field}
+                                  placeholder="Investment preferences, notes, etc."
+                                  className="resize-none"
+                                  rows={3}
+                                  data-testid="textarea-investor-notes"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Company Information Section */}
               <div className="pt-4 border-t">
                 <h4 className="text-sm font-medium mb-3">Company Information (Optional)</h4>
@@ -695,147 +847,6 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
                 </div>
               </div>
               </div>
-
-              {/* Investor Profile Section - Feature Flagged */}
-              {featureFlags?.enableInvestorFields && (
-                <div className="border-t pt-4">
-                  <h3 className="text-sm font-semibold mb-4">Investor Profile</h3>
-                  
-                  <div className="space-y-4">
-                    {/* Toggles Row */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="isLp"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                            <div className="space-y-0.5">
-                              <FormLabel>Is LP</FormLabel>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                                data-testid="toggle-is-lp"
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="isInvestor"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                            <div className="space-y-0.5">
-                              <FormLabel>Is Investor</FormLabel>
-                            </div>
-                            <FormControl>
-                              <Switch
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                                data-testid="toggle-is-investor"
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    {/* Contact Type */}
-                    <FormField
-                      control={form.control}
-                      name="contactType"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Contact Type</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-contact-type">
-                                <SelectValue placeholder="Select type..." />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="LP">LP</SelectItem>
-                              <SelectItem value="GP">GP</SelectItem>
-                              <SelectItem value="Angel">Angel</SelectItem>
-                              <SelectItem value="FamilyOffice">Family Office</SelectItem>
-                              <SelectItem value="Startup">Startup</SelectItem>
-                              <SelectItem value="Other">Other</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Check Size Range */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="checkSizeMin"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Check Size Min ($)</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                type="number"
-                                placeholder="e.g., 250000"
-                                onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : 0)}
-                                data-testid="input-check-size-min"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="checkSizeMax"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Check Size Max ($)</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                type="number"
-                                placeholder="e.g., 2000000"
-                                onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : 0)}
-                                data-testid="input-check-size-max"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    {/* Investor Notes */}
-                    <FormField
-                      control={form.control}
-                      name="investorNotes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Investor Notes</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              {...field}
-                              placeholder="Investment preferences, notes, etc."
-                              className="resize-none"
-                              rows={3}
-                              data-testid="textarea-investor-notes"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-              )}
               </div>
               </ScrollArea>
 
