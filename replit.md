@@ -260,7 +260,13 @@ Use `run_test` tool for automated UI testing.
   - **Feature Flag System**: `client/src/lib/featureFlags.ts` checks migration version from database to conditionally enable investor fields in UI
   - **RoleTag Component**: Color-coded badges for contact types (LP=blue, GP=purple, Angel=orange, FamilyOffice=green, Startup=cyan, Other=gray)
   - **Currency Formatter**: `formatCheckSizeRange()` displays check sizes in compact format ($250k-$2M, $1M+, etc.)
-  - **ContactDialog Updates**: Investor Profile section with Is LP/Is Investor toggles, Contact Type selector, Check Size Min/Max inputs with validation (min ≤ max), and Investor Notes textarea
+  - **ContactDialog Updates (November 6, 2025 - Restructured)**: 
+    - **Section Ordering**: Investor Profile section moved ABOVE Company Information
+    - **Contact Type**: Changed from dropdown to toggle buttons (6 buttons: LP, GP, Angel, Family Office, Startup, Other)
+    - **Conditional Visibility**: Investor fields (Is LP, Check Sizes, Investor Notes) only show when Contact Type is GP/Angel/FamilyOffice
+    - **Auto-Derivation**: isInvestor field automatically derived from contactType (GP/Angel/FamilyOffice = true, others = false)
+    - **Removed**: "Is Investor" toggle (redundant - contactType now determines investor status)
+    - **ScrollArea Fix**: Explicit height for proper scrolling with all fields visible
   - **ContactCard Display**: Shows role tags next to contact name, displays check size range when present
   - **Schema Updates**: Contact type now includes isInvestor, contactType enum, checkSizeMin, checkSizeMax, investorNotes fields
   - **Data Pipeline**: Complete serialization in supabaseHelpers (contactFromDb/contactToDb) for new investor fields
