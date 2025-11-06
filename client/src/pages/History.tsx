@@ -5,62 +5,51 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import ConversationHistoryRow from "@/components/ConversationHistoryRow";
 import { Search, Download, MessageSquare, TrendingUp, UserPlus } from "lucide-react";
+import { useConversations } from "@/hooks/useConversations";
+import { useIntroductionStats } from "@/hooks/useIntroductions";
+import { useContacts } from "@/hooks/useContacts";
 
 export default function History() {
   const [searchQuery, setSearchQuery] = useState("");
-
-  const mockConversations = [
-    {
-      id: "1",
-      startedAt: new Date(Date.now() - 86400000).toISOString(),
-      endedAt: new Date(Date.now() - 84600000).toISOString(),
-      participants: ["Alex Chen", "Jordan Smith"],
-      suggestionsCount: 3,
-    },
-    {
-      id: "2",
-      startedAt: new Date(Date.now() - 172800000).toISOString(),
-      endedAt: new Date(Date.now() - 170400000).toISOString(),
-      participants: ["Sarah Lee", "Michael Park", "Emma Wilson"],
-      suggestionsCount: 5,
-    },
-    {
-      id: "3",
-      startedAt: new Date(Date.now() - 259200000).toISOString(),
-      endedAt: new Date(Date.now() - 256800000).toISOString(),
-      participants: ["David Kim"],
-      suggestionsCount: 2,
-    },
-    {
-      id: "4",
-      startedAt: new Date(Date.now() - 345600000).toISOString(),
-      endedAt: new Date(Date.now() - 342000000).toISOString(),
-      participants: ["Amanda Chen", "James Rodriguez"],
-      suggestionsCount: 4,
-    },
-  ];
+  
+  const { data: conversations = [], isLoading: conversationsLoading } = useConversations();
+  const { data: introStats, isLoading: introStatsLoading } = useIntroductionStats();
+  const { data: contacts = [], isLoading: contactsLoading } = useContacts();
 
   const stats = useMemo(() => {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    const totalConversations = mockConversations.length;
-    const conversationsToday = mockConversations.filter(c => 
-      new Date(c.startedAt) >= todayStart
+    const totalConversations = conversations.length;
+    const conversationsToday = conversations.filter(c => 
+      c.recordedAt && !Number.isNaN(c.recordedAt.getTime()) && c.recordedAt >= todayStart
     ).length;
-    const conversationsThisWeek = mockConversations.filter(c => 
-      new Date(c.startedAt) >= weekStart
+    const conversationsThisWeek = conversations.filter(c => 
+      c.recordedAt && !Number.isNaN(c.recordedAt.getTime()) && c.recordedAt >= weekStart
+    ).length;
+    
+    const newContactsToday = contacts.filter(c => 
+      c.createdAt && !Number.isNaN(c.createdAt.getTime()) && c.createdAt >= todayStart
+    ).length;
+    const newContactsThisWeek = contacts.filter(c => 
+      c.createdAt && !Number.isNaN(c.createdAt.getTime()) && c.createdAt >= weekStart
     ).length;
 
     return {
-      total: totalConversations,
-      today: conversationsToday,
-      thisWeek: conversationsThisWeek,
-      introsMade: 23,
-      newContactsAdded: 8
+      conversations: {
+        total: totalConversations,
+        today: conversationsToday,
+        thisWeek: conversationsThisWeek,
+      },
+      intros: introStats || { total: 0, today: 0, thisWeek: 0 },
+      newContacts: {
+        total: contacts.length,
+        today: newContactsToday,
+        thisWeek: newContactsThisWeek,
+      }
     };
-  }, [mockConversations]);
+  }, [conversations, introStats, contacts]);
 
   return (
     <div className="p-8">
@@ -86,16 +75,22 @@ export default function History() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-muted-foreground mb-1">Total Conversations</p>
-                <p className="text-2xl font-semibold mb-2" data-testid="text-total-conversations">{stats.total}</p>
+                <p className="text-2xl font-semibold mb-2" data-testid="text-total-conversations">
+                  {conversationsLoading ? "..." : stats.conversations.total}
+                </p>
                 <Separator className="my-2" />
                 <div className="space-y-1 text-xs text-muted-foreground">
                   <div className="flex items-center justify-between">
                     <span>Today</span>
-                    <span className="font-medium text-foreground" data-testid="text-conversations-today">{stats.today}</span>
+                    <span className="font-medium text-foreground" data-testid="text-conversations-today">
+                      {conversationsLoading ? "..." : stats.conversations.today}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>This Week</span>
-                    <span className="font-medium text-foreground" data-testid="text-conversations-week">{stats.thisWeek}</span>
+                    <span className="font-medium text-foreground" data-testid="text-conversations-week">
+                      {conversationsLoading ? "..." : stats.conversations.thisWeek}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -103,25 +98,59 @@ export default function History() {
           </Card>
 
           <Card className="p-4" data-testid="stat-card-intros">
-            <div className="flex items-center gap-3">
+            <div className="flex items-start gap-3">
               <div className="p-2 rounded-md bg-chart-2/20">
                 <TrendingUp className="w-5 h-5 text-chart-2" />
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Intros Made</p>
-                <p className="text-2xl font-semibold" data-testid="text-intros-made">{stats.introsMade}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground mb-1">Intros Made</p>
+                <p className="text-2xl font-semibold mb-2" data-testid="text-intros-made">
+                  {introStatsLoading ? "..." : stats.intros.total}
+                </p>
+                <Separator className="my-2" />
+                <div className="space-y-1 text-xs text-muted-foreground">
+                  <div className="flex items-center justify-between">
+                    <span>Today</span>
+                    <span className="font-medium text-foreground" data-testid="text-intros-today">
+                      {introStatsLoading ? "..." : stats.intros.today}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>This Week</span>
+                    <span className="font-medium text-foreground" data-testid="text-intros-week">
+                      {introStatsLoading ? "..." : stats.intros.thisWeek}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </Card>
 
           <Card className="p-4" data-testid="stat-card-new-contacts">
-            <div className="flex items-center gap-3">
+            <div className="flex items-start gap-3">
               <div className="p-2 rounded-md bg-chart-3/20">
                 <UserPlus className="w-5 h-5 text-chart-3" />
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">New Contacts Added</p>
-                <p className="text-2xl font-semibold" data-testid="text-new-contacts">{stats.newContactsAdded}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-muted-foreground mb-1">New Contacts Added</p>
+                <p className="text-2xl font-semibold mb-2" data-testid="text-new-contacts">
+                  {contactsLoading ? "..." : stats.newContacts.total}
+                </p>
+                <Separator className="my-2" />
+                <div className="space-y-1 text-xs text-muted-foreground">
+                  <div className="flex items-center justify-between">
+                    <span>Today</span>
+                    <span className="font-medium text-foreground" data-testid="text-contacts-today">
+                      {contactsLoading ? "..." : stats.newContacts.today}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>This Week</span>
+                    <span className="font-medium text-foreground" data-testid="text-contacts-week">
+                      {contactsLoading ? "..." : stats.newContacts.thisWeek}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </Card>
@@ -139,29 +168,43 @@ export default function History() {
         </div>
       </div>
 
-      <div className="bg-card rounded-lg border border-card-border overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-muted/50 border-b border-border sticky top-0">
-            <tr>
-              <th className="py-3 px-4 text-left text-sm font-semibold">Date</th>
-              <th className="py-3 px-4 text-left text-sm font-semibold">Participants</th>
-              <th className="py-3 px-4 text-left text-sm font-semibold">Duration</th>
-              <th className="py-3 px-4 text-left text-sm font-semibold">Intros</th>
-              <th className="py-3 px-4 text-right text-sm font-semibold">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {mockConversations.map((conversation) => (
-              <ConversationHistoryRow
-                key={conversation.id}
-                {...conversation}
-                onView={() => console.log('View', conversation.id)}
-                onDelete={() => console.log('Delete', conversation.id)}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {conversationsLoading ? (
+        <div className="bg-card rounded-lg border border-card-border p-8 text-center text-muted-foreground">
+          Loading conversations...
+        </div>
+      ) : conversations.length === 0 ? (
+        <div className="bg-card rounded-lg border border-card-border p-8 text-center text-muted-foreground">
+          No conversations yet. Start recording to see your history here.
+        </div>
+      ) : (
+        <div className="bg-card rounded-lg border border-card-border overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-muted/50 border-b border-border sticky top-0">
+              <tr>
+                <th className="py-3 px-4 text-left text-sm font-semibold">Date</th>
+                <th className="py-3 px-4 text-left text-sm font-semibold">Participants</th>
+                <th className="py-3 px-4 text-left text-sm font-semibold">Duration</th>
+                <th className="py-3 px-4 text-left text-sm font-semibold">Intros</th>
+                <th className="py-3 px-4 text-right text-sm font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {conversations.map((conversation) => (
+                <ConversationHistoryRow
+                  key={conversation.id}
+                  id={conversation.id}
+                  startedAt={conversation.recordedAt.toISOString()}
+                  endedAt={conversation.recordedAt.toISOString()}
+                  participants={[]}
+                  suggestionsCount={0}
+                  onView={() => console.log('View', conversation.id)}
+                  onDelete={() => console.log('Delete', conversation.id)}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
