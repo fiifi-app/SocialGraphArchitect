@@ -18,6 +18,7 @@ import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
+import PendingContacts from "@/pages/PendingContacts";
 import { useEffect } from "react";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
@@ -65,6 +66,9 @@ function Router() {
       </Route>
       <Route path="/settings">
         {() => <ProtectedRoute component={Settings} />}
+      </Route>
+      <Route path="/pending">
+        {() => <ProtectedRoute component={PendingContacts} />}
       </Route>
       <Route component={NotFound} />
     </Switch>

@@ -60,6 +60,11 @@ export const contacts = pgTable("contacts", {
   
   isShared: boolean("is_shared").notNull().default(false),
   
+  // Contact Status for new contacts discovered during conversations
+  status: text("status", {
+    enum: ['verified', 'pending']
+  }).notNull().default('verified'),
+  
   // Contact Type (multi-select array)
   contactType: text("contact_type", { 
     enum: ['LP', 'GP', 'Angel', 'FamilyOffice', 'Startup', 'Other'] 

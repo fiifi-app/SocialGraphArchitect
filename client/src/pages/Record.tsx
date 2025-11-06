@@ -1,27 +1,28 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import RecordingIndicator from "@/components/RecordingIndicator";
 import TranscriptView from "@/components/TranscriptView";
 import SuggestionCard from "@/components/SuggestionCard";
-import MeetingSummary from "@/components/MeetingSummary";
-import IntroEmailPanel from "@/components/IntroEmailPanel";
-import { Mic, Trash2 } from "lucide-react";
+import { Mic } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { useAudioRecorder } from "@/hooks/useAudioRecorder";
+import { 
+  useCreateConversation, 
+  useUpdateConversation,
+  useConversationSegments 
+} from "@/hooks/useConversations";
+import { useMatchSuggestions } from "@/hooks/useMatches";
+import { 
+  transcribeAudio,
+  extractParticipants,
+  generateMatches,
+  processParticipants 
+} from "@/lib/edgeFunctions";
+import { supabase } from "@/lib/supabase";
 
 interface TranscriptEntry {
   t: string;
@@ -37,196 +38,259 @@ interface Suggestion {
 
 export default function Record() {
   const [consentChecked, setConsentChecked] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [showSummary, setShowSummary] = useState(false);
-  const [duration, setDuration] = useState("00:00");
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const transcriptTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const lastExtractTimeRef = useRef<number>(0);
+  const lastMatchTimeRef = useRef<number>(0);
+  const audioQueueRef = useRef<Blob[]>([]);
+  const isUploadingRef = useRef(false);
+  
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const createConversation = useCreateConversation();
+  const updateConversation = useUpdateConversation();
 
-  const demoTranscriptSegments = [
-    {
-      speaker: "Alex Chen",
-      text: "We're looking to raise a $2M seed round for our AI infrastructure platform.",
-      delay: 2000
-    },
-    {
-      speaker: "Alex Chen",
-      text: "We're focused on making it easier for developers to deploy agentic workflows.",
-      delay: 4000
-    },
-    {
-      speaker: "Jordan Smith",
-      text: "That sounds interesting. What's your current traction?",
-      delay: 6000
-    },
-    {
-      speaker: "Jordan Smith",
-      text: "Are you looking specifically for investors who understand the developer tools space?",
-      delay: 8000
-    },
-    {
-      speaker: "Alex Chen",
-      text: "We have about 500 developers on our platform, mostly in the Bay Area and New York.",
-      delay: 11000
-    },
-    {
-      speaker: "Alex Chen",
-      text: "We're growing 20% month over month. Yes, ideally we'd love investors who've backed DevTools before.",
-      delay: 14000
-    },
-  ];
-
-  const demoSuggestionUpdates = [
-    {
-      delay: 7000,
-      suggestions: [
-        {
-          contactName: "Sarah Johnson",
-          score: 2 as const,
-          reasons: [
-            "Invests in AI infra at seed stage",
-            "Based in SF, matches geo preference"
-          ]
-        }
-      ]
-    },
-    {
-      delay: 12000,
-      suggestions: [
-        {
-          contactName: "Sarah Johnson",
-          score: 3 as const,
-          reasons: [
-            "Invests in AI infra at seed stage ($1-3M)",
-            "Based in SF, matches geo preference",
-            "Recently met 45 days ago"
-          ]
-        },
-        {
-          contactName: "Michael Park",
-          score: 2 as const,
-          reasons: [
-            "DevTools investor at Series A",
-            "Strong relationship (0.8 score)",
-          ]
-        }
-      ]
+  // Audio chunk handler
+  const handleAudioData = useCallback(async (audioBlob: Blob) => {
+    if (!conversationId) return;
+    
+    audioQueueRef.current.push(audioBlob);
+    
+    // Process queue if not already uploading
+    if (!isUploadingRef.current) {
+      await processAudioQueue();
     }
-  ];
+  }, [conversationId]);
 
-  const mockIntroMatches = [
-    {
-      contactA: {
-        name: "Alex Chen",
-        email: "alex@techflow.ai"
-      },
-      contactB: {
-        name: "Sarah Johnson",
-        email: "sarah@sequoia.com"
-      },
-      score: 3,
-      reason: "Based on the conversation, Alex is raising a $2M seed round for their AI infrastructure platform. Given Sarah's focus on AI infra investments at the seed stage, this could be a great fit.",
-      conversationContext: "Alex mentioned they're specifically looking for investors who understand the DevTools space and have experience with technical founders. Their current traction (500 developers, 20% MoM growth) aligns well with Sarah's typical investment criteria.",
-      introBulletsForA: [
-        "Sarah invests in AI infra at seed stage ($1-3M checks)",
-        "Strong track record with technical founders in DevTools",
-        "Based in SF, matches geographic focus",
-        "Portfolio includes similar AI infrastructure companies"
-      ],
-      introBulletsForB: [
-        "Alex raising $2M seed for AI infrastructure platform",
-        "500 developers on platform, 20% MoM growth in Bay Area/NYC",
-        "Looking for investors with DevTools expertise",
-        "Strong technical team focused on agentic workflows for developers"
-      ]
+  // Process audio queue sequentially
+  const processAudioQueue = async () => {
+    if (audioQueueRef.current.length === 0 || !conversationId) return;
+    
+    isUploadingRef.current = true;
+    setIsTranscribing(true);
+    
+    try {
+      const blob = audioQueueRef.current.shift();
+      if (!blob) return;
+      
+      // Send to transcription Edge Function
+      await transcribeAudio(blob, conversationId);
+      
+      // Continue processing queue
+      if (audioQueueRef.current.length > 0) {
+        await processAudioQueue();
+      }
+    } catch (error) {
+      console.error('Transcription error:', error);
+      toast({
+        title: "Transcription error",
+        description: "Failed to transcribe audio chunk. Will retry with next chunk.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTranscribing(false);
+      isUploadingRef.current = false;
     }
-  ];
+  };
 
+  // Audio recorder
+  const { state: audioState, controls: audioControls } = useAudioRecorder(handleAudioData);
+
+  // Format duration for display
+  const formattedDuration = `${Math.floor(audioState.duration / 60).toString().padStart(2, '0')}:${(audioState.duration % 60).toString().padStart(2, '0')}`;
+
+  // Subscribe to realtime conversation segments
   useEffect(() => {
-    if (isRecording && !isPaused) {
-      let seconds = 0;
-      timerRef.current = setInterval(() => {
-        seconds++;
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        setDuration(`${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`);
-      }, 1000);
-    }
+    if (!conversationId) return;
 
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [isRecording, isPaused]);
-
-  const handleStartRecording = () => {
-    if (!consentChecked) return;
-    setIsRecording(true);
-    setTranscript([]);
-    setSuggestions([]);
-    setShowSummary(false);
-    console.log('Demo recording started');
-
-    demoTranscriptSegments.forEach((segment) => {
-      setTimeout(() => {
-        setTranscript(prev => [
-          ...prev,
-          {
+    const channel = supabase
+      .channel(`conversation:${conversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'conversation_segments',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const segment = payload.new;
+          setTranscript(prev => [...prev, {
             t: new Date().toISOString(),
             speaker: segment.speaker,
-            text: segment.text
-          }
-        ]);
-      }, segment.delay);
-    });
+            text: segment.text,
+          }]);
+        }
+      )
+      .subscribe();
 
-    demoSuggestionUpdates.forEach((update) => {
-      setTimeout(() => {
-        setSuggestions(update.suggestions);
-        toast({
-          title: "New match found!",
-          description: `${update.suggestions[update.suggestions.length - 1].contactName} - Score ${update.suggestions[update.suggestions.length - 1].score}`,
-        });
-      }, update.delay);
-    });
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [conversationId]);
+
+  // Periodic AI processing (every 30 seconds)
+  useEffect(() => {
+    if (!conversationId || !audioState.isRecording || audioState.isPaused) return;
+
+    const interval = setInterval(async () => {
+      const now = Date.now();
+      
+      // Extract participants every 30s
+      if (now - lastExtractTimeRef.current >= 30000 && transcript.length > 0) {
+        try {
+          await extractParticipants(conversationId);
+          lastExtractTimeRef.current = now;
+        } catch (error) {
+          console.error('Participant extraction error:', error);
+        }
+      }
+      
+      // Generate matches every 30s
+      if (now - lastMatchTimeRef.current >= 30000 && transcript.length > 0) {
+        try {
+          const matchData = await generateMatches(conversationId);
+          if (matchData.matches && matchData.matches.length > 0) {
+            // Update suggestions with new matches
+            const newSuggestions = matchData.matches.map((m: any) => ({
+              contactName: m.contact_name || 'Unknown',
+              score: m.score,
+              reasons: m.reasons || [],
+            }));
+            
+            setSuggestions(newSuggestions);
+            
+            // Toast for new high-value matches
+            const highValueMatches = newSuggestions.filter((s: Suggestion) => s.score === 3);
+            if (highValueMatches.length > 0) {
+              toast({
+                title: "New match found!",
+                description: `${highValueMatches[0].contactName} - ${highValueMatches[0].score} stars`,
+              });
+            }
+          }
+          lastMatchTimeRef.current = now;
+        } catch (error) {
+          console.error('Match generation error:', error);
+        }
+      }
+    }, 5000); // Check every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [conversationId, audioState.isRecording, audioState.isPaused, transcript.length, toast]);
+
+  const handleStartRecording = async () => {
+    if (!consentChecked) return;
+    
+    try {
+      // Create conversation in database
+      const conversation = await createConversation.mutateAsync({
+        title: `Conversation - ${new Date().toLocaleString()}`,
+        recordedAt: new Date(),
+        status: 'recording',
+        ownedByProfile: '', // Added by the hook automatically
+      } as any);
+      
+      setConversationId(conversation.id);
+      setTranscript([]);
+      setSuggestions([]);
+      lastExtractTimeRef.current = 0;
+      lastMatchTimeRef.current = 0;
+      audioQueueRef.current = [];
+      
+      // Start audio recording
+      await audioControls.startRecording();
+      
+      toast({
+        title: "Recording started",
+        description: "Your conversation is being recorded and transcribed in real-time.",
+      });
+    } catch (error) {
+      console.error('Failed to start recording:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start recording. Please check microphone permissions.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handlePause = () => {
-    setIsPaused(!isPaused);
-    console.log(isPaused ? 'Recording resumed' : 'Recording paused');
+    if (audioState.isPaused) {
+      audioControls.resumeRecording();
+    } else {
+      audioControls.pauseRecording();
+    }
   };
 
-  const handleStop = () => {
-    setIsRecording(false);
-    setIsPaused(false);
-    if (timerRef.current) clearInterval(timerRef.current);
-    if (transcriptTimerRef.current) clearInterval(transcriptTimerRef.current);
-    console.log('Recording stopped - redirecting to history');
+  const handleStop = async () => {
+    if (!conversationId) return;
     
-    toast({
-      title: "Recording saved!",
-      description: "Redirecting to history...",
-    });
+    setIsProcessing(true);
     
-    // Redirect to history page after a brief delay
-    setTimeout(() => {
-      setLocation('/history');
-    }, 800);
+    try {
+      // Stop recording and get final audio blob
+      const finalBlob = await audioControls.stopRecording();
+      
+      // Flush final audio chunk
+      if (finalBlob && finalBlob.size > 0) {
+        await transcribeAudio(finalBlob, conversationId);
+      }
+      
+      // Mark conversation as processing
+      await updateConversation.mutateAsync({
+        id: conversationId,
+        status: 'processing',
+      });
+      
+      // Process participants (duplicate detection, auto-fill, pending contacts)
+      const processResult = await processParticipants(conversationId);
+      
+      // Mark conversation as completed
+      await updateConversation.mutateAsync({
+        id: conversationId,
+        status: 'completed',
+      });
+      
+      // Show results
+      const { newContacts, updatedContacts, duplicatesFound } = processResult.results || {};
+      
+      let description = '';
+      if (newContacts && newContacts.length > 0) {
+        description += `${newContacts.length} new contact(s) added for review. `;
+      }
+      if (updatedContacts && updatedContacts.length > 0) {
+        description += `${updatedContacts.length} contact(s) updated with new information. `;
+      }
+      if (duplicatesFound && duplicatesFound.length > 0) {
+        description += `${duplicatesFound.length} duplicate(s) found.`;
+      }
+      
+      toast({
+        title: "Recording saved!",
+        description: description || "Conversation processed successfully.",
+      });
+      
+      // Redirect to history
+      setTimeout(() => {
+        setLocation('/history');
+      }, 1500);
+      
+    } catch (error) {
+      console.error('Error stopping recording:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process recording. Please try again.",
+        variant: "destructive",
+      });
+      setIsProcessing(false);
+    }
   };
 
-  const handleSendEmail = (to: string, message: string) => {
-    console.log('Sending email to:', to);
-    toast({
-      title: "Email sent!",
-      description: `Introduction email sent to ${to}`,
-    });
-  };
-
-  if (!isRecording) {
+  if (!audioState.isRecording) {
     return (
       <div className="flex items-center justify-center min-h-screen p-8">
         <div className="text-center max-w-xl">
@@ -252,199 +316,100 @@ export default function Record() {
             />
             <label
               htmlFor="consent"
-              className="text-sm cursor-pointer"
+              className="text-sm cursor-pointer select-none"
             >
-              All participants have consented to this recording
+              I have consent from all parties to record this conversation
             </label>
           </div>
 
+          {audioState.error && (
+            <Card className="p-4 mb-4 border-destructive">
+              <p className="text-sm text-destructive">{audioState.error}</p>
+            </Card>
+          )}
+
           <Button
             size="lg"
+            disabled={!consentChecked || createConversation.isPending}
             onClick={handleStartRecording}
-            disabled={!consentChecked}
-            className="w-full h-24 text-xl disabled:opacity-50 disabled:cursor-not-allowed"
             data-testid="button-start-recording"
+            className="gap-2"
           >
-            <Mic className="w-8 h-8 mr-3" />
-            Record
+            <Mic className="w-5 h-5" />
+            {createConversation.isPending ? 'Starting...' : 'Start Recording'}
           </Button>
         </div>
       </div>
     );
   }
 
-  const handleDeleteRecording = () => {
-    setShowSummary(false);
-    setTranscript([]);
-    setSuggestions([]);
-    setDuration("00:00");
-    toast({
-      title: "Recording deleted",
-      description: "The recording has been permanently deleted",
-    });
-  };
-
-  if (showSummary) {
-    return (
-      <div className="p-8">
-        <div className="mb-8">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-semibold mb-2">Demo Meeting Summary</h1>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <span>{new Date().toLocaleDateString()}</span>
-                <span>•</span>
-                <span>{duration}</span>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="text-destructive hover:text-destructive"
-                    data-testid="button-delete-recording"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete this recording?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete the recording, 
-                      transcript, and all associated match suggestions.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleDeleteRecording}
-                      className="bg-destructive hover:bg-destructive/90"
-                      data-testid="button-confirm-delete"
-                    >
-                      Delete Recording
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowSummary(false);
-                  setTranscript([]);
-                  setSuggestions([]);
-                  setDuration("00:00");
-                }}
-                data-testid="button-new-recording"
-              >
-                New Recording
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <Tabs defaultValue="summary" className="w-full">
-          <TabsList className="mb-6">
-            <TabsTrigger value="summary" data-testid="tab-summary">Summary</TabsTrigger>
-            <TabsTrigger value="transcript" data-testid="tab-transcript">Transcript</TabsTrigger>
-            <TabsTrigger value="emails" data-testid="tab-emails">
-              Intro Emails ({mockIntroMatches.length})
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="summary">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2">
-                <MeetingSummary
-                  highlights={[
-                    "Team is raising $2M seed round for AI infrastructure platform",
-                    "Current traction: 500 developers, 20% MoM growth",
-                    "Geographic focus: Bay Area and New York",
-                    "Looking for investors with DevTools experience"
-                  ]}
-                  decisions={[
-                    "Follow up with Sarah Johnson about seed investment intro",
-                    "Share deck with Michael Park by end of week"
-                  ]}
-                  actions={[
-                    "Send updated pitch deck to Alex by Friday",
-                    "Prepare investor questions document",
-                    "Research comparable DevTools valuations",
-                  ]}
-                />
-              </div>
-
-              <div>
-                <h2 className="text-xl font-semibold mb-4">Matched Contacts</h2>
-                <div className="space-y-4">
-                  {suggestions.map((suggestion, idx) => (
-                    <SuggestionCard
-                      key={idx}
-                      {...suggestion}
-                      onPromise={() => console.log('Promised', suggestion.contactName)}
-                      onMaybe={() => console.log('Maybe', suggestion.contactName)}
-                      onDismiss={() => console.log('Dismissed', suggestion.contactName)}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="transcript">
-            <div className="bg-card border border-card-border rounded-lg h-96">
-              <TranscriptView transcript={transcript} />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="emails">
-            <IntroEmailPanel 
-              matches={mockIntroMatches}
-              onSendEmail={handleSendEmail}
-            />
-          </TabsContent>
-        </Tabs>
-      </div>
-    );
-  }
-
   return (
-    <div className="h-screen flex flex-col">
+    <div className="pb-8">
       <RecordingIndicator
-        isRecording={isRecording}
-        isPaused={isPaused}
-        duration={duration}
+        isRecording={true}
+        isPaused={audioState.isPaused}
+        duration={formattedDuration}
         onPause={handlePause}
         onStop={handleStop}
       />
-      <div className="flex-1 flex mt-16 overflow-hidden">
-        <div className="flex-1 border-r border-border overflow-hidden">
-          <TranscriptView transcript={transcript} />
-        </div>
-        <div className="w-96 overflow-y-auto p-6 space-y-4 bg-card/50">
-          <div className="sticky top-0 bg-card/90 backdrop-blur-sm pb-4 border-b border-border mb-4">
-            <h2 className="text-lg font-semibold">Live Suggestions</h2>
-            <p className="text-xs text-muted-foreground mt-1">
-              Updates in real-time
+
+      <div className="mt-20 px-8">
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">Recording in Progress</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {isTranscribing && 'Transcribing audio... '}
+              {isProcessing && 'Processing conversation... '}
+              {suggestions.length > 0 && `${suggestions.length} match(es) found`}
             </p>
           </div>
-          {suggestions.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              Listening for potential matches...
-            </p>
-          )}
-          {suggestions.map((suggestion, idx) => (
-            <SuggestionCard
-              key={idx}
-              {...suggestion}
-              onPromise={() => console.log('Promised', suggestion.contactName)}
-              onMaybe={() => console.log('Maybe', suggestion.contactName)}
-              onDismiss={() => console.log('Dismissed', suggestion.contactName)}
-            />
-          ))}
         </div>
+
+        <Tabs defaultValue="transcript" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="transcript" data-testid="tab-transcript">
+              Transcript {transcript.length > 0 && `(${transcript.length})`}
+            </TabsTrigger>
+            <TabsTrigger value="matches" data-testid="tab-matches">
+              Matches {suggestions.length > 0 && `(${suggestions.length})`}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="transcript">
+            <Card className="p-0 h-96">
+              <TranscriptView transcript={transcript} />
+            </Card>
+            {transcript.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground">
+                <p>Waiting for audio transcription...</p>
+                <p className="text-sm mt-2">Speak to see the transcript appear here</p>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="matches">
+            <div className="space-y-4">
+              {suggestions.length > 0 ? (
+                suggestions.map((suggestion, idx) => (
+                  <SuggestionCard
+                    key={idx}
+                    {...suggestion}
+                    onPromise={() => console.log('Promised', suggestion.contactName)}
+                    onMaybe={() => console.log('Maybe', suggestion.contactName)}
+                    onDismiss={() => console.log('Dismissed', suggestion.contactName)}
+                  />
+                ))
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  <p>No matches found yet</p>
+                  <p className="text-sm mt-2">
+                    Continue the conversation to find relevant contacts
+                  </p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

@@ -26,6 +26,20 @@ serve(async (req) => {
 
     const { conversationId } = await req.json();
     
+    // Verify conversation ownership
+    const { data: conversation } = await supabase
+      .from('conversations')
+      .select('owned_by_profile')
+      .eq('id', conversationId)
+      .single();
+
+    if (!conversation || conversation.owned_by_profile !== user.id) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden: You do not own this conversation' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     const { data: entities } = await supabase
       .from('conversation_entities')
       .select('*')
