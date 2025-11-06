@@ -1,12 +1,35 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Mic, Users, History as HistoryIcon, TrendingUp, Calendar, Clock, MapPin, ChevronRight } from "lucide-react";
+import { Mic, Users, History as HistoryIcon, TrendingUp, Calendar, Clock, MapPin, RefreshCw } from "lucide-react";
 import { Link } from "wouter";
 import { useTodaysEvents } from "@/hooks/useUpcomingEvents";
+import { useGoogleCalendarSync } from "@/hooks/useGoogleCalendarSync";
 import { format, differenceInMinutes } from "date-fns";
+import { useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
   const { data: todaysEvents, isLoading } = useTodaysEvents();
+  const { isConnected, sync, isSyncing, syncError } = useGoogleCalendarSync();
+  const { toast } = useToast();
+
+  // Auto-sync Google Calendar on mount if connected
+  useEffect(() => {
+    if (isConnected) {
+      sync();
+    }
+  }, [isConnected]);
+
+  // Show sync error toast
+  useEffect(() => {
+    if (syncError) {
+      toast({
+        title: "Calendar Sync Failed",
+        description: syncError.message || "Please try again later.",
+        variant: "destructive",
+      });
+    }
+  }, [syncError, toast]);
   
   const stats = [
     { label: "Total Conversations", value: "12", icon: HistoryIcon },
@@ -41,10 +64,23 @@ export default function Home() {
       {/* Upcoming Meetings Section (Granola-style) */}
       {upcomingEvents.length > 0 && (
         <div className="mb-12">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Coming Up
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Coming Up
+            </h2>
+            {isConnected && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => sync()}
+                disabled={isSyncing}
+                data-testid="button-sync-calendar"
+              >
+                <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+              </Button>
+            )}
+          </div>
           <div className="space-y-3">
             {upcomingEvents.slice(0, 3).map((event) => {
               const status = getEventStatus(event.startTime);
