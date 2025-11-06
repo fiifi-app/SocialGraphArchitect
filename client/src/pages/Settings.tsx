@@ -49,10 +49,15 @@ export default function Settings() {
 
   const disconnectMutation = useMutation({
     mutationFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No session');
+
       const response = await fetch('/api/auth/google/disconnect', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user?.id }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
       });
       if (!response.ok) throw new Error('Failed to disconnect');
       return response.json();
@@ -78,8 +83,19 @@ export default function Settings() {
     await signOut();
   };
 
-  const handleConnectCalendar = () => {
-    window.location.href = `/api/auth/google/connect?userId=${user?.id}`;
+  const handleConnectCalendar = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      toast({
+        title: "Error",
+        description: "No active session. Please log in again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Redirect with Authorization header via fetch then redirect
+    window.location.href = `/api/auth/google/connect?token=${encodeURIComponent(session.access_token)}`;
   };
 
   const handleDisconnectCalendar = () => {
