@@ -267,12 +267,12 @@ Use `run_test` tool for automated UI testing.
   - **Feature Flag System**: `client/src/lib/featureFlags.ts` checks migration version from database to conditionally enable investor fields in UI
   - **RoleTag Component**: Color-coded badges for contact types (LP=blue, GP=purple, Angel=orange, FamilyOffice=green, Startup=cyan, Other=gray)
   - **Currency Formatter**: `formatCheckSizeRange()` displays check sizes in compact format ($250k-$2M, $1M+, etc.)
-  - **ContactDialog Updates (November 6, 2025 - Restructured)**: 
+  - **ContactDialog Updates (November 6, 2025 - Multi-Select Contact Types)**: 
     - **Section Ordering**: Investor Profile section moved ABOVE Company Information
-    - **Contact Type**: Changed from dropdown to toggle buttons (6 buttons: LP, GP, Angel, Family Office, Startup, Other)
-    - **Conditional Visibility**: Investor fields (Is LP, Check Sizes, Investor Notes) only show when Contact Type is GP/Angel/FamilyOffice
-    - **Auto-Derivation**: isInvestor field automatically derived from contactType (GP/Angel/FamilyOffice = true, others = false)
-    - **Removed**: "Is Investor" toggle (redundant - contactType now determines investor status)
+    - **Multi-Select Contact Types**: Converted from single-select to multi-select toggle buttons - users can now select multiple roles (e.g., LP + Angel + Family Office)
+    - **Removed Fields**: Eliminated redundant "Is LP" toggle - LP is now just another contact type tag
+    - **Conditional Visibility**: Investor fields (Check Sizes, Investor Notes) show when ANY selected type is LP/GP/Angel/FamilyOffice
+    - **Auto-Derivation**: isInvestor automatically true if contact has LP, GP, Angel, or FamilyOffice role
     - **ScrollArea Fix**: Explicit height for proper scrolling with all fields visible
   - **ContactCard Display**: Shows role tags next to contact name, displays check size range when present
   - **Schema Updates**: Contact type now includes isInvestor, contactType enum, checkSizeMin, checkSizeMax, investorNotes fields

@@ -179,7 +179,6 @@ export default function Contacts() {
                 tags={[]}
                 lastInteractionAt={contact.updatedAt.toISOString()}
                 contactType={contact.contactType || undefined}
-                isLp={contact.isLp || false}
                 isInvestor={contact.isInvestor || false}
                 checkSizeMin={contact.checkSizeMin || undefined}
                 checkSizeMax={contact.checkSizeMax || undefined}

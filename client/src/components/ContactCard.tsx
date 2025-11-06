@@ -47,8 +47,7 @@ interface ContactCardProps {
   onEdit: () => void;
   
   // Investor Profile fields
-  contactType?: 'LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'Other';
-  isLp?: boolean;
+  contactType?: ('LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'Other')[];
   isInvestor?: boolean;
   checkSizeMin?: number;
   checkSizeMax?: number;
@@ -86,7 +85,6 @@ export default function ContactCard({
   lastInteractionAt,
   onEdit,
   contactType,
-  isLp = false,
   isInvestor = false,
   checkSizeMin,
   checkSizeMax,
@@ -103,11 +101,17 @@ export default function ContactCard({
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-base font-semibold truncate" data-testid="text-contact-name">
                 {fullName}
               </h3>
-              {contactType && <RoleTag type={contactType} />}
+              {contactType && contactType.length > 0 && (
+                <div className="flex items-center gap-1 flex-wrap">
+                  {contactType.map((type) => (
+                    <RoleTag key={type} type={type} />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <div className="flex gap-1">

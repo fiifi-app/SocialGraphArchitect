@@ -36,9 +36,8 @@ export function contactFromDb(dbRow: any): Contact {
     companyOwler: dbRow.company_owler,
     youtubeVimeo: dbRow.youtube_vimeo,
     isShared: dbRow.is_shared,
-    isLp: dbRow.is_lp ?? false,
     isInvestor: dbRow.is_investor ?? false,
-    contactType: dbRow.contact_type,
+    contactType: dbRow.contact_type || [],
     checkSizeMin: dbRow.check_size_min,
     checkSizeMax: dbRow.check_size_max,
     investorNotes: dbRow.investor_notes,
@@ -83,7 +82,6 @@ export function contactToDb(contact: Partial<Contact>): any {
   if ('companyOwler' in contact) dbRow.company_owler = contact.companyOwler;
   if ('youtubeVimeo' in contact) dbRow.youtube_vimeo = contact.youtubeVimeo;
   if (contact.isShared !== undefined) dbRow.is_shared = contact.isShared;
-  if (contact.isLp !== undefined) dbRow.is_lp = contact.isLp;
   if (contact.isInvestor !== undefined) dbRow.is_investor = contact.isInvestor;
   if ('contactType' in contact) dbRow.contact_type = contact.contactType;
   if ('checkSizeMin' in contact) dbRow.check_size_min = contact.checkSizeMin;

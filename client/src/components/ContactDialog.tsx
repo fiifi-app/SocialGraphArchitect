@@ -69,9 +69,8 @@ const contactFormSchema = z.object({
   youtubeVimeo: z.string().optional(),
   
   // Investor Profile fields
-  isLp: z.boolean().default(false),
   isInvestor: z.boolean().default(false),
-  contactType: z.enum(['LP', 'GP', 'Angel', 'FamilyOffice', 'Startup', 'Other']).optional(),
+  contactType: z.array(z.enum(['LP', 'GP', 'Angel', 'FamilyOffice', 'Startup', 'Other'])).default([]),
   checkSizeMin: z.number().int().positive().optional().or(z.literal(0)),
   checkSizeMax: z.number().int().positive().optional().or(z.literal(0)),
   investorNotes: z.string().optional(),
@@ -91,9 +90,10 @@ const contactFormSchema = z.object({
 
 type ContactFormData = z.infer<typeof contactFormSchema>;
 
-// Helper function to determine if a contact type indicates an investor
-const isInvestorType = (contactType: string | undefined): boolean => {
-  return contactType === 'GP' || contactType === 'Angel' || contactType === 'FamilyOffice';
+// Helper function to determine if any contact types indicate an investor
+// LP, GP, Angel, and FamilyOffice are all capital allocators
+const hasInvestorType = (contactTypes: string[]): boolean => {
+  return contactTypes.some(type => type === 'LP' || type === 'GP' || type === 'Angel' || type === 'FamilyOffice');
 };
 
 interface ContactDialogProps {
@@ -136,9 +136,8 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
       companyCrunchbase: "",
       companyOwler: "",
       youtubeVimeo: "",
-      isLp: false,
       isInvestor: false,
-      contactType: undefined,
+      contactType: [],
       checkSizeMin: 0,
       checkSizeMax: 0,
       investorNotes: "",
@@ -171,9 +170,8 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
         companyCrunchbase: contact.companyCrunchbase || "",
         companyOwler: contact.companyOwler || "",
         youtubeVimeo: contact.youtubeVimeo || "",
-        isLp: contact.isLp || false,
         isInvestor: contact.isInvestor || false,
-        contactType: contact.contactType || undefined,
+        contactType: contact.contactType || [],
         checkSizeMin: contact.checkSizeMin || 0,
         checkSizeMax: contact.checkSizeMax || 0,
         investorNotes: contact.investorNotes || "",
@@ -202,9 +200,8 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
         companyCrunchbase: "",
         companyOwler: "",
         youtubeVimeo: "",
-        isLp: false,
         isInvestor: false,
-        contactType: undefined,
+        contactType: [],
         checkSizeMin: 0,
         checkSizeMax: 0,
         investorNotes: "",
@@ -216,7 +213,7 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
       if (name === 'contactType') {
-        const shouldBeInvestor = isInvestorType(value.contactType);
+        const shouldBeInvestor = hasInvestorType(value.contactType || []);
         form.setValue('isInvestor', shouldBeInvestor);
       }
     });
@@ -227,8 +224,8 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
     try {
       const fullName = `${data.firstName}${data.lastName ? ' ' + data.lastName : ''}`;
       
-      // Derive isInvestor from contactType to ensure consistency
-      const derivedIsInvestor = isInvestorType(data.contactType);
+      // Derive isInvestor from contactType array to ensure consistency
+      const derivedIsInvestor = hasInvestorType(data.contactType);
       
       const contactData = {
         name: fullName,
@@ -254,9 +251,8 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
         companyCrunchbase: data.companyCrunchbase || null,
         companyOwler: data.companyOwler || null,
         youtubeVimeo: data.youtubeVimeo || null,
-        isLp: data.isLp || false,
-        isInvestor: derivedIsInvestor, // Use derived value instead of form value
-        contactType: data.contactType || null,
+        isInvestor: derivedIsInvestor, // Use derived value from contact types
+        contactType: data.contactType || [],
         checkSizeMin: (data.checkSizeMin && data.checkSizeMin > 0) ? data.checkSizeMin : null,
         checkSizeMax: (data.checkSizeMax && data.checkSizeMax > 0) ? data.checkSizeMax : null,
         investorNotes: data.investorNotes || null,
@@ -551,13 +547,13 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
                   <h3 className="text-sm font-semibold mb-4">Investor Profile</h3>
                   
                   <div className="space-y-4">
-                    {/* Contact Type - Toggle Buttons */}
+                    {/* Contact Type - Multi-Select Toggle Buttons */}
                     <FormField
                       control={form.control}
                       name="contactType"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Contact Type</FormLabel>
+                          <FormLabel>Contact Type (select all that apply)</FormLabel>
                           <div className="grid grid-cols-3 gap-2">
                             {[
                               { value: 'LP', label: 'LP' },
@@ -566,49 +562,36 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
                               { value: 'FamilyOffice', label: 'Family Office' },
                               { value: 'Startup', label: 'Startup' },
                               { value: 'Other', label: 'Other' },
-                            ].map((type) => (
-                              <Button
-                                key={type.value}
-                                type="button"
-                                variant={field.value === type.value ? 'default' : 'outline'}
-                                className="toggle-elevate"
-                                onClick={() => field.onChange(type.value)}
-                                data-testid={`button-contact-type-${type.value.toLowerCase()}`}
-                              >
-                                {type.label}
-                              </Button>
-                            ))}
+                            ].map((type) => {
+                              const isSelected = field.value?.includes(type.value);
+                              return (
+                                <Button
+                                  key={type.value}
+                                  type="button"
+                                  variant={isSelected ? 'default' : 'outline'}
+                                  className="toggle-elevate"
+                                  onClick={() => {
+                                    const currentValue = field.value || [];
+                                    const newValue = isSelected
+                                      ? currentValue.filter((v: string) => v !== type.value)
+                                      : [...currentValue, type.value];
+                                    field.onChange(newValue);
+                                  }}
+                                  data-testid={`button-contact-type-${type.value.toLowerCase()}`}
+                                >
+                                  {type.label}
+                                </Button>
+                              );
+                            })}
                           </div>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
 
-                    {/* Conditional Investor Fields - Show only for GP, Angel, FamilyOffice */}
-                    {(form.watch('contactType') === 'GP' || 
-                      form.watch('contactType') === 'Angel' || 
-                      form.watch('contactType') === 'FamilyOffice') && (
+                    {/* Conditional Investor Fields - Show if ANY type is GP, Angel, or FamilyOffice */}
+                    {hasInvestorType(form.watch('contactType') || []) && (
                       <>
-                        {/* Is LP Toggle */}
-                        <FormField
-                          control={form.control}
-                          name="isLp"
-                          render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                              <div className="space-y-0.5">
-                                <FormLabel>Is LP</FormLabel>
-                              </div>
-                              <FormControl>
-                                <Switch
-                                  checked={field.value}
-                                  onCheckedChange={field.onChange}
-                                  data-testid="toggle-is-lp"
-                                />
-                              </FormControl>
-                            </FormItem>
-                          )}
-                        />
-
                         {/* Check Size Range */}
                         <div className="grid grid-cols-2 gap-4">
                           <FormField

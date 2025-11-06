@@ -60,11 +60,10 @@ export const contacts = pgTable("contacts", {
   
   isShared: boolean("is_shared").notNull().default(false),
   
-  // Contact Type & LP Status
+  // Contact Type (multi-select array)
   contactType: text("contact_type", { 
     enum: ['LP', 'GP', 'Angel', 'FamilyOffice', 'Startup', 'Other'] 
-  }),
-  isLp: boolean("is_lp").notNull().default(false),
+  }).array().default(sql`ARRAY[]::text[]`),
   isInvestor: boolean("is_investor").notNull().default(false),
   
   // Investor Profile Fields
