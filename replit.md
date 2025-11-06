@@ -192,7 +192,14 @@ Use `run_test` tool for automated UI testing.
 
 ### ✅ Completed (November 3, 2025)
 - Frontend Supabase integration
-- Authentication (Login/Signup)
+- Authentication (Login/Signup/Logout)
+- Password Reset Flow:
+  - "Forgot password?" link on Login page
+  - ForgotPassword page for email submission
+  - ResetPassword page for setting new password
+  - Supabase email verification flow with PASSWORD_RECOVERY event tracking
+  - 500ms grace period to prevent race condition false-negatives
+  - Clear error states for invalid/expired links
 - Protected routes
 - Data access hooks (Contacts, Conversations, Profile, Matches)
 - Edge Functions (4 functions created)
