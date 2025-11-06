@@ -298,8 +298,8 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col" data-testid="dialog-contact">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col" data-testid="dialog-contact">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>{isEditMode ? "Edit Contact" : "Add New Contact"}</DialogTitle>
             <DialogDescription>
               {isEditMode ? "Update contact information" : "Add a new contact to your network"}
@@ -307,8 +307,9 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
           </DialogHeader>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
-              <div className="overflow-y-auto flex-1 pr-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
+              <ScrollArea className="flex-1 pr-4">
+                <div className="pr-2">
                 <div className="space-y-4">
                   {/* Name */}
                   <div className="grid grid-cols-2 gap-4">
@@ -694,7 +695,6 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
                 </div>
               </div>
               </div>
-              </div>
 
               {/* Investor Profile Section - Feature Flagged */}
               {featureFlags?.enableInvestorFields && (
@@ -836,6 +836,8 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
                   </div>
                 </div>
               )}
+              </div>
+              </ScrollArea>
 
               <DialogFooter className="gap-2 mt-4 flex-shrink-0">
                 {isEditMode && (
