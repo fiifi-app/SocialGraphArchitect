@@ -16,6 +16,8 @@ import ConversationDetail from "@/pages/ConversationDetail";
 import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
+import ForgotPassword from "@/pages/ForgotPassword";
+import ResetPassword from "@/pages/ResetPassword";
 import { useEffect } from "react";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
@@ -44,6 +46,8 @@ function Router() {
     <Switch>
       <Route path="/login" component={Login} />
       <Route path="/signup" component={Signup} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
       <Route path="/">
         {() => <ProtectedRoute component={Home} />}
       </Route>
@@ -74,7 +78,7 @@ function AppContent() {
     "--sidebar-width": "16rem",
   };
 
-  const isAuthPage = location === "/login" || location === "/signup";
+  const isAuthPage = location === "/login" || location === "/signup" || location === "/forgot-password" || location === "/reset-password";
 
   if (isAuthPage) {
     return <Router />;
