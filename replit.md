@@ -18,7 +18,16 @@ The design draws inspiration from Granola and Linear, emphasizing high informati
 - **Contact Management:** Includes full CRUD for contacts, pagination, searching, real-time updates, toast notifications, and comprehensive CSV bulk import with validation and enrichment.
 - **Contact Enrichment:** An Edge Function uses Hunter.io and People Data Labs APIs for email verification and person enrichment, with a preview showing original vs. enriched data.
 - **Investor Profile Feature:** Incorporates an `is_investor` flag, extended contact types (GP/Angel/FamilyOffice/Startup/Other), check size ranges, and investor notes, conditionally visible based on selected contact types. A feature flag system manages the visibility of these fields based on database migration status.
-- **Conversation Workflow:** Features auto-start on consent, simplified UI, person-based conversation sections, and promise tracking with color-coded urgency.
+- **Real-Time Conversation Recording:** Production-ready implementation featuring:
+  - Browser audio capture via MediaRecorder API with 5-second chunking
+  - Real-time transcription using OpenAI Whisper API (transcribe-audio Edge Function)
+  - AI-powered participant extraction from conversations (extract-participants Edge Function)
+  - Live contact matching with 1-3 star scoring every 30 seconds (generate-matches Edge Function)
+  - Post-conversation processing with duplicate detection and auto-fill (process-participants Edge Function)
+  - Real-time Supabase subscriptions for instant transcript updates
+  - Pending contact workflow: new contacts discovered during conversations require user review/acceptance
+  - Contact status field (verified/pending) for managing discovered contacts
+  - Comprehensive security: ALL conversation-related Edge Functions enforce ownership verification to prevent cross-tenant data exposure
 
 **System Design Choices:**
 - **Security:** RLS protects all database access. Service role keys are confined to Edge Functions. API keys are secured in Supabase secrets.
