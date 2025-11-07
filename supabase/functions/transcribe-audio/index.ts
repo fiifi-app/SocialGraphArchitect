@@ -85,7 +85,7 @@ serve(async (req) => {
         .eq('conversation_id', conversationId)
         .order('timestamp_ms', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
       
       const timeOffsetMs = lastSegment?.timestamp_ms || 0;
       
