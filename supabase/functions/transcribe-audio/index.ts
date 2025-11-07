@@ -79,8 +79,9 @@ serve(async (req) => {
     // Save transcription segments to database
     if (conversationId && transcription.segments && transcription.segments.length > 0) {
       try {
-        // Get the last segment's timestamp to calculate offset
-        const { data: lastSegment, error: fetchError } = await supabaseClient
+        // Get the maximum timestamp from existing segments to calculate cumulative offset
+        // This ensures we don't create duplicate timestamps across chunks
+        const { data: maxSegment, error: fetchError } = await supabaseClient
           .from('conversation_segments')
           .select('timestamp_ms')
           .eq('conversation_id', conversationId)
@@ -89,16 +90,25 @@ serve(async (req) => {
           .maybeSingle();
         
         if (fetchError) {
-          console.error('Error fetching last segment:', fetchError);
-          throw new Error(`Failed to fetch last segment: ${fetchError.message}`);
+          console.error('Error fetching max segment:', fetchError);
+          throw new Error(`Failed to fetch max segment: ${fetchError.message}`);
         }
         
-        // Calculate the time offset based on the last segment
-        // If this is the first chunk, timeOffsetMs will be 0
-        // For subsequent chunks, we add to the previous maximum timestamp
-        const timeOffsetMs = lastSegment?.timestamp_ms || 0;
+        // Calculate cumulative offset based on the chunk's duration
+        // For the first chunk, offset is 0
+        // For subsequent chunks, we use the current max timestamp + this chunk's duration
+        // This ensures monotonically increasing timestamps without duplicates
+        let timeOffsetMs = 0;
         
-        console.log(`Time offset for this chunk: ${timeOffsetMs}ms`);
+        if (maxSegment?.timestamp_ms != null) {
+          // Add the current chunk's duration (in ms) to the previous max timestamp
+          // Use the transcription's total duration to advance the timeline
+          const chunkDurationMs = Math.floor((transcription.duration || 0) * 1000);
+          timeOffsetMs = maxSegment.timestamp_ms + chunkDurationMs;
+          console.log(`Previous max: ${maxSegment.timestamp_ms}ms, chunk duration: ${chunkDurationMs}ms, new offset: ${timeOffsetMs}ms`);
+        } else {
+          console.log('First chunk, offset: 0ms');
+        }
         
         const segments = transcription.segments.map((segment: any) => ({
           conversation_id: conversationId,
@@ -107,7 +117,7 @@ serve(async (req) => {
           timestamp_ms: Math.floor(segment.start * 1000) + timeOffsetMs,
         }));
 
-        console.log(`Inserting ${segments.length} segments`);
+        console.log(`Inserting ${segments.length} segments with offset ${timeOffsetMs}ms`);
 
         const { error: insertError } = await supabaseClient
           .from('conversation_segments')
