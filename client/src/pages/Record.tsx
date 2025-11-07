@@ -78,8 +78,12 @@ export default function Record() {
 
   // Audio chunk handler
   const handleAudioData = useCallback(async (audioBlob: Blob) => {
-    if (!conversationId) return;
+    if (!conversationId) {
+      console.log('❌ No conversationId, skipping audio');
+      return;
+    }
     
+    console.log('✅ Audio chunk received:', audioBlob.size, 'bytes');
     audioQueueRef.current.push(audioBlob);
     
     // Process queue if not already uploading
@@ -99,18 +103,23 @@ export default function Record() {
       const blob = audioQueueRef.current.shift();
       if (!blob) return;
       
+      console.log('🎤 Sending audio to transcription:', blob.size, 'bytes, conversationId:', conversationId);
+      
       // Send to transcription Edge Function
-      await transcribeAudio(blob, conversationId);
+      const result = await transcribeAudio(blob, conversationId);
+      console.log('✅ Transcription result:', result);
       
       // Continue processing queue
       if (audioQueueRef.current.length > 0) {
         await processAudioQueue();
       }
     } catch (error) {
-      console.error('Transcription error:', error);
+      console.error('❌ Transcription error DETAILS:', error);
+      console.error('❌ Error message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('❌ Full error object:', JSON.stringify(error, null, 2));
       toast({
         title: "Transcription error",
-        description: "Failed to transcribe audio chunk. Will retry with next chunk.",
+        description: error instanceof Error ? error.message : "Failed to transcribe audio chunk",
         variant: "destructive",
       });
     } finally {
