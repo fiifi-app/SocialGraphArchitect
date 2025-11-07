@@ -79,18 +79,34 @@ serve(async (req) => {
 
     // Save transcription segments to database
     if (conversationId && transcription.segments) {
+      // Get the last segment's end time to calculate offset
+      const { data: lastSegment } = await supabaseClient
+        .from('conversation_segments')
+        .select('end_time')
+        .eq('conversation_id', conversationId)
+        .order('end_time', { ascending: false })
+        .limit(1)
+        .single();
+      
+      const timeOffset = lastSegment?.end_time || 0;
+      
       const segments = transcription.segments.map((segment: any) => ({
         conversation_id: conversationId,
         speaker: segment.speaker || 'Unknown', // Speaker diarization would require additional processing
         text: segment.text,
-        start_time: segment.start,
-        end_time: segment.end,
+        start_time: segment.start + timeOffset,
+        end_time: segment.end + timeOffset,
         confidence: segment.confidence || 0,
       }));
 
-      await supabaseClient
+      const { error: insertError } = await supabaseClient
         .from('conversation_segments')
         .insert(segments);
+      
+      if (insertError) {
+        console.error('Database insert error:', insertError);
+        throw new Error(`Failed to save segments: ${insertError.message}`);
+      }
     }
 
     return new Response(
