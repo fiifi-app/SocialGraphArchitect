@@ -52,11 +52,10 @@ serve(async (req) => {
 
     // Convert audio to proper format for Whisper
     const audioBuffer = await audioFile.arrayBuffer();
-    const audioBlob = new Blob([audioBuffer], { type: 'audio/webm' });
-
-    // Create FormData for OpenAI API
+    
+    // Create FormData for OpenAI API - use the original file directly
     const openaiFormData = new FormData();
-    openaiFormData.append('file', audioBlob, 'audio.webm');
+    openaiFormData.append('file', new File([audioBuffer], 'audio.webm', { type: 'audio/webm' }));
     openaiFormData.append('model', 'whisper-1');
     openaiFormData.append('language', 'en');
     openaiFormData.append('response_format', 'verbose_json'); // Get timestamps for segments
@@ -79,24 +78,22 @@ serve(async (req) => {
 
     // Save transcription segments to database
     if (conversationId && transcription.segments) {
-      // Get the last segment's end time to calculate offset
+      // Get the last segment's timestamp to calculate offset
       const { data: lastSegment } = await supabaseClient
         .from('conversation_segments')
-        .select('end_time')
+        .select('timestamp_ms')
         .eq('conversation_id', conversationId)
-        .order('end_time', { ascending: false })
+        .order('timestamp_ms', { ascending: false })
         .limit(1)
         .single();
       
-      const timeOffset = lastSegment?.end_time || 0;
+      const timeOffsetMs = lastSegment?.timestamp_ms || 0;
       
       const segments = transcription.segments.map((segment: any) => ({
         conversation_id: conversationId,
         speaker: segment.speaker || 'Unknown', // Speaker diarization would require additional processing
         text: segment.text,
-        start_time: segment.start + timeOffset,
-        end_time: segment.end + timeOffset,
-        confidence: segment.confidence || 0,
+        timestamp_ms: Math.floor(segment.start * 1000) + timeOffsetMs, // Convert seconds to milliseconds
       }));
 
       const { error: insertError } = await supabaseClient
