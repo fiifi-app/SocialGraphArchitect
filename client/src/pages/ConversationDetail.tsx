@@ -33,11 +33,13 @@ export default function ConversationDetail() {
   const { data: matches = [], isLoading: matchesLoading } = useMatchSuggestions(conversationId);
 
   const transcript = useMemo(() => {
-    return segments.map(segment => ({
-      t: new Date(segment.startTime * 1000).toISOString(),
-      speaker: segment.speaker || 'Unknown',
-      text: segment.text,
-    }));
+    return segments
+      .filter(segment => segment.timestamp_ms != null)
+      .map(segment => ({
+        t: new Date(segment.timestamp_ms).toISOString(),
+        speaker: segment.speaker || 'Unknown',
+        text: segment.text,
+      }));
   }, [segments]);
 
   const conversationTitle = conversation?.title || 'Conversation';
