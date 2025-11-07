@@ -8,9 +8,11 @@ import { Search, Download, MessageSquare, TrendingUp, UserPlus } from "lucide-re
 import { useConversations } from "@/hooks/useConversations";
 import { useIntroductionStats } from "@/hooks/useIntroductions";
 import { useContacts } from "@/hooks/useContacts";
+import { useLocation } from "wouter";
 
 export default function History() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [, setLocation] = useLocation();
   
   const { data: conversations = [], isLoading: conversationsLoading } = useConversations();
   const { data: introStats, isLoading: introStatsLoading } = useIntroductionStats();
@@ -197,7 +199,7 @@ export default function History() {
                   endedAt={conversation.recordedAt.toISOString()}
                   participants={[]}
                   suggestionsCount={0}
-                  onView={() => console.log('View', conversation.id)}
+                  onView={() => setLocation(`/conversation/${conversation.id}`)}
                   onDelete={() => console.log('Delete', conversation.id)}
                 />
               ))}
