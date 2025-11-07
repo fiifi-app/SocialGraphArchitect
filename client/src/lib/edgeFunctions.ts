@@ -9,7 +9,11 @@ export async function transcribeAudio(audioBlob: Blob, conversationId: string) {
     body: formData,
   });
 
-  if (error) throw error;
+  if (error) {
+    console.error('🔥 Edge Function error:', error);
+    console.error('🔥 Error data:', data);
+    throw new Error(data?.error || error.message || 'Transcription failed');
+  }
   return data;
 }
 
