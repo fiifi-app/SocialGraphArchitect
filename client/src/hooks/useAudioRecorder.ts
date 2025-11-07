@@ -57,10 +57,24 @@ export function useAudioRecorder(onDataAvailable?: (audioBlob: Blob) => void) {
           if (onDataAvailable) {
             onDataAvailable(event.data);
           }
+          
+          // Restart recording to ensure each chunk is a complete webm file
+          // This is necessary because OpenAI Whisper requires complete audio files,
+          // not fragments. The first chunk has a webm header, but subsequent chunks
+          // from the same start() call are headerless fragments.
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+            mediaRecorderRef.current.stop();
+            // Start a new recording immediately to capture the next 5-second chunk
+            setTimeout(() => {
+              if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'inactive') {
+                mediaRecorderRef.current.start();
+              }
+            }, 100);
+          }
         }
       };
 
-      // Request data every 5 seconds for real-time processing
+      // Start recording - will automatically create 5-second chunks
       mediaRecorder.start(5000);
 
       // Start duration timer

@@ -53,9 +53,12 @@ serve(async (req) => {
     // Convert audio to proper format for Whisper
     const audioBuffer = await audioFile.arrayBuffer();
     
-    // Create FormData for OpenAI API - use the original file directly
+    // Create a Blob from the audio data (Deno-compatible)
+    const audioBlob = new Blob([audioBuffer], { type: 'audio/webm' });
+    
+    // Create FormData for OpenAI API
     const openaiFormData = new FormData();
-    openaiFormData.append('file', new File([audioBuffer], 'audio.webm', { type: 'audio/webm' }));
+    openaiFormData.append('file', audioBlob, 'audio.webm');
     openaiFormData.append('model', 'whisper-1');
     openaiFormData.append('language', 'en');
     openaiFormData.append('response_format', 'verbose_json'); // Get timestamps for segments
