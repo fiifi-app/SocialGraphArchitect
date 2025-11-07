@@ -77,32 +77,51 @@ serve(async (req) => {
     const transcription = await openaiResponse.json();
 
     // Save transcription segments to database
-    if (conversationId && transcription.segments) {
-      // Get the last segment's timestamp to calculate offset
-      const { data: lastSegment } = await supabaseClient
-        .from('conversation_segments')
-        .select('timestamp_ms')
-        .eq('conversation_id', conversationId)
-        .order('timestamp_ms', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      
-      const timeOffsetMs = lastSegment?.timestamp_ms || 0;
-      
-      const segments = transcription.segments.map((segment: any) => ({
-        conversation_id: conversationId,
-        speaker: segment.speaker || 'Unknown', // Speaker diarization would require additional processing
-        text: segment.text,
-        timestamp_ms: Math.floor(segment.start * 1000) + timeOffsetMs, // Convert seconds to milliseconds
-      }));
+    if (conversationId && transcription.segments && transcription.segments.length > 0) {
+      try {
+        // Get the last segment's timestamp to calculate offset
+        const { data: lastSegment, error: fetchError } = await supabaseClient
+          .from('conversation_segments')
+          .select('timestamp_ms')
+          .eq('conversation_id', conversationId)
+          .order('timestamp_ms', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (fetchError) {
+          console.error('Error fetching last segment:', fetchError);
+          throw new Error(`Failed to fetch last segment: ${fetchError.message}`);
+        }
+        
+        // Calculate the time offset based on the last segment
+        // If this is the first chunk, timeOffsetMs will be 0
+        // For subsequent chunks, we add to the previous maximum timestamp
+        const timeOffsetMs = lastSegment?.timestamp_ms || 0;
+        
+        console.log(`Time offset for this chunk: ${timeOffsetMs}ms`);
+        
+        const segments = transcription.segments.map((segment: any) => ({
+          conversation_id: conversationId,
+          speaker: segment.speaker || 'Unknown',
+          text: segment.text.trim(),
+          timestamp_ms: Math.floor(segment.start * 1000) + timeOffsetMs,
+        }));
 
-      const { error: insertError } = await supabaseClient
-        .from('conversation_segments')
-        .insert(segments);
-      
-      if (insertError) {
-        console.error('Database insert error:', insertError);
-        throw new Error(`Failed to save segments: ${insertError.message}`);
+        console.log(`Inserting ${segments.length} segments`);
+
+        const { error: insertError } = await supabaseClient
+          .from('conversation_segments')
+          .insert(segments);
+        
+        if (insertError) {
+          console.error('Database insert error:', insertError);
+          throw new Error(`DB insert failed: ${insertError.message || JSON.stringify(insertError)}`);
+        }
+        
+        console.log('Successfully inserted segments');
+      } catch (dbError) {
+        console.error('Database operation error:', dbError);
+        throw new Error(`Database error: ${dbError.message || String(dbError)}`);
       }
     }
 
