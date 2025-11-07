@@ -50,6 +50,7 @@ export default function Record() {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [calendarEvent, setCalendarEvent] = useState<CalendarEvent | null>(null);
+  const conversationIdRef = useRef<string | null>(null);
   const lastExtractTimeRef = useRef<number>(0);
   const lastMatchTimeRef = useRef<number>(0);
   const audioQueueRef = useRef<Blob[]>([]);
@@ -78,23 +79,24 @@ export default function Record() {
 
   // Audio chunk handler
   const handleAudioData = useCallback(async (audioBlob: Blob) => {
-    if (!conversationId) {
+    if (!conversationIdRef.current) {
       console.log('❌ No conversationId, skipping audio');
       return;
     }
     
-    console.log('✅ Audio chunk received:', audioBlob.size, 'bytes');
+    console.log('✅ Audio chunk received:', audioBlob.size, 'bytes', 'conversationId:', conversationIdRef.current);
     audioQueueRef.current.push(audioBlob);
     
     // Process queue if not already uploading
     if (!isUploadingRef.current) {
       await processAudioQueue();
     }
-  }, [conversationId]);
+  }, []);
 
   // Process audio queue sequentially
   const processAudioQueue = async () => {
-    if (audioQueueRef.current.length === 0 || !conversationId) return;
+    const currentConversationId = conversationIdRef.current;
+    if (audioQueueRef.current.length === 0 || !currentConversationId) return;
     
     isUploadingRef.current = true;
     setIsTranscribing(true);
@@ -103,10 +105,10 @@ export default function Record() {
       const blob = audioQueueRef.current.shift();
       if (!blob) return;
       
-      console.log('🎤 Sending audio to transcription:', blob.size, 'bytes, conversationId:', conversationId);
+      console.log('🎤 Sending audio to transcription:', blob.size, 'bytes, conversationId:', currentConversationId);
       
       // Send to transcription Edge Function
-      const result = await transcribeAudio(blob, conversationId);
+      const result = await transcribeAudio(blob, currentConversationId);
       console.log('✅ Transcription result:', result);
       
       // Continue processing queue
@@ -232,6 +234,7 @@ export default function Record() {
       
       console.log('✅ Conversation created:', conversation.id);
       setConversationId(conversation.id);
+      conversationIdRef.current = conversation.id; // Update ref immediately
       setTranscript([]);
       setSuggestions([]);
       lastExtractTimeRef.current = 0;
