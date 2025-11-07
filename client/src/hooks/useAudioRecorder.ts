@@ -53,8 +53,9 @@ export function useAudioRecorder(onDataAvailable?: (audioBlob: Blob) => void) {
         if (event.data.size > 0) {
           chunksRef.current.push(event.data);
           
-          // Send chunk for processing if callback provided
-          if (onDataAvailable) {
+          // Only send chunks that are large enough (> 10KB) to avoid tiny fragments
+          // This filters out the small chunks created during recorder restart
+          if (onDataAvailable && event.data.size > 10000) {
             onDataAvailable(event.data);
           }
           
@@ -67,9 +68,9 @@ export function useAudioRecorder(onDataAvailable?: (audioBlob: Blob) => void) {
             // Start a new recording immediately to capture the next 5-second chunk
             setTimeout(() => {
               if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'inactive') {
-                mediaRecorderRef.current.start();
+                mediaRecorderRef.current.start(5000);
               }
-            }, 100);
+            }, 10);
           }
         }
       };
