@@ -218,7 +218,10 @@ export default function Record() {
     if (!consentChecked) return;
     
     try {
+      console.log('🎬 Starting recording...');
+      
       // Create conversation in database
+      console.log('📝 Creating conversation...');
       const conversation = await createConversation.mutateAsync({
         title: calendarEvent ? calendarEvent.title : `Conversation - ${new Date().toLocaleString()}`,
         recordedAt: new Date(),
@@ -227,6 +230,7 @@ export default function Record() {
         ownedByProfile: '', // Added by the hook automatically
       } as any);
       
+      console.log('✅ Conversation created:', conversation.id);
       setConversationId(conversation.id);
       setTranscript([]);
       setSuggestions([]);
@@ -235,6 +239,7 @@ export default function Record() {
       audioQueueRef.current = [];
       
       // Start audio recording
+      console.log('🎤 Starting audio recorder...');
       await audioControls.startRecording();
       
       toast({
@@ -242,10 +247,12 @@ export default function Record() {
         description: "Your conversation is being recorded and transcribed in real-time.",
       });
     } catch (error) {
-      console.error('Failed to start recording:', error);
+      console.error('❌ Failed to start recording - FULL ERROR:', error);
+      console.error('❌ Error message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack');
       toast({
         title: "Error",
-        description: "Failed to start recording. Please check microphone permissions.",
+        description: error instanceof Error ? error.message : "Failed to start recording",
         variant: "destructive",
       });
     }
