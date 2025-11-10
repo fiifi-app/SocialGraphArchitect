@@ -83,13 +83,24 @@ Deno.serve(async (req) => {
         model: 'gpt-3.5-turbo',
         messages: [{
           role: 'system',
-          content: `Extract investment entities AND person names from this conversation. Return a JSON array with objects containing:
+          content: `Extract investment entities AND person names from this VC/investor conversation. Return a JSON array with objects containing:
           - entity_type: one of ["sector", "stage", "check_size", "geo", "persona", "intent", "person_name"]
           - value: the extracted value
           - confidence: 0.0-1.0 confidence score
           - context_snippet: the relevant quote from the conversation
           
-          IMPORTANT: When someone mentions a person's name in context of being a good match/intro (e.g., "Matt Hooper would be a good match" or "I think Vance Weber could help"), extract it with entity_type "person_name".
+          CRITICAL DISTINCTION:
+          - "person_name": Use when a SPECIFIC PERSON'S ACTUAL NAME is mentioned (e.g., "Matt Hooper", "Vance Weber", "Susan Schofer")
+          - "persona": Use ONLY for TYPES/CATEGORIES of people (e.g., "founders", "enterprise buyers", "technical CTOs")
+          
+          Examples of "person_name" (use this type!):
+          - "Matt Hooper would be a good match" → entity_type: "person_name", value: "Matt Hooper"
+          - "I think Vance Weber could help" → entity_type: "person_name", value: "Vance Weber"
+          - "Susan Schofer from SOSV" → entity_type: "person_name", value: "Susan Schofer"
+          
+          Examples of "persona" (different!):
+          - "looking for technical founders" → entity_type: "persona", value: "technical founders"
+          - "enterprise buyers" → entity_type: "persona", value: "enterprise buyers"
           
           Example output:
           [
@@ -100,16 +111,16 @@ Deno.serve(async (req) => {
               "context_snippet": "It's a B2B SaaS startup"
             },
             {
-              "entity_type": "stage",
-              "value": "pre-seed",
-              "confidence": 0.9,
-              "context_snippet": "looking for pre-seed companies"
-            },
-            {
               "entity_type": "person_name",
               "value": "Matt Hooper",
               "confidence": 0.95,
-              "context_snippet": "Matt Hooper would be a good match"
+              "context_snippet": "good match for Matt Hooper"
+            },
+            {
+              "entity_type": "person_name",
+              "value": "Vance Weber",
+              "confidence": 0.95,
+              "context_snippet": "Vance is on the other side"
             }
           ]`
         }, {
