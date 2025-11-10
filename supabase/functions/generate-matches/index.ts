@@ -80,11 +80,42 @@ Deno.serve(async (req) => {
 
     console.log('Entity summary:', entitySummary);
     console.log('Person names mentioned:', personNames);
+    console.log('Total contacts to search:', contacts.length);
 
-    // Direct name matches - find contacts whose names were mentioned
-    const nameMatches = contacts.filter(c => 
-      personNames.some(name => c.name?.toLowerCase().includes(name) || name.includes(c.name?.toLowerCase()))
-    ).map(c => ({
+    // Enhanced name matching - handle first/last name variations
+    const nameMatches = contacts.filter(c => {
+      if (!c.name) return false;
+      
+      const contactNameLower = c.name.toLowerCase();
+      
+      return personNames.some(mentionedName => {
+        // Try exact match first
+        if (contactNameLower.includes(mentionedName) || mentionedName.includes(contactNameLower)) {
+          return true;
+        }
+        
+        // Split into first/last name and try matching both parts
+        const mentionedParts = mentionedName.split(/\s+/).filter(p => p.length > 0);
+        const contactParts = contactNameLower.split(/\s+/).filter(p => p.length > 0);
+        
+        // If we have at least 2 parts (first + last), check if both exist in contact name
+        if (mentionedParts.length >= 2) {
+          const firstName = mentionedParts[0];
+          const lastName = mentionedParts[mentionedParts.length - 1];
+          
+          // Check if both first and last name appear in the contact name
+          const hasFirstName = contactParts.some(part => part.includes(firstName) || firstName.includes(part));
+          const hasLastName = contactParts.some(part => part.includes(lastName) || lastName.includes(part));
+          
+          if (hasFirstName && hasLastName) {
+            console.log(`✅ Name match: "${mentionedName}" matched with "${c.name}"`);
+            return true;
+          }
+        }
+        
+        return false;
+      });
+    }).map(c => ({
       contact_id: c.id,
       contact_name: c.name,
       score: 3, // Person mentioned by name = 3 stars
@@ -93,6 +124,9 @@ Deno.serve(async (req) => {
     }));
 
     console.log('Name matches found:', nameMatches.length);
+    if (nameMatches.length > 0) {
+      console.log('Matched contacts:', nameMatches.map(m => m.contact_name).join(', '));
+    }
 
     // Only call OpenAI if there are other entities to match
     let aiMatches: any[] = [];
