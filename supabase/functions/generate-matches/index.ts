@@ -60,13 +60,36 @@ serve(async (req) => {
       );
     }
 
-    const entitySummary = entities?.reduce((acc, e) => {
+    // Separate person names from other entities
+    const personNames = entities?.filter(e => e.entity_type === 'person_name').map(e => e.value.toLowerCase()) || [];
+    const otherEntities = entities?.filter(e => e.entity_type !== 'person_name') || [];
+    
+    const entitySummary = otherEntities.reduce((acc, e) => {
       if (!acc[e.entity_type]) acc[e.entity_type] = [];
       acc[e.entity_type].push(e.value);
       return acc;
-    }, {} as Record<string, string[]>) || {};
+    }, {} as Record<string, string[]>);
 
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    console.log('Entity summary:', entitySummary);
+    console.log('Person names mentioned:', personNames);
+
+    // Direct name matches - find contacts whose names were mentioned
+    const nameMatches = contacts.filter(c => 
+      personNames.some(name => c.name?.toLowerCase().includes(name) || name.includes(c.name?.toLowerCase()))
+    ).map(c => ({
+      contact_id: c.id,
+      contact_name: c.name,
+      score: 3, // Person mentioned by name = 3 stars
+      reasons: ['Mentioned by name in conversation'],
+      justification: `${c.name} was specifically mentioned as a potential match during the conversation.`,
+    }));
+
+    console.log('Name matches found:', nameMatches.length);
+
+    // Only call OpenAI if there are other entities to match
+    let aiMatches: any[] = [];
+    if (Object.keys(entitySummary).length > 0) {
+      const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
@@ -116,13 +139,66 @@ serve(async (req) => {
       }),
     });
 
-    const openaiData = await openaiResponse.json();
-    const matches = JSON.parse(openaiData.choices[0].message.content);
+      const openaiData = await openaiResponse.json();
+      console.log('OpenAI response:', JSON.stringify(openaiData));
+      
+      if (!openaiData.choices || !openaiData.choices[0]) {
+        console.error('Invalid OpenAI response:', openaiData);
+        aiMatches = [];
+      } else {
+        let content = openaiData.choices[0].message.content;
+        console.log('OpenAI content:', content);
+        
+        // Remove code blocks if present
+        if (content.includes('```json')) {
+          content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+        } else if (content.includes('```')) {
+          content = content.replace(/```\n?/g, '');
+        }
+        
+        try {
+          aiMatches = JSON.parse(content.trim());
+          console.log('AI matches parsed:', aiMatches.length);
+          
+          // Add contact names to AI matches
+          aiMatches = aiMatches.map((m: any) => {
+            const contact = contacts.find(c => c.id === m.contact_id);
+            return {
+              ...m,
+              contact_name: contact?.name || 'Unknown',
+            };
+          });
+        } catch (parseError) {
+          console.error('Failed to parse AI matches:', parseError);
+          aiMatches = [];
+        }
+      }
+    }
     
-    const { data: insertedMatches } = await supabase
+    // Merge name matches and AI matches, removing duplicates
+    const allMatches = [...nameMatches];
+    const nameMatchIds = new Set(nameMatches.map(m => m.contact_id));
+    
+    for (const aiMatch of aiMatches) {
+      if (!nameMatchIds.has(aiMatch.contact_id)) {
+        allMatches.push(aiMatch);
+      }
+    }
+    
+    console.log('Total matches:', allMatches.length, '(name:', nameMatches.length, ', AI:', aiMatches.length, ')');
+    
+    if (allMatches.length === 0) {
+      console.log('No matches found');
+      return new Response(
+        JSON.stringify({ matches: [] }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const { data: insertedMatches, error: insertError } = await supabase
       .from('match_suggestions')
       .insert(
-        matches.map((m: any) => ({
+        allMatches.map((m: any) => ({
           conversation_id: conversationId,
           contact_id: m.contact_id,
           score: m.score,
@@ -133,13 +209,21 @@ serve(async (req) => {
       )
       .select();
     
+    if (insertError) {
+      console.error('Insert error:', insertError);
+      throw insertError;
+    }
+    
+    console.log('Inserted matches:', insertedMatches?.length || 0);
+    
     return new Response(
       JSON.stringify({ matches: insertedMatches }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
+    console.error('Generate matches error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || String(error) }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

@@ -62,19 +62,33 @@ serve(async (req) => {
         model: 'gpt-4',
         messages: [{
           role: 'system',
-          content: `Extract investment entities from this conversation. Return a JSON array with objects containing:
-          - entity_type: one of ["sector", "stage", "check_size", "geo", "persona", "intent"]
+          content: `Extract investment entities AND person names from this conversation. Return a JSON array with objects containing:
+          - entity_type: one of ["sector", "stage", "check_size", "geo", "persona", "intent", "person_name"]
           - value: the extracted value
           - confidence: 0.0-1.0 confidence score
           - context_snippet: the relevant quote from the conversation
+          
+          IMPORTANT: When someone mentions a person's name in context of being a good match/intro (e.g., "Matt Hooper would be a good match" or "I think Vance Weber could help"), extract it with entity_type "person_name".
           
           Example output:
           [
             {
               "entity_type": "sector",
-              "value": "FinTech",
+              "value": "B2B SaaS",
               "confidence": 0.95,
-              "context_snippet": "looking for FinTech companies"
+              "context_snippet": "It's a B2B SaaS startup"
+            },
+            {
+              "entity_type": "stage",
+              "value": "pre-seed",
+              "confidence": 0.9,
+              "context_snippet": "looking for pre-seed companies"
+            },
+            {
+              "entity_type": "person_name",
+              "value": "Matt Hooper",
+              "confidence": 0.95,
+              "context_snippet": "Matt Hooper would be a good match"
             }
           ]`
         }, {
@@ -86,9 +100,34 @@ serve(async (req) => {
     });
 
     const openaiData = await openaiResponse.json();
-    const entities = JSON.parse(openaiData.choices[0].message.content);
+    console.log('OpenAI response:', JSON.stringify(openaiData));
     
-    const { data: insertedEntities } = await supabase
+    if (!openaiData.choices || !openaiData.choices[0]) {
+      throw new Error('Invalid OpenAI response: ' + JSON.stringify(openaiData));
+    }
+    
+    let content = openaiData.choices[0].message.content;
+    console.log('OpenAI content:', content);
+    
+    // Remove code blocks if present
+    if (content.includes('```json')) {
+      content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+    } else if (content.includes('```')) {
+      content = content.replace(/```\n?/g, '');
+    }
+    
+    const entities = JSON.parse(content.trim());
+    console.log('Parsed entities:', JSON.stringify(entities));
+    
+    if (!Array.isArray(entities) || entities.length === 0) {
+      console.log('No entities found');
+      return new Response(
+        JSON.stringify({ entities: [] }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const { data: insertedEntities, error: insertError } = await supabase
       .from('conversation_entities')
       .insert(
         entities.map((e: any) => ({
@@ -101,13 +140,21 @@ serve(async (req) => {
       )
       .select();
     
+    if (insertError) {
+      console.error('Insert error:', insertError);
+      throw insertError;
+    }
+    
+    console.log('Inserted entities:', insertedEntities?.length || 0);
+    
     return new Response(
       JSON.stringify({ entities: insertedEntities }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
+    console.error('Extract entities error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || String(error) }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
