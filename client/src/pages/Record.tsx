@@ -189,12 +189,16 @@ export default function Record() {
         try {
           // First extract entities from the conversation
           console.log('🔍 Extracting entities from conversation...');
-          await extractEntities(conversationId);
+          const entityData = await extractEntities(conversationId);
+          console.log('✅ Entities extracted:', entityData);
           
           // Then generate matches based on extracted entities
           console.log('🎯 Generating matches...');
           const matchData = await generateMatches(conversationId);
+          console.log('✅ Match generation response:', matchData);
+          
           if (matchData.matches && matchData.matches.length > 0) {
+            console.log(`🎉 Found ${matchData.matches.length} matches!`);
             // Update suggestions with new matches
             const newSuggestions = matchData.matches.map((m: any) => ({
               contactName: m.contact_name || 'Unknown',
@@ -212,10 +216,13 @@ export default function Record() {
                 description: `${highValueMatches[0].contactName} - ${highValueMatches[0].score} stars`,
               });
             }
+          } else {
+            console.log('⚠️ No matches found');
           }
           lastMatchTimeRef.current = now;
         } catch (error) {
-          console.error('Match generation error:', error);
+          console.error('❌ Match generation error:', error);
+          console.error('Error details:', JSON.stringify(error, null, 2));
         }
       }
     }, 5000); // Check every 5 seconds
