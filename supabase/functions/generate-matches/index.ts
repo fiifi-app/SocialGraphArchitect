@@ -238,7 +238,17 @@ Deno.serve(async (req) => {
           status: 'pending',
         }))
       )
-      .select();
+      .select(`
+        id,
+        conversation_id,
+        contact_id,
+        score,
+        reasons,
+        justification,
+        status,
+        created_at,
+        contacts:contact_id ( name )
+      `);
     
     if (insertError) {
       console.error('Insert error:', insertError);
@@ -247,8 +257,14 @@ Deno.serve(async (req) => {
     
     console.log('Inserted matches:', insertedMatches?.length || 0);
     
+    // Flatten nested contact names
+    const matchesWithNames = insertedMatches?.map((m: any) => ({
+      ...m,
+      contact_name: m.contacts?.name ?? null
+    })) || [];
+    
     return new Response(
-      JSON.stringify({ matches: insertedMatches }),
+      JSON.stringify({ matches: matchesWithNames }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
