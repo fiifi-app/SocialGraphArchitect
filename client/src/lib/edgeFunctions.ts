@@ -49,7 +49,11 @@ export async function extractEntities(conversationId: string) {
     body: { conversationId }
   });
   
-  if (error) throw error;
+  if (error) {
+    console.error('❌ Extract entities error:', error);
+    console.error('❌ Error data:', data);
+    throw error;
+  }
   return data;
 }
 
@@ -58,7 +62,11 @@ export async function generateMatches(conversationId: string) {
     body: { conversationId }
   });
   
-  if (error) throw error;
+  if (error) {
+    console.error('❌ Generate matches error:', error);
+    console.error('❌ Error data:', data);
+    throw error;
+  }
   return data;
 }
 
