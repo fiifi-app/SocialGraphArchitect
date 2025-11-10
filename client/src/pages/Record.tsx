@@ -19,6 +19,7 @@ import { useMatchSuggestions } from "@/hooks/useMatches";
 import { 
   transcribeAudio,
   extractParticipants,
+  extractEntities,
   generateMatches,
   processParticipants 
 } from "@/lib/edgeFunctions";
@@ -186,6 +187,12 @@ export default function Record() {
       // Generate matches every 30s
       if (now - lastMatchTimeRef.current >= 30000 && transcript.length > 0) {
         try {
+          // First extract entities from the conversation
+          console.log('🔍 Extracting entities from conversation...');
+          await extractEntities(conversationId);
+          
+          // Then generate matches based on extracted entities
+          console.log('🎯 Generating matches...');
           const matchData = await generateMatches(conversationId);
           if (matchData.matches && matchData.matches.length > 0) {
             // Update suggestions with new matches
