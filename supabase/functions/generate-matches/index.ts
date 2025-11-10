@@ -77,18 +77,28 @@ serve(async (req) => {
         messages: [{
           role: 'system',
           content: `You are a relationship matching engine for VCs and investors. 
-          Score each contact (1-3 stars) based on how well their thesis matches the conversation entities.
+          Score each contact based on how well their thesis matches the conversation entities.
           
-          Scoring:
-          - 3 stars: Strong match (3+ entity overlaps)
-          - 2 stars: Medium match (2 entity overlaps)
-          - 1 star: Weak match (1 entity overlap)
+          IMPORTANT: Partial matches are valuable! Contacts don't need to match ALL criteria.
+          Even if only one field matches (e.g., just "pre-seed" stage), include it as a match.
           
-          Return JSON array with:
+          Scoring guidelines:
+          - 3 stars: Strong match (3+ overlapping criteria OR perfect fit for key criteria)
+          - 2 stars: Medium match (2 overlapping criteria OR good fit on important criteria)
+          - 1 star: Weak match (1 overlapping criterion OR relevant but not perfect fit)
+          
+          Match on ANY of these:
+          - Investment stage (pre-seed, seed, Series A, etc.)
+          - Sector/vertical (B2B SaaS, fintech, healthcare, AI, etc.)
+          - Check size ($1M, $5M, etc.)
+          - Geography (SF Bay Area, NYC, remote, etc.)
+          - Persona type (GP, angel, family office, etc.)
+          
+          Return JSON array (include ALL matches, even 1-star):
           - contact_id: string
           - score: number (1-3)
-          - reasons: string[] (matched entities)
-          - justification: string (why this match makes sense)
+          - reasons: string[] (what matched, e.g., ["stage: pre-seed", "sector: B2B SaaS"])
+          - justification: string (brief explanation why this is a good intro)
           `
         }, {
           role: 'user',
