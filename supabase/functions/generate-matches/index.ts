@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
@@ -6,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -94,14 +93,23 @@ serve(async (req) => {
         throw new Error('OPENAI_API_KEY not configured');
       }
 
-      const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      // Limit contacts to 100 to avoid payload size issues and timeout
+      const limitedContacts = contacts.slice(0, 100);
+      console.log(`Processing ${limitedContacts.length} contacts for matching`);
+
+      // Wrap OpenAI call in 25-second timeout
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('OpenAI request timed out after 25s')), 25000)
+      );
+
+      const openaiPromise = fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-3.5-turbo',
         messages: [{
           role: 'system',
           content: `You are a relationship matching engine for VCs and investors. 
@@ -132,7 +140,7 @@ serve(async (req) => {
           role: 'user',
           content: JSON.stringify({
             entities: entitySummary,
-            contacts: contacts.map(c => ({
+            contacts: limitedContacts.map(c => ({
               id: c.id,
               name: c.name,
               company: c.company,
@@ -143,6 +151,8 @@ serve(async (req) => {
         temperature: 0.5,
       }),
     });
+
+      const openaiResponse = await Promise.race([openaiPromise, timeoutPromise]) as Response;
 
       if (!openaiResponse.ok) {
         const errorText = await openaiResponse.text();

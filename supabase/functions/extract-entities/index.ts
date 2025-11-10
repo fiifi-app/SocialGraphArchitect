@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
@@ -6,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -50,21 +49,29 @@ serve(async (req) => {
       throw new Error('No conversation segments found');
     }
 
-    const transcript = segments.map(s => s.text).join('\n');
+    // Limit to last 30 segments (about 2-3 minutes) to avoid timeout
+    const recentSegments = segments.slice(-30);
+    const transcript = recentSegments.map(s => s.text).join('\n');
+    console.log(`Processing ${recentSegments.length} segments (${transcript.length} chars)`);
     
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openaiApiKey) {
       throw new Error('OPENAI_API_KEY not configured');
     }
 
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Wrap OpenAI call in 25-second timeout to prevent edge function timeout
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('OpenAI request timed out after 25s')), 25000)
+    );
+
+    const openaiPromise = fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-3.5-turbo',
         messages: [{
           role: 'system',
           content: `Extract investment entities AND person names from this conversation. Return a JSON array with objects containing:
@@ -103,6 +110,8 @@ serve(async (req) => {
         temperature: 0.3,
       }),
     });
+
+    const openaiResponse = await Promise.race([openaiPromise, timeoutPromise]) as Response;
 
     if (!openaiResponse.ok) {
       const errorText = await openaiResponse.text();
@@ -145,7 +154,7 @@ serve(async (req) => {
           conversation_id: conversationId,
           entity_type: e.entity_type,
           value: e.value,
-          confidence: e.confidence.toString(),
+          confidence: (e.confidence != null ? e.confidence : 0.5).toString(),
           context_snippet: e.context_snippet,
         }))
       )
