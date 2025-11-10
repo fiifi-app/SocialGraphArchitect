@@ -12,21 +12,29 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get('Authorization')!;
-    const supabase = createClient(
+    
+    // User client for auth and ownership verification
+    const supabaseUser = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: authHeader } } }
     );
     
-    const { data: { user } } = await supabase.auth.getUser();
+    // Service role client for bypassing RLS when inserting
+    const supabaseService = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+    
+    const { data: { user } } = await supabaseUser.auth.getUser();
     if (!user) {
       throw new Error('Unauthorized');
     }
 
     const { conversationId } = await req.json();
     
-    // Verify conversation ownership
-    const { data: conversation } = await supabase
+    // Verify conversation ownership using user client
+    const { data: conversation } = await supabaseUser
       .from('conversations')
       .select('owned_by_profile')
       .eq('id', conversationId)
@@ -39,7 +47,8 @@ Deno.serve(async (req) => {
       );
     }
     
-    const { data: segments } = await supabase
+    // Use service role to read segments (bypasses RLS)
+    const { data: segments } = await supabaseService
       .from('conversation_segments')
       .select('*')
       .eq('conversation_id', conversationId)
@@ -147,7 +156,8 @@ Deno.serve(async (req) => {
       );
     }
     
-    const { data: insertedEntities, error: insertError } = await supabase
+    // Use service role client to insert entities (bypasses RLS)
+    const { data: insertedEntities, error: insertError } = await supabaseService
       .from('conversation_entities')
       .insert(
         entities.map((e: any) => ({
