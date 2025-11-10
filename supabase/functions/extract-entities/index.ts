@@ -52,10 +52,15 @@ serve(async (req) => {
 
     const transcript = segments.map(s => s.text).join('\n');
     
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openaiApiKey) {
+      throw new Error('OPENAI_API_KEY not configured');
+    }
+
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Authorization': `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -98,6 +103,12 @@ serve(async (req) => {
         temperature: 0.3,
       }),
     });
+
+    if (!openaiResponse.ok) {
+      const errorText = await openaiResponse.text();
+      console.error('OpenAI API error:', openaiResponse.status, errorText);
+      throw new Error(`OpenAI API failed: ${openaiResponse.status} - ${errorText}`);
+    }
 
     const openaiData = await openaiResponse.json();
     console.log('OpenAI response:', JSON.stringify(openaiData));
