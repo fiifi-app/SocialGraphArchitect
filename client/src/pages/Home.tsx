@@ -1,16 +1,21 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Mic, Users, History as HistoryIcon, TrendingUp, Calendar, Clock, MapPin, RefreshCw } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Mic, Users, History as HistoryIcon, TrendingUp, Calendar, Clock, MapPin, RefreshCw, MessageSquare } from "lucide-react";
 import { Link } from "wouter";
 import { useTodaysEvents } from "@/hooks/useUpcomingEvents";
 import { useGoogleCalendarSync } from "@/hooks/useGoogleCalendarSync";
+import { useConversations } from "@/hooks/useConversations";
+import { useIntroductionStats } from "@/hooks/useIntroductions";
 import { format, differenceInMinutes } from "date-fns";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
   const { data: todaysEvents, isLoading } = useTodaysEvents();
   const { isConnected, sync, isSyncing, syncError } = useGoogleCalendarSync();
+  const { data: conversations = [], isLoading: conversationsLoading } = useConversations();
+  const { data: introStats, isLoading: introStatsLoading } = useIntroductionStats();
   const { toast } = useToast();
 
   // Auto-sync Google Calendar on mount if connected
@@ -31,11 +36,28 @@ export default function Home() {
     }
   }, [syncError, toast]);
   
-  const stats = [
-    { label: "Total Conversations", value: "12", icon: HistoryIcon },
-    { label: "Active Contacts", value: "47", icon: Users },
-    { label: "Intros Made", value: "23", icon: TrendingUp },
-  ];
+  const stats = useMemo(() => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const totalConversations = conversations.length;
+    const conversationsToday = conversations.filter(c => 
+      c.recordedAt && !Number.isNaN(c.recordedAt.getTime()) && c.recordedAt >= todayStart
+    ).length;
+    const conversationsThisWeek = conversations.filter(c => 
+      c.recordedAt && !Number.isNaN(c.recordedAt.getTime()) && c.recordedAt >= weekStart
+    ).length;
+
+    return {
+      conversations: {
+        total: totalConversations,
+        today: conversationsToday,
+        thisWeek: conversationsThisWeek,
+      },
+      intros: introStats || { total: 0, today: 0, thisWeek: 0 },
+    };
+  }, [conversations, introStats]);
 
   const upcomingEvents = (todaysEvents || []).filter(event => {
     const now = new Date();
@@ -150,18 +172,64 @@ export default function Home() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        {stats.map((stat, idx) => (
-          <Card key={idx} className="p-6" data-testid={`stat-card-${idx}`}>
-            <div className="flex items-center gap-3 mb-2">
-              <stat.icon className="w-5 h-5 text-primary" />
-              <span className="text-sm text-muted-foreground">{stat.label}</span>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+        <Card className="p-6" data-testid="stat-card-conversations">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-md bg-chart-1/20">
+              <MessageSquare className="w-5 h-5 text-chart-1" />
             </div>
-            <div className="text-3xl font-semibold" data-testid={`stat-value-${idx}`}>
-              {stat.value}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-muted-foreground mb-1">Total Conversations</p>
+              <p className="text-3xl font-semibold mb-2" data-testid="text-total-conversations">
+                {conversationsLoading ? "..." : stats.conversations.total}
+              </p>
+              <Separator className="my-2" />
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <div className="flex items-center justify-between">
+                  <span>Today</span>
+                  <span className="font-medium text-foreground" data-testid="text-conversations-today">
+                    {conversationsLoading ? "..." : stats.conversations.today}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>This Week</span>
+                  <span className="font-medium text-foreground" data-testid="text-conversations-week">
+                    {conversationsLoading ? "..." : stats.conversations.thisWeek}
+                  </span>
+                </div>
+              </div>
             </div>
-          </Card>
-        ))}
+          </div>
+        </Card>
+
+        <Card className="p-6" data-testid="stat-card-intros">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-md bg-chart-2/20">
+              <TrendingUp className="w-5 h-5 text-chart-2" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-muted-foreground mb-1">Intros Made</p>
+              <p className="text-3xl font-semibold mb-2" data-testid="text-intros-made">
+                {introStatsLoading ? "..." : stats.intros.total}
+              </p>
+              <Separator className="my-2" />
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <div className="flex items-center justify-between">
+                  <span>Today</span>
+                  <span className="font-medium text-foreground" data-testid="text-intros-today">
+                    {introStatsLoading ? "..." : stats.intros.today}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>This Week</span>
+                  <span className="font-medium text-foreground" data-testid="text-intros-week">
+                    {introStatsLoading ? "..." : stats.intros.thisWeek}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
       </div>
 
       <div className="space-y-4">
