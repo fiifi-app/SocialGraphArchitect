@@ -55,9 +55,14 @@ export default function HomeNew() {
 
   const formatDateHeader = (dateStr: string) => {
     const date = new Date(dateStr);
-    if (isToday(date)) return "Today";
-    if (isYesterday(date)) return "Yesterday";
-    return format(date, "EEE dd MMM");
+    return format(date, "E dd MMM");
+  };
+
+  const truncateTitle = (title: string | null) => {
+    if (!title) return 'Untitled Conversation';
+    const words = title.trim().split(/\s+/);
+    if (words.length <= 5) return title;
+    return words.slice(0, 5).join(' ') + '...';
   };
 
   const getConversationStats = (conversationId: string) => {
@@ -155,8 +160,8 @@ export default function HomeNew() {
                         >
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold mb-2 truncate">
-                                {conversation.title || 'Untitled Conversation'}
+                              <h4 className="font-semibold mb-2">
+                                {truncateTitle(conversation.title)}
                               </h4>
                               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                 <div className="flex items-center gap-1.5">
