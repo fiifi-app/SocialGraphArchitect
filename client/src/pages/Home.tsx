@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Plus, Calendar, Clock, Mic } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Plus, Calendar, MessageSquare, TrendingUp, Clock } from "lucide-react";
 import { useLocation } from "wouter";
 import { useTodaysEvents } from "@/hooks/useUpcomingEvents";
 import { useConversations } from "@/hooks/useConversations";
@@ -17,6 +18,17 @@ export default function HomeNew() {
   
   const { data: todaysEvents, isLoading: eventsLoading } = useTodaysEvents();
   const { data: conversations = [], isLoading: conversationsLoading } = useConversations();
+  
+  const { data: allMatches = [] } = useQuery({
+    queryKey: ['/api/matches/all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('match_suggestions')
+        .select('id, conversation_id, status');
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const upcomingEvents = (todaysEvents || []).filter(event => {
     const now = new Date();
@@ -43,15 +55,19 @@ export default function HomeNew() {
 
   const formatDateHeader = (dateStr: string) => {
     const date = new Date(dateStr);
-    if (isToday(date)) return "Earlier today";
-    return format(date, "E dd MMM");
+    if (isToday(date)) return "Today";
+    if (isYesterday(date)) return "Yesterday";
+    return format(date, "EEE dd MMM");
   };
 
-  const truncateTitle = (title: string | null) => {
-    if (!title) return 'Untitled Conversation';
-    const words = title.trim().split(/\s+/);
-    if (words.length <= 5) return title;
-    return words.slice(0, 5).join(' ') + '...';
+  const getConversationStats = (conversationId: string) => {
+    const conversationMatches = allMatches.filter(m => m.conversation_id === conversationId);
+    const introsOffered = conversationMatches.length;
+    const introsMade = conversationMatches.filter(m => 
+      m.status === 'accepted' || m.status === 'intro_made'
+    ).length;
+    
+    return { introsOffered, introsMade };
   };
 
   return (
@@ -129,6 +145,7 @@ export default function HomeNew() {
                   </h3>
                   <div className="space-y-3">
                     {convs.map((conversation) => {
+                      const stats = getConversationStats(conversation.id);
                       return (
                         <Card
                           key={conversation.id}
@@ -136,19 +153,25 @@ export default function HomeNew() {
                           onClick={() => setLocation(`/conversation/${conversation.id}`)}
                           data-testid={`card-conversation-${conversation.id}`}
                         >
-                          <div className="flex items-start gap-4">
-                            <div className="flex-shrink-0">
-                              <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center">
-                                <Mic className="w-6 h-6 text-muted-foreground" />
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold mb-2 truncate">
+                                {conversation.title || 'Untitled Conversation'}
+                              </h4>
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                <div className="flex items-center gap-1.5">
+                                  <MessageSquare className="h-3.5 w-3.5" />
+                                  <span>{stats.introsOffered} intro{stats.introsOffered !== 1 ? 's' : ''} offered</span>
+                                </div>
+                                <Separator orientation="vertical" className="h-4" />
+                                <div className="flex items-center gap-1.5">
+                                  <TrendingUp className="h-3.5 w-3.5" />
+                                  <span>{stats.introsMade} intro{stats.introsMade !== 1 ? 's' : ''} made</span>
+                                </div>
                               </div>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-base mb-1">
-                                {truncateTitle(conversation.title)}
-                              </h4>
-                              <div className="text-sm text-muted-foreground">
-                                {format(conversation.recordedAt, 'h:mm')}
-                              </div>
+                            <div className="text-xs text-muted-foreground whitespace-nowrap">
+                              {format(conversation.recordedAt, 'h:mm a')}
                             </div>
                           </div>
                         </Card>
