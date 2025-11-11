@@ -11,7 +11,7 @@ import { Link, useRoute } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useMemo } from "react";
 import { useConversation, useConversationSegments } from "@/hooks/useConversations";
-import { useMatchSuggestions } from "@/hooks/useMatches";
+import { useMatchSuggestions, useUpdateMatchStatus } from "@/hooks/useMatches";
 import { format } from "date-fns";
 
 interface PromisedIntro {
@@ -31,12 +31,13 @@ export default function ConversationDetail() {
   const { data: conversation, isLoading: conversationLoading } = useConversation(conversationId);
   const { data: segments = [], isLoading: segmentsLoading } = useConversationSegments(conversationId);
   const { data: matches = [], isLoading: matchesLoading } = useMatchSuggestions(conversationId);
+  const updateStatus = useUpdateMatchStatus(conversationId);
 
   const transcript = useMemo(() => {
     return segments
-      .filter(segment => segment.timestamp_ms != null)
+      .filter(segment => segment.timestampMs != null)
       .map(segment => ({
-        t: new Date(segment.timestamp_ms).toISOString(),
+        t: new Date(segment.timestampMs).toISOString(),
         speaker: segment.speaker || 'Unknown',
         text: segment.text,
       }));
@@ -47,7 +48,7 @@ export default function ConversationDetail() {
     ? format(conversation.recordedAt, 'MMMM dd, yyyy')
     : '';
   
-  const duration = conversation?.duration || 0;
+  const duration = conversation?.durationSeconds || 0;
   const durationMinutes = Math.round(duration / 60);
 
   const handlePromiseIntro = (participant: string, contactName: string) => {
@@ -89,14 +90,28 @@ export default function ConversationDetail() {
     }));
   };
 
-  const suggestions = useMemo(() => {
-    return matches.map(match => ({
-      participant: "Conversation Participant",
-      contactName: match.contact?.name || 'Unknown',
-      score: match.score as (1 | 2 | 3),
-      reasons: match.reasoning || []
-    }));
-  }, [matches]);
+  const handleUpdateStatus = async (matchId: string, status: string) => {
+    try {
+      await updateStatus.mutateAsync({ matchId, status });
+      const statusLabels: Record<string, string> = {
+        promised: 'Intro promised!',
+        maybe: 'Marked as maybe',
+        dismissed: 'Match dismissed',
+      };
+      toast({
+        title: statusLabels[status] || 'Status updated',
+        description: status === 'promised' 
+          ? 'You can now draft an introduction email' 
+          : undefined,
+      });
+    } catch (error) {
+      toast({
+        title: "Error updating match",
+        description: "Please try again",
+        variant: "destructive",
+      });
+    }
+  };
 
   const isLoading = conversationLoading || segmentsLoading || matchesLoading;
 
@@ -207,17 +222,24 @@ export default function ConversationDetail() {
             <p className="text-sm text-muted-foreground mb-6">
               Based on the conversation, here are potential introductions you could make.
             </p>
-            {suggestions.length > 0 ? (
+            {matches.length > 0 ? (
               <div className="space-y-4">
-                {suggestions.map((suggestion, idx) => (
-                  <div key={idx}>
+                {matches.map((match) => (
+                  <div key={match.id}>
                     <SuggestionCard
-                      contactName={suggestion.contactName}
-                      score={suggestion.score}
-                      reasons={suggestion.reasons}
-                      onPromise={() => handlePromiseIntro(suggestion.participant, suggestion.contactName)}
-                      onMaybe={() => console.log('Maybe', suggestion.contactName)}
-                      onDismiss={() => console.log('Dismissed', suggestion.contactName)}
+                      contact={{
+                        name: match.contact?.name || 'Unknown',
+                        email: match.contact?.email || null,
+                        company: match.contact?.company || null,
+                        title: match.contact?.title || null,
+                      }}
+                      score={match.score as (1 | 2 | 3)}
+                      reasons={(match.reasons as string[]) || []}
+                      status={match.status}
+                      onPromise={() => handleUpdateStatus(match.id, 'promised')}
+                      onMaybe={() => handleUpdateStatus(match.id, 'maybe')}
+                      onDismiss={() => handleUpdateStatus(match.id, 'dismissed')}
+                      isPending={updateStatus.isPending}
                     />
                   </div>
                 ))}
