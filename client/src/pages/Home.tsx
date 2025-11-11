@@ -60,6 +60,12 @@ export default function HomeNew() {
     return format(date, "EEE dd MMM");
   };
 
+  const getDisplayTitle = (title: string | null) => {
+    if (!title) return 'Untitled Conversation';
+    if (title.startsWith('Conversation --')) return 'Untitled Conversation';
+    return title;
+  };
+
   const getConversationStats = (conversationId: string) => {
     const conversationMatches = allMatches.filter(m => m.conversation_id === conversationId);
     const introsOffered = conversationMatches.length;
@@ -156,7 +162,7 @@ export default function HomeNew() {
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 min-w-0">
                               <h4 className="font-semibold mb-2 truncate">
-                                {conversation.title || 'Untitled Conversation'}
+                                {getDisplayTitle(conversation.title)}
                               </h4>
                               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                 <div className="flex items-center gap-1.5">
