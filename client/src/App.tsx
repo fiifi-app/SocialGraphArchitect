@@ -54,7 +54,11 @@ function Router() {
         {() => <ProtectedRoute component={Home} />}
       </Route>
       <Route path="/record">
-        {() => <ProtectedRoute component={Record} />}
+        {() => {
+          const [, setLocation] = useLocation();
+          setLocation("/");
+          return null;
+        }}
       </Route>
       <Route path="/contacts">
         {() => <ProtectedRoute component={Contacts} />}
