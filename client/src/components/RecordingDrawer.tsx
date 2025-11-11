@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/drawer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import RecordingIndicator from "@/components/RecordingIndicator";
 import TranscriptView from "@/components/TranscriptView";
 import SuggestionCard from "@/components/SuggestionCard";
 import { Mic, Square } from "lucide-react";
@@ -150,11 +149,6 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
 
     console.log('🎤 Starting audio recorder...');
     await audioControls.startRecording();
-    
-    toast({
-      title: "Recording started",
-      description: "Your conversation is being transcribed in real-time.",
-    });
   };
 
   const handleStop = async () => {
@@ -183,8 +177,8 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
       });
 
       toast({
-        title: "Recording saved",
-        description: "Conversation processing complete",
+        title: "Matches and transcripts completed!",
+        description: "Your conversation has been processed successfully",
       });
 
       setLocation(`/conversation/${conversationIdRef.current}`);
@@ -341,13 +335,24 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
           <DrawerTitle>{isRecording ? 'Recording in Progress' : 'New Meeting'}</DrawerTitle>
         </DrawerHeader>
 
-        {!isRecording ? (
+        {isProcessing ? (
+          <div className="px-4 flex-1 flex flex-col items-center justify-center space-y-4">
+            <div className="w-full max-w-md space-y-2">
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div className="h-full bg-primary animate-pulse w-3/4"></div>
+              </div>
+              <p className="text-sm text-center text-muted-foreground">
+                Generating matches... we'll notify you when matches are being made
+              </p>
+            </div>
+          </div>
+        ) : !isRecording ? (
           <div className="px-4 space-y-4 overflow-auto">
             <div className="space-y-2">
               <Label htmlFor="title">Meeting Title</Label>
               <Input
                 id="title"
-                placeholder="Enter meeting title..."
+                placeholder="Enter title or we will auto fill once the meeting begins"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 data-testid="input-meeting-title"
@@ -368,13 +373,6 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
           </div>
         ) : (
           <div className="px-4 flex-1 overflow-auto">
-            <RecordingIndicator
-              isRecording={true}
-              isPaused={audioState.isPaused}
-              duration={formattedDuration}
-              onPause={handlePause}
-              onStop={handleStop}
-            />
 
             <Tabs defaultValue="transcript" className="mt-4">
               <TabsList className="mb-4">
@@ -411,7 +409,7 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
 
         <DrawerFooter>
           <div className="flex items-center justify-between w-full gap-4">
-            {isRecording ? (
+            {isProcessing ? null : isRecording ? (
               <>
                 <Button
                   variant="outline"
