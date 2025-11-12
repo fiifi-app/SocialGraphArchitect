@@ -192,10 +192,10 @@ export default function ConversationDetail() {
         </div>
       </div>
 
-      <Tabs defaultValue="overview" className="w-full">
+      <Tabs defaultValue="suggestions" className="w-full">
         <TabsList className="mb-6">
-          <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
           <TabsTrigger value="suggestions" data-testid="tab-suggestions">Suggested Intros</TabsTrigger>
+          <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
           <TabsTrigger value="emails" data-testid="tab-emails">Intro Emails</TabsTrigger>
         </TabsList>
 
