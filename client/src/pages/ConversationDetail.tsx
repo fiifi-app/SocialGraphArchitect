@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import TranscriptView from "@/components/TranscriptView";
+import StructuredTranscriptView from "@/components/StructuredTranscriptView";
 import MeetingSummary from "@/components/MeetingSummary";
 import PersonSection from "@/components/PersonSection";
 import SuggestionCard from "@/components/SuggestionCard";
@@ -200,20 +200,19 @@ export default function ConversationDetail() {
         </TabsList>
 
         <TabsContent value="overview">
-          <div className="grid grid-cols-1 gap-8">
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Transcript</h2>
-              {transcript.length > 0 ? (
-                <div className="bg-card border border-card-border rounded-lg h-96">
-                  <TranscriptView transcript={transcript} />
-                </div>
-              ) : (
-                <div className="bg-card border border-card-border rounded-lg p-8 text-center text-muted-foreground">
-                  No transcript available. This conversation may not have been transcribed yet.
-                </div>
-              )}
+          {transcript.length > 0 ? (
+            <div className="bg-card border border-card-border rounded-lg min-h-[600px]">
+              <StructuredTranscriptView 
+                transcript={transcript}
+                conversationTitle={conversationTitle}
+                conversationDate={conversation.recordedAt}
+              />
             </div>
-          </div>
+          ) : (
+            <div className="bg-card border border-card-border rounded-lg p-8 text-center text-muted-foreground">
+              No transcript available. This conversation may not have been transcribed yet.
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="suggestions">
