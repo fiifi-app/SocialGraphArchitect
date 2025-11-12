@@ -85,7 +85,7 @@ export default function HomeNew() {
   };
 
   const getDisplayTitle = (conversationId: string, title: string | null) => {
-    if (title && !title.startsWith('Conversation --')) {
+    if (title && !title.startsWith('Conversation - ')) {
       return title;
     }
     
