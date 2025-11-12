@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Check, X, Clock, Building2, Briefcase } from "lucide-react";
+import { Check, X, Clock, Building2, Briefcase, Star } from "lucide-react";
 
 interface ContactDetails {
   name: string;
@@ -87,8 +87,12 @@ export default function SuggestionCard({
             </div>
           )}
         </div>
-        <Badge className={scoreColors[score]} data-testid="badge-score">
-          {score} ★
+        <Badge className="bg-transparent border-0 p-0" data-testid="badge-score">
+          <div className="flex items-center gap-0.5">
+            {Array.from({ length: score }).map((_, idx) => (
+              <Star key={idx} className="w-4 h-4 fill-yellow-500 text-yellow-500" />
+            ))}
+          </div>
         </Badge>
       </div>
       
