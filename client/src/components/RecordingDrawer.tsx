@@ -441,29 +441,15 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
               </div>
             </div>
 
-            <Tabs defaultValue="transcript">
+            <Tabs defaultValue="matches">
               <TabsList className="mb-4">
-                <TabsTrigger value="transcript">
-                  Transcript {transcript.length > 0 && `(${transcript.length})`}
-                </TabsTrigger>
                 <TabsTrigger value="matches">
                   Matches {suggestions.length > 0 && `(${suggestions.length})`}
                 </TabsTrigger>
+                <TabsTrigger value="transcript">
+                  Transcript {transcript.length > 0 && `(${transcript.length})`}
+                </TabsTrigger>
               </TabsList>
-
-              <TabsContent value="transcript">
-                <Card className="p-0 h-48 overflow-auto">
-                  {transcript.length > 0 ? (
-                    <TranscriptView transcript={transcript} />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
-                      <Mic className="w-8 h-8 mb-2 opacity-50" />
-                      <p className="text-sm text-center">Waiting for audio transcription...</p>
-                      <p className="text-xs text-center mt-1">Speak to see the transcript</p>
-                    </div>
-                  )}
-                </Card>
-              </TabsContent>
 
               <TabsContent value="matches">
                 <div className="space-y-2 h-48 overflow-auto">
@@ -487,6 +473,20 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
                     </Card>
                   )}
                 </div>
+              </TabsContent>
+
+              <TabsContent value="transcript">
+                <Card className="p-0 h-48 overflow-auto">
+                  {transcript.length > 0 ? (
+                    <TranscriptView transcript={transcript} />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
+                      <Mic className="w-8 h-8 mb-2 opacity-50" />
+                      <p className="text-sm text-center">Waiting for audio transcription...</p>
+                      <p className="text-xs text-center mt-1">Speak to see the transcript</p>
+                    </div>
+                  )}
+                </Card>
               </TabsContent>
             </Tabs>
           </div>
