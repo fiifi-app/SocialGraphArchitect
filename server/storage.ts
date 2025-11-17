@@ -1,38 +1,12 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
-
-export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
-}
-
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
-  }
-
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
-  }
-}
-
-export const storage = new MemStorage();
+/**
+ * This application uses Supabase as the default database.
+ * 
+ * All database operations are performed through:
+ * - Frontend: Direct Supabase queries using hooks (useContacts, useConversations, etc.)
+ * - Backend: Supabase Edge Functions for AI-powered operations
+ * - Auth: Supabase Auth for user authentication
+ * 
+ * The Supabase client is configured in client/src/lib/supabase.ts
+ * Database schema is defined in shared/schema.ts
+ * Migrations are in supabase/migrations/
+ */
