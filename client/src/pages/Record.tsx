@@ -439,7 +439,7 @@ export default function Record() {
             disabled={!consentChecked || createConversation.isPending}
             onClick={handleStartRecording}
             data-testid="button-start-recording"
-            className="gap-2"
+            className="gap-2 px-8"
           >
             <Mic className="w-5 h-5" />
             {createConversation.isPending ? 'Starting...' : 'Start Recording'}

@@ -525,9 +525,10 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
                   disabled={!consentChecked || createConversation.isPending}
                   onClick={handleStartRecording}
                   data-testid="button-start"
+                  className="px-8"
                 >
                   <Mic className="w-4 h-4 mr-2" />
-                  {createConversation.isPending ? 'Starting...' : 'Start'}
+                  {createConversation.isPending ? 'Starting...' : 'Start Recording'}
                 </Button>
               </>
             )}

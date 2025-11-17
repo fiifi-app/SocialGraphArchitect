@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Calendar, MessageSquare, TrendingUp, Clock } from "lucide-react";
+import { Plus, Calendar, MessageSquare, TrendingUp, Clock, Mic } from "lucide-react";
 import { useLocation } from "wouter";
 import { useTodaysEvents } from "@/hooks/useUpcomingEvents";
 import { useConversations } from "@/hooks/useConversations";
@@ -240,7 +240,7 @@ export default function HomeNew() {
           onClick={() => setDrawerOpen(true)}
           data-testid="button-new-meeting"
         >
-          <Plus className="h-6 w-6" />
+          <Mic className="h-6 w-6" />
         </Button>
       </div>
 

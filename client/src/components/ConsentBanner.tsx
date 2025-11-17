@@ -1,4 +1,4 @@
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
@@ -39,7 +39,8 @@ export default function ConsentBanner({
           >
             Cancel
           </Button>
-          <Button onClick={onAccept} data-testid="button-accept-consent">
+          <Button onClick={onAccept} data-testid="button-accept-consent" className="px-8">
+            <Mic className="w-4 h-4 mr-2" />
             Start Recording
           </Button>
         </div>
