@@ -38,7 +38,12 @@ interface TranscriptEntry {
 }
 
 interface Suggestion {
-  contactName: string;
+  contact: {
+    name: string;
+    email: string | null;
+    company: string | null;
+    title: string | null;
+  };
   score: 1 | 2 | 3;
   reasons: string[];
 }
@@ -256,12 +261,25 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
           table: 'match_suggestions',
           filter: `conversation_id=eq.${conversationId}`,
         },
-        (payload) => {
+        async (payload) => {
           const match = payload.new;
+          
+          // Fetch the contact details for this match
+          const { data: contactData } = await supabase
+            .from('contacts')
+            .select('name, email, company, title')
+            .eq('id', match.contact_id)
+            .single();
+          
           setSuggestions((prev) => [
             ...prev,
             {
-              contactName: (match as any).contact_name || 'Unknown',
+              contact: {
+                name: contactData?.name || 'Unknown',
+                email: contactData?.email || null,
+                company: contactData?.company || null,
+                title: contactData?.title || null,
+              },
               score: (match.score || 1) as 1 | 2 | 3,
               reasons: match.reasons || [],
             },
@@ -301,7 +319,12 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
           if (matchData.matches && matchData.matches.length > 0) {
             console.log(`🎉 Found ${matchData.matches.length} matches!`);
             const newSuggestions = matchData.matches.map((m: any) => ({
-              contactName: m.contact_name || 'Unknown',
+              contact: {
+                name: m.contact_name || 'Unknown',
+                email: m.contact_email || null,
+                company: m.contact_company || null,
+                title: m.contact_title || null,
+              },
               score: m.score,
               reasons: m.reasons || [],
             }));
@@ -312,7 +335,7 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
             if (highValueMatches.length > 0) {
               toast({
                 title: "New match found!",
-                description: `${highValueMatches[0].contactName} - ${highValueMatches[0].score} stars`,
+                description: `${highValueMatches[0].contact.name} - ${highValueMatches[0].score} stars`,
               });
             }
           }
@@ -394,7 +417,15 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
                 <div className="space-y-2 h-48 overflow-auto">
                   {suggestions.length > 0 ? (
                     suggestions.map((suggestion, idx) => (
-                      <SuggestionCard key={idx} {...suggestion} />
+                      <SuggestionCard 
+                        key={idx} 
+                        contact={suggestion.contact}
+                        score={suggestion.score}
+                        reasons={suggestion.reasons}
+                        onPromise={() => console.log('Promise', suggestion.contact.name)}
+                        onMaybe={() => console.log('Maybe', suggestion.contact.name)}
+                        onDismiss={() => console.log('Dismiss', suggestion.contact.name)}
+                      />
                     ))
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
