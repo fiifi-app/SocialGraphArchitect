@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import TranscriptView from "@/components/TranscriptView";
 import SuggestionCard from "@/components/SuggestionCard";
-import { Mic, Square } from "lucide-react";
+import { Mic, Square, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
@@ -360,12 +360,20 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
 
         {isProcessing ? (
           <div className="px-4 flex-1 flex flex-col items-center justify-center space-y-4">
-            <div className="w-full max-w-md space-y-2">
+            <div className="w-full max-w-md space-y-3">
+              <div className="flex items-center justify-center mb-4">
+                <div className="relative">
+                  <div className="w-12 h-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin"></div>
+                </div>
+              </div>
               <div className="h-2 bg-muted rounded-full overflow-hidden">
                 <div className="h-full bg-primary animate-pulse w-3/4"></div>
               </div>
               <p className="text-sm text-center text-muted-foreground">
-                Generating matches... we'll notify you when matches are being made
+                Processing conversation and generating matches...
+              </p>
+              <p className="text-xs text-center text-muted-foreground">
+                This may take a few moments
               </p>
             </div>
           </div>
@@ -409,7 +417,15 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
 
               <TabsContent value="transcript">
                 <Card className="p-0 h-48 overflow-auto">
-                  <TranscriptView transcript={transcript} />
+                  {transcript.length > 0 ? (
+                    <TranscriptView transcript={transcript} />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4">
+                      <Mic className="w-8 h-8 mb-2 opacity-50" />
+                      <p className="text-sm text-center">Waiting for audio transcription...</p>
+                      <p className="text-xs text-center mt-1">Speak to see the transcript</p>
+                    </div>
+                  )}
                 </Card>
               </TabsContent>
 
@@ -428,9 +444,11 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
                       />
                     ))
                   ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <p className="text-sm">Continue the conversation to find matches</p>
-                    </div>
+                    <Card className="h-full flex flex-col items-center justify-center text-muted-foreground p-4 border-dashed">
+                      <Users className="w-8 h-8 mb-2 opacity-50" />
+                      <p className="text-sm text-center">No matches yet</p>
+                      <p className="text-xs text-center mt-1">Continue talking to discover connections</p>
+                    </Card>
                   )}
                 </div>
               </TabsContent>

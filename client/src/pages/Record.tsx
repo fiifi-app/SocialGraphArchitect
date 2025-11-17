@@ -384,14 +384,14 @@ export default function Record() {
                         <span data-testid="text-event-location">{calendarEvent.location}</span>
                       </div>
                     )}
-                    {calendarEvent.attendees && Array.isArray(calendarEvent.attendees) && calendarEvent.attendees.length > 0 && (
+                    {calendarEvent.attendees && Array.isArray(calendarEvent.attendees) && calendarEvent.attendees.length > 0 ? (
                       <div className="flex items-center gap-2">
                         <Users className="h-4 w-4" />
                         <span data-testid="text-event-attendees">
                           {(calendarEvent.attendees as any[]).length} attendee{(calendarEvent.attendees as any[]).length !== 1 ? 's' : ''}
                         </span>
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -463,11 +463,24 @@ export default function Record() {
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold">Recording in Progress</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {isTranscribing && 'Transcribing audio... '}
-              {isProcessing && 'Processing conversation... '}
-              {suggestions.length > 0 && `${suggestions.length} match(es) found`}
-            </p>
+            <div className="flex items-center gap-3 mt-2">
+              {isTranscribing && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                  <span>Transcribing audio...</span>
+                </div>
+              )}
+              {!isTranscribing && transcript.length > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  {transcript.length} transcript segment{transcript.length !== 1 ? 's' : ''}
+                </p>
+              )}
+              {suggestions.length > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  • {suggestions.length} match{suggestions.length !== 1 ? 'es' : ''} found
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
@@ -482,15 +495,17 @@ export default function Record() {
           </TabsList>
 
           <TabsContent value="transcript">
-            <Card className="p-0 h-96">
-              <TranscriptView transcript={transcript} />
+            <Card className="p-0 h-96 overflow-auto">
+              {transcript.length > 0 ? (
+                <TranscriptView transcript={transcript} />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8">
+                  <Mic className="w-12 h-12 mb-3 opacity-50" />
+                  <p className="text-base font-medium">Waiting for audio transcription</p>
+                  <p className="text-sm mt-2">Speak to see the transcript appear here</p>
+                </div>
+              )}
             </Card>
-            {transcript.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">
-                <p>Waiting for audio transcription...</p>
-                <p className="text-sm mt-2">Speak to see the transcript appear here</p>
-              </div>
-            )}
           </TabsContent>
 
           <TabsContent value="matches">
@@ -508,12 +523,13 @@ export default function Record() {
                   />
                 ))
               ) : (
-                <div className="text-center py-12 text-muted-foreground">
-                  <p>No matches found yet</p>
-                  <p className="text-sm mt-2">
-                    Continue the conversation to find relevant contacts
+                <Card className="p-12 border-dashed flex flex-col items-center justify-center text-muted-foreground">
+                  <Users className="w-12 h-12 mb-3 opacity-50" />
+                  <p className="text-base font-medium">No matches found yet</p>
+                  <p className="text-sm mt-2 text-center max-w-md">
+                    Continue the conversation to discover relevant contacts from your network
                   </p>
-                </div>
+                </Card>
               )}
             </div>
           </TabsContent>
