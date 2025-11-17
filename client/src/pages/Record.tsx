@@ -35,7 +35,12 @@ interface TranscriptEntry {
 }
 
 interface Suggestion {
-  contactName: string;
+  contact: {
+    name: string;
+    email: string | null;
+    company: string | null;
+    title: string | null;
+  };
   score: 1 | 2 | 3;
   reasons: string[];
 }
@@ -201,7 +206,12 @@ export default function Record() {
             console.log(`🎉 Found ${matchData.matches.length} matches!`);
             // Update suggestions with new matches
             const newSuggestions = matchData.matches.map((m: any) => ({
-              contactName: m.contact_name || 'Unknown',
+              contact: {
+                name: m.contact_name || 'Unknown',
+                email: m.contact_email || null,
+                company: m.contact_company || null,
+                title: m.contact_title || null,
+              },
               score: m.score,
               reasons: m.reasons || [],
             }));
@@ -213,7 +223,7 @@ export default function Record() {
             if (highValueMatches.length > 0) {
               toast({
                 title: "New match found!",
-                description: `${highValueMatches[0].contactName} - ${highValueMatches[0].score} stars`,
+                description: `${highValueMatches[0].contact.name} - ${highValueMatches[0].score} stars`,
               });
             }
           } else {
@@ -489,10 +499,12 @@ export default function Record() {
                 suggestions.map((suggestion, idx) => (
                   <SuggestionCard
                     key={idx}
-                    {...suggestion}
-                    onPromise={() => console.log('Promised', suggestion.contactName)}
-                    onMaybe={() => console.log('Maybe', suggestion.contactName)}
-                    onDismiss={() => console.log('Dismissed', suggestion.contactName)}
+                    contact={suggestion.contact}
+                    score={suggestion.score}
+                    reasons={suggestion.reasons}
+                    onPromise={() => console.log('Promised', suggestion.contact.name)}
+                    onMaybe={() => console.log('Maybe', suggestion.contact.name)}
+                    onDismiss={() => console.log('Dismissed', suggestion.contact.name)}
                   />
                 ))
               ) : (
