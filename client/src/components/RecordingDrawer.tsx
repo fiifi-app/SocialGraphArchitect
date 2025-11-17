@@ -116,7 +116,7 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
 
   const { state: audioState, controls: audioControls } = useAudioRecorder(handleAudioData);
 
-  const formattedDuration = `${Math.floor(audioState.duration / 60)}:${String(audioState.duration % 60).padStart(2, '0')}`;
+  const formattedDuration = `${Math.floor(audioState.duration / 60).toString().padStart(2, '0')}:${(audioState.duration % 60).toString().padStart(2, '0')}`;
 
   const handleStartRecording = async () => {
     if (!consentChecked) {
@@ -231,8 +231,10 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
   useEffect(() => {
     if (!conversationId) return;
 
-    const subscription = supabase
-      .channel(`conversation-${conversationId}`)
+    console.log('🔌 Setting up real-time subscription for conversation:', conversationId);
+
+    const channel = supabase
+      .channel(`conversation:${conversationId}`)
       .on(
         'postgres_changes',
         {
@@ -242,12 +244,13 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
+          console.log('📝 Received transcript segment:', payload.new);
           const segment = payload.new;
           setTranscript((prev) => [
             ...prev,
             {
               t: segment.timestamp_ms ? new Date(parseInt(segment.timestamp_ms)).toLocaleTimeString() : '',
-              speaker: null,
+              speaker: segment.speaker || null,
               text: segment.text || '',
             },
           ]);
@@ -262,6 +265,7 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
           filter: `conversation_id=eq.${conversationId}`,
         },
         async (payload) => {
+          console.log('🎯 Received match suggestion:', payload.new);
           const match = payload.new;
           
           // Fetch the contact details for this match
@@ -297,12 +301,15 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
           ]);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 Subscription status:', status);
+      });
 
     return () => {
-      subscription.unsubscribe();
+      console.log('🔌 Unsubscribing from conversation:', conversationId);
+      supabase.removeChannel(channel);
     };
-  }, [conversationId]);
+  }, [conversationId, toast]);
 
   useEffect(() => {
     if (!conversationId || !audioState.isRecording || audioState.isPaused) return;
@@ -415,8 +422,26 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
           </div>
         ) : (
           <div className="px-4 flex-1 overflow-auto">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                {isTranscribing && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                    <span>Transcribing...</span>
+                  </div>
+                )}
+                {!isTranscribing && transcript.length > 0 && (
+                  <span className="text-sm text-muted-foreground">
+                    {transcript.length} segment{transcript.length !== 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+              <div className="text-lg font-mono font-semibold" data-testid="text-duration">
+                {formattedDuration}
+              </div>
+            </div>
 
-            <Tabs defaultValue="transcript" className="mt-4">
+            <Tabs defaultValue="transcript">
               <TabsList className="mb-4">
                 <TabsTrigger value="transcript">
                   Transcript {transcript.length > 0 && `(${transcript.length})`}
