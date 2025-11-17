@@ -8,13 +8,30 @@ export function useContacts() {
   return useQuery<Contact[]>({
     queryKey: ['/api/contacts'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('contacts')
-        .select('*')
-        .order('created_at', { ascending: false });
+      let allContacts: any[] = [];
+      let from = 0;
+      const batchSize = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('contacts')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .range(from, from + batchSize - 1);
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          allContacts = [...allContacts, ...data];
+          from += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
       
-      if (error) throw error;
-      return (data || []).map(contactFromDb);
+      return allContacts.map(contactFromDb);
     },
   });
 }

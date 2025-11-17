@@ -78,7 +78,7 @@ export default function History() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-muted-foreground mb-1">Total Conversations</p>
                 <p className="text-2xl font-semibold mb-2" data-testid="text-total-conversations">
-                  {conversationsLoading ? "..." : stats.conversations.total}
+                  {conversationsLoading ? "..." : stats.conversations.total.toLocaleString()}
                 </p>
                 <Separator className="my-2" />
                 <div className="space-y-1 text-xs text-muted-foreground">
@@ -107,7 +107,7 @@ export default function History() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-muted-foreground mb-1">Intros Made</p>
                 <p className="text-2xl font-semibold mb-2" data-testid="text-intros-made">
-                  {introStatsLoading ? "..." : stats.intros.total}
+                  {introStatsLoading ? "..." : stats.intros.total.toLocaleString()}
                 </p>
                 <Separator className="my-2" />
                 <div className="space-y-1 text-xs text-muted-foreground">
@@ -136,7 +136,7 @@ export default function History() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-muted-foreground mb-1">New Contacts Added</p>
                 <p className="text-2xl font-semibold mb-2" data-testid="text-new-contacts">
-                  {contactsLoading ? "..." : stats.newContacts.total}
+                  {contactsLoading ? "..." : stats.newContacts.total.toLocaleString()}
                 </p>
                 <Separator className="my-2" />
                 <div className="space-y-1 text-xs text-muted-foreground">

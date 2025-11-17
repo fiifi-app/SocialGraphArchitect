@@ -92,7 +92,9 @@ export default function Contacts() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total Contacts</p>
-              <p className="text-2xl font-semibold" data-testid="text-total-count">{stats.total}</p>
+              <p className="text-2xl font-semibold" data-testid="text-total-count">
+                {stats.total.toLocaleString()}
+              </p>
             </div>
           </div>
         </Card>
