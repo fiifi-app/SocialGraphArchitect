@@ -265,20 +265,31 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
           const match = payload.new;
           
           // Fetch the contact details for this match
-          const { data: contactData } = await supabase
+          const { data: contactData, error } = await supabase
             .from('contacts')
             .select('name, email, company, title')
             .eq('id', match.contact_id)
             .single();
           
+          // Guard against missing or failed contact fetch
+          if (error || !contactData) {
+            console.error('Failed to fetch contact for match:', error);
+            toast({
+              title: "Error loading contact",
+              description: "Failed to load contact details for a new match",
+              variant: "destructive",
+            });
+            return;
+          }
+          
           setSuggestions((prev) => [
             ...prev,
             {
               contact: {
-                name: contactData?.name || 'Unknown',
-                email: contactData?.email || null,
-                company: contactData?.company || null,
-                title: contactData?.title || null,
+                name: contactData.name,
+                email: contactData.email,
+                company: contactData.company,
+                title: contactData.title,
               },
               score: (match.score || 1) as 1 | 2 | 3,
               reasons: match.reasons || [],
