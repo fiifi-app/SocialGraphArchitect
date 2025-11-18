@@ -346,6 +346,7 @@ export default function ContactCard({
                 href={`mailto:${email}`}
                 className="truncate text-primary hover:underline"
                 data-testid="link-email"
+                onClick={(e) => e.stopPropagation()}
               >
                 {email}
               </a>
@@ -378,6 +379,7 @@ export default function ContactCard({
                 rel="noopener noreferrer"
                 className="truncate text-primary hover:underline"
                 data-testid="link-linkedin-full"
+                onClick={(e) => e.stopPropagation()}
               >
                 LinkedIn Profile
               </a>
@@ -400,6 +402,7 @@ export default function ContactCard({
                 href={`tel:${phone}`}
                 className="truncate text-primary hover:underline"
                 data-testid="link-phone"
+                onClick={(e) => e.stopPropagation()}
               >
                 {phone}
               </a>
@@ -418,6 +421,7 @@ export default function ContactCard({
                 rel="noopener noreferrer"
                 className="truncate text-primary hover:underline"
                 data-testid="link-twitter"
+                onClick={(e) => e.stopPropagation()}
               >
                 {twitter}
               </a>
@@ -429,11 +433,12 @@ export default function ContactCard({
             <div className="flex items-center gap-2 text-sm">
               <Users className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
               <a
-                href={angellist}
+                href={angellist.startsWith('http') ? angellist : `https://angel.co/${angellist.replace('@', '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="truncate text-primary hover:underline"
                 data-testid="link-angellist"
+                onClick={(e) => e.stopPropagation()}
               >
                 AngelList Profile
               </a>
