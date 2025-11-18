@@ -53,15 +53,31 @@ interface PDLResponse {
     last_name: string;
     linkedin_url: string;
     summary: string; // LinkedIn "About" section
-    current_job: {
-      company: {
-        name: string;
-        website: string;
-        industry: string;
-        size: string;
-      };
-      title: string;
-    }[];
+    location_name: string;
+    location_locality: string;
+    location_region: string;
+    location_country: string;
+    mobile_phone: string;
+    phone_numbers: Array<string>;
+    twitter_url: string;
+    facebook_url: string;
+    github_url: string;
+    job_title: string;
+    job_company_name: string;
+    job_company_website: string;
+    job_company_size: string;
+    job_company_founded: number;
+    job_company_industry: string;
+    job_company_location_name: string;
+    job_company_location_locality: string;
+    job_company_location_region: string;
+    job_company_location_country: string;
+    job_company_location_street_address: string;
+    job_company_location_address_line_2: string;
+    job_company_location_postal_code: string;
+    job_company_linkedin_url: string;
+    job_company_twitter_url: string;
+    job_company_facebook_url: string;
     emails: Array<{
       address: string;
       type: string;
@@ -182,21 +198,54 @@ async function enrichWithPDL(data: any, apiKey: string) {
     const result: PDLResponse = await response.json();
     
     if (result.data) {
-      const currentJob = result.data.current_job?.[0];
       const primaryEmail = result.data.emails?.find(e => e.type === 'professional')?.address || 
                           result.data.emails?.[0]?.address;
       
+      // Format location
+      const location = result.data.location_name || 
+                      [result.data.location_locality, result.data.location_region, result.data.location_country]
+                        .filter(Boolean).join(', ') || null;
+      
+      // Format company address
+      const companyAddress = [
+        result.data.job_company_location_street_address,
+        result.data.job_company_location_address_line_2,
+        result.data.job_company_location_locality,
+        result.data.job_company_location_region,
+        result.data.job_company_location_postal_code,
+        result.data.job_company_location_country
+      ].filter(Boolean).join(', ') || null;
+      
+      // Get phone number (prefer mobile, fallback to first phone number)
+      const phone = result.data.mobile_phone || result.data.phone_numbers?.[0] || null;
+      
       return {
+        // Personal information
+        firstName: result.data.first_name || data.firstName,
+        lastName: result.data.last_name || data.lastName,
         email: primaryEmail || data.email,
         linkedinUrl: result.data.linkedin_url || data.linkedinUrl,
-        title: currentJob?.title || data.title,
-        company: currentJob?.company?.name || data.company,
-        bio: result.data.summary || null, // LinkedIn "About" section
+        title: result.data.job_title || data.title,
+        company: result.data.job_company_name || data.company,
+        location: location || data.location,
+        phone: phone || data.phone,
+        bio: result.data.summary || data.bio,
+        twitter: result.data.twitter_url || data.twitter,
+        
+        // Company information
+        companyUrl: result.data.job_company_website || data.companyUrl,
+        companyAddress: companyAddress || data.companyAddress,
+        companyEmployees: result.data.job_company_size || data.companyEmployees,
+        companyFounded: result.data.job_company_founded?.toString() || data.companyFounded,
+        companyLinkedin: result.data.job_company_linkedin_url || data.companyLinkedin,
+        companyTwitter: result.data.job_company_twitter_url || data.companyTwitter,
+        companyFacebook: result.data.job_company_facebook_url || data.companyFacebook,
+        
+        // Metadata
         confidence: 95, // PDL generally high confidence
         source: 'pdl',
         extra: {
-          industry: currentJob?.company?.industry,
-          companySize: currentJob?.company?.size,
+          industry: result.data.job_company_industry,
         },
       };
     }
