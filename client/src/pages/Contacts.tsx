@@ -165,6 +165,7 @@ export default function Contacts() {
                 category={contact.category || undefined}
                 twitter={contact.twitter || undefined}
                 angellist={contact.angellist || undefined}
+                bio={contact.bio || undefined}
                 companyAddress={contact.companyAddress || undefined}
                 companyEmployees={contact.companyEmployees || undefined}
                 companyFounded={contact.companyFounded || undefined}

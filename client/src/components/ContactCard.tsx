@@ -25,6 +25,7 @@ interface ContactCardProps {
   category?: string;
   twitter?: string;
   angellist?: string;
+  bio?: string;
   
   // Company Information (shown in More Information)
   companyAddress?: string;
@@ -68,6 +69,7 @@ export default function ContactCard({
   category,
   twitter,
   angellist,
+  bio,
   companyAddress,
   companyEmployees,
   companyFounded,
@@ -411,6 +413,13 @@ export default function ContactCard({
               >
                 AngelList Profile
               </a>
+            </div>
+          )}
+          
+          {/* 11. Bio (first 140 characters, no heading) */}
+          {bio && bio.trim() && (
+            <div className="text-sm text-muted-foreground pt-1" data-testid="text-bio">
+              {bio.substring(0, 140)}{bio.length > 140 ? '...' : ''}
             </div>
           )}
         </div>
