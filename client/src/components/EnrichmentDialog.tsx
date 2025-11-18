@@ -59,6 +59,13 @@ export default function EnrichmentDialog({
     // Only update fields that have truthy enriched values
     const updates: any = { id: contactId };
     
+    // Personal information
+    if (enrichedData.firstName && enrichedData.firstName !== originalData.firstName) {
+      updates.firstName = enrichedData.firstName;
+    }
+    if (enrichedData.lastName && enrichedData.lastName !== originalData.lastName) {
+      updates.lastName = enrichedData.lastName;
+    }
     if (enrichedData.email && enrichedData.email !== originalData.email) {
       updates.email = enrichedData.email;
     }
@@ -70,6 +77,41 @@ export default function EnrichmentDialog({
     }
     if (enrichedData.company && enrichedData.company !== originalData.company) {
       updates.company = enrichedData.company;
+    }
+    if (enrichedData.location && enrichedData.location !== originalData.location) {
+      updates.location = enrichedData.location;
+    }
+    if (enrichedData.phone && enrichedData.phone !== originalData.phone) {
+      updates.phone = enrichedData.phone;
+    }
+    if (enrichedData.bio && enrichedData.bio !== originalData.bio) {
+      updates.bio = enrichedData.bio;
+    }
+    if (enrichedData.twitter && enrichedData.twitter !== originalData.twitter) {
+      updates.twitter = enrichedData.twitter;
+    }
+    
+    // Company information
+    if (enrichedData.companyUrl && enrichedData.companyUrl !== originalData.companyUrl) {
+      updates.companyUrl = enrichedData.companyUrl;
+    }
+    if (enrichedData.companyAddress && enrichedData.companyAddress !== originalData.companyAddress) {
+      updates.companyAddress = enrichedData.companyAddress;
+    }
+    if (enrichedData.companyEmployees && enrichedData.companyEmployees !== originalData.companyEmployees) {
+      updates.companyEmployees = enrichedData.companyEmployees;
+    }
+    if (enrichedData.companyFounded && enrichedData.companyFounded !== originalData.companyFounded) {
+      updates.companyFounded = enrichedData.companyFounded;
+    }
+    if (enrichedData.companyLinkedin && enrichedData.companyLinkedin !== originalData.companyLinkedin) {
+      updates.companyLinkedin = enrichedData.companyLinkedin;
+    }
+    if (enrichedData.companyTwitter && enrichedData.companyTwitter !== originalData.companyTwitter) {
+      updates.companyTwitter = enrichedData.companyTwitter;
+    }
+    if (enrichedData.companyFacebook && enrichedData.companyFacebook !== originalData.companyFacebook) {
+      updates.companyFacebook = enrichedData.companyFacebook;
     }
     
     // Don't update if no changes
@@ -114,10 +156,23 @@ export default function EnrichmentDialog({
   };
 
   const hasChanges = enrichedData && originalData && (
+    (enrichedData.firstName && enrichedData.firstName !== originalData.firstName) ||
+    (enrichedData.lastName && enrichedData.lastName !== originalData.lastName) ||
     (enrichedData.email && enrichedData.email !== originalData.email) ||
     (enrichedData.linkedinUrl && enrichedData.linkedinUrl !== originalData.linkedinUrl) ||
     (enrichedData.title && enrichedData.title !== originalData.title) ||
-    (enrichedData.company && enrichedData.company !== originalData.company)
+    (enrichedData.company && enrichedData.company !== originalData.company) ||
+    (enrichedData.location && enrichedData.location !== originalData.location) ||
+    (enrichedData.phone && enrichedData.phone !== originalData.phone) ||
+    (enrichedData.bio && enrichedData.bio !== originalData.bio) ||
+    (enrichedData.twitter && enrichedData.twitter !== originalData.twitter) ||
+    (enrichedData.companyUrl && enrichedData.companyUrl !== originalData.companyUrl) ||
+    (enrichedData.companyAddress && enrichedData.companyAddress !== originalData.companyAddress) ||
+    (enrichedData.companyEmployees && enrichedData.companyEmployees !== originalData.companyEmployees) ||
+    (enrichedData.companyFounded && enrichedData.companyFounded !== originalData.companyFounded) ||
+    (enrichedData.companyLinkedin && enrichedData.companyLinkedin !== originalData.companyLinkedin) ||
+    (enrichedData.companyTwitter && enrichedData.companyTwitter !== originalData.companyTwitter) ||
+    (enrichedData.companyFacebook && enrichedData.companyFacebook !== originalData.companyFacebook)
   );
 
   return (
@@ -170,12 +225,20 @@ export default function EnrichmentDialog({
 
               <Separator />
 
+              {/* Personal Information Section */}
               <div className="space-y-3">
+                <p className="text-sm font-semibold">Personal Information</p>
                 {[
+                  { label: 'First Name', original: originalData?.firstName, enriched: enrichedData.firstName },
+                  { label: 'Last Name', original: originalData?.lastName, enriched: enrichedData.lastName },
                   { label: 'Email', original: originalData?.email, enriched: enrichedData.email },
-                  { label: 'LinkedIn', original: originalData?.linkedinUrl, enriched: enrichedData.linkedinUrl },
                   { label: 'Title', original: originalData?.title, enriched: enrichedData.title },
                   { label: 'Company', original: originalData?.company, enriched: enrichedData.company },
+                  { label: 'LinkedIn', original: originalData?.linkedinUrl, enriched: enrichedData.linkedinUrl },
+                  { label: 'Location', original: originalData?.location, enriched: enrichedData.location },
+                  { label: 'Phone', original: originalData?.phone, enriched: enrichedData.phone },
+                  { label: 'Twitter', original: originalData?.twitter, enriched: enrichedData.twitter },
+                  { label: 'Bio', original: originalData?.bio, enriched: enrichedData.bio, truncate: true },
                 ].map((field) => {
                   const hasChange = field.original !== field.enriched && field.enriched;
                   if (!hasChange && !field.enriched) return null;
@@ -186,17 +249,69 @@ export default function EnrichmentDialog({
                       <div className="col-span-2">
                         {hasChange ? (
                           <div className="space-y-1">
-                            <div className="text-muted-foreground line-through">{field.original || 'Not set'}</div>
-                            <div className="text-green-600 font-medium">{field.enriched}</div>
+                            <div className="text-muted-foreground line-through">
+                              {field.truncate && field.original 
+                                ? field.original.substring(0, 50) + (field.original.length > 50 ? '...' : '')
+                                : field.original || 'Not set'}
+                            </div>
+                            <div className="text-green-600 font-medium">
+                              {field.truncate && field.enriched 
+                                ? field.enriched.substring(0, 50) + (field.enriched.length > 50 ? '...' : '')
+                                : field.enriched}
+                            </div>
                           </div>
                         ) : (
-                          <div>{field.enriched}</div>
+                          <div>
+                            {field.truncate && field.enriched 
+                              ? field.enriched.substring(0, 50) + (field.enriched.length > 50 ? '...' : '')
+                              : field.enriched}
+                          </div>
                         )}
                       </div>
                     </div>
                   );
                 })}
               </div>
+
+              {/* Company Information Section */}
+              {(enrichedData.companyUrl || enrichedData.companyAddress || enrichedData.companyEmployees || 
+                enrichedData.companyFounded || enrichedData.companyLinkedin || enrichedData.companyTwitter || 
+                enrichedData.companyFacebook) && (
+                <>
+                  <Separator />
+                  <div className="space-y-3">
+                    <p className="text-sm font-semibold">Company Information</p>
+                    {[
+                      { label: 'Company Website', original: originalData?.companyUrl, enriched: enrichedData.companyUrl },
+                      { label: 'Company Address', original: originalData?.companyAddress, enriched: enrichedData.companyAddress },
+                      { label: 'Company Size', original: originalData?.companyEmployees, enriched: enrichedData.companyEmployees },
+                      { label: 'Founded', original: originalData?.companyFounded, enriched: enrichedData.companyFounded },
+                      { label: 'Company LinkedIn', original: originalData?.companyLinkedin, enriched: enrichedData.companyLinkedin },
+                      { label: 'Company Twitter', original: originalData?.companyTwitter, enriched: enrichedData.companyTwitter },
+                      { label: 'Company Facebook', original: originalData?.companyFacebook, enriched: enrichedData.companyFacebook },
+                    ].map((field) => {
+                      const hasChange = field.original !== field.enriched && field.enriched;
+                      if (!hasChange && !field.enriched) return null;
+                      
+                      return (
+                        <div key={field.label} className="grid grid-cols-3 gap-4 text-sm">
+                          <div className="font-medium text-muted-foreground">{field.label}</div>
+                          <div className="col-span-2">
+                            {hasChange ? (
+                              <div className="space-y-1">
+                                <div className="text-muted-foreground line-through">{field.original || 'Not set'}</div>
+                                <div className="text-green-600 font-medium">{field.enriched}</div>
+                              </div>
+                            ) : (
+                              <div>{field.enriched}</div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
 
               {enrichedData.extra && (
                 <>
