@@ -52,6 +52,7 @@ interface PDLResponse {
     first_name: string;
     last_name: string;
     linkedin_url: string;
+    summary: string; // LinkedIn "About" section
     current_job: {
       company: {
         name: string;
@@ -190,6 +191,7 @@ async function enrichWithPDL(data: any, apiKey: string) {
         linkedinUrl: result.data.linkedin_url || data.linkedinUrl,
         title: currentJob?.title || data.title,
         company: currentJob?.company?.name || data.company,
+        bio: result.data.summary || null, // LinkedIn "About" section
         confidence: 95, // PDL generally high confidence
         source: 'pdl',
         extra: {

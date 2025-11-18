@@ -54,6 +54,7 @@ const contactFormSchema = z.object({
   category: z.string().optional(),
   twitter: z.string().optional(),
   angellist: z.string().optional(),
+  bio: z.string().optional(),
   
   // Company information fields
   companyAddress: z.string().optional(),
@@ -125,6 +126,7 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
       category: "",
       twitter: "",
       angellist: "",
+      bio: "",
       companyAddress: "",
       companyEmployees: "",
       companyFounded: "",
@@ -159,6 +161,7 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
         category: contact.category || "",
         twitter: contact.twitter || "",
         angellist: contact.angellist || "",
+        bio: contact.bio || "",
         companyAddress: contact.companyAddress || "",
         companyEmployees: contact.companyEmployees || "",
         companyFounded: contact.companyFounded || "",
@@ -189,6 +192,7 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
         category: "",
         twitter: "",
         angellist: "",
+        bio: "",
         companyAddress: "",
         companyEmployees: "",
         companyFounded: "",
@@ -577,6 +581,26 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
                   )}
                 />
               </div>
+
+              {/* About Section */}
+              <FormField
+                control={form.control}
+                name="bio"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>About</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        {...field}
+                        placeholder="LinkedIn bio or additional information about this contact..."
+                        className="min-h-24"
+                        data-testid="input-contact-bio"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               {/* Investor Profile Section - Feature Flagged */}
               {featureFlags?.enableInvestorFields && (

@@ -44,6 +44,7 @@ export const contacts = pgTable("contacts", {
   category: text("category"),
   twitter: text("twitter"),
   angellist: text("angellist"),
+  bio: text("bio"), // LinkedIn "About" section
   
   // Company information (hidden in "More Information")
   companyAddress: text("company_address"),
