@@ -76,6 +76,35 @@ export function useTopMatches(conversationId: string, minScore: number = 2) {
   });
 }
 
+export function useConversationMatchStats() {
+  return useQuery<Record<string, { introsOffered: number; introsMade: number }>>({
+    queryKey: ['/api/conversations/match-stats'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('match_suggestions')
+        .select('conversation_id, status');
+      
+      if (error) throw error;
+      
+      const stats: Record<string, { introsOffered: number; introsMade: number }> = {};
+      
+      (data || []).forEach(match => {
+        if (!stats[match.conversation_id]) {
+          stats[match.conversation_id] = { introsOffered: 0, introsMade: 0 };
+        }
+        
+        stats[match.conversation_id].introsOffered += 1;
+        
+        if (match.status === 'accepted' || match.status === 'intro_made') {
+          stats[match.conversation_id].introsMade += 1;
+        }
+      });
+      
+      return stats;
+    },
+  });
+}
+
 export function useUpdateMatchStatus(conversationId: string) {
   return useMutation({
     mutationFn: async ({ matchId, status }: { matchId: string; status: string }) => {
@@ -123,6 +152,9 @@ export function useUpdateMatchStatus(conversationId: string) {
       });
       queryClient.invalidateQueries({ 
         queryKey: ['/api/matches/all'] 
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/conversations/match-stats'] 
       });
     },
   });

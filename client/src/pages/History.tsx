@@ -8,6 +8,7 @@ import { Search, Download, MessageSquare, TrendingUp, UserPlus } from "lucide-re
 import { useConversations } from "@/hooks/useConversations";
 import { useIntroductionStats } from "@/hooks/useIntroductions";
 import { useContacts } from "@/hooks/useContacts";
+import { useConversationMatchStats } from "@/hooks/useMatches";
 import { useLocation } from "wouter";
 
 export default function History() {
@@ -17,6 +18,7 @@ export default function History() {
   const { data: conversations = [], isLoading: conversationsLoading } = useConversations();
   const { data: introStats, isLoading: introStatsLoading } = useIntroductionStats();
   const { data: contacts = [], isLoading: contactsLoading } = useContacts();
+  const { data: matchStats = {} } = useConversationMatchStats();
 
   const stats = useMemo(() => {
     const now = new Date();
@@ -191,18 +193,22 @@ export default function History() {
               </tr>
             </thead>
             <tbody>
-              {conversations.map((conversation) => (
-                <ConversationHistoryRow
-                  key={conversation.id}
-                  id={conversation.id}
-                  startedAt={conversation.recordedAt.toISOString()}
-                  endedAt={conversation.recordedAt.toISOString()}
-                  participants={[]}
-                  suggestionsCount={0}
-                  onView={() => setLocation(`/conversation/${conversation.id}`)}
-                  onDelete={() => console.log('Delete', conversation.id)}
-                />
-              ))}
+              {conversations.map((conversation) => {
+                const stats = matchStats[conversation.id] || { introsOffered: 0, introsMade: 0 };
+                return (
+                  <ConversationHistoryRow
+                    key={conversation.id}
+                    id={conversation.id}
+                    startedAt={conversation.recordedAt.toISOString()}
+                    endedAt={conversation.recordedAt.toISOString()}
+                    participants={[]}
+                    introsOffered={stats.introsOffered}
+                    introsMade={stats.introsMade}
+                    onView={() => setLocation(`/conversation/${conversation.id}`)}
+                    onDelete={() => console.log('Delete', conversation.id)}
+                  />
+                );
+              })}
             </tbody>
           </table>
         </div>

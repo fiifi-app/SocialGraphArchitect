@@ -8,7 +8,8 @@ interface ConversationHistoryRowProps {
   startedAt: string;
   endedAt?: string;
   participants: string[];
-  suggestionsCount: number;
+  introsOffered: number;
+  introsMade: number;
   onView: () => void;
   onDelete: () => void;
 }
@@ -18,7 +19,8 @@ export default function ConversationHistoryRow({
   startedAt,
   endedAt,
   participants,
-  suggestionsCount,
+  introsOffered,
+  introsMade,
   onView,
   onDelete,
 }: ConversationHistoryRowProps) {
@@ -59,7 +61,14 @@ export default function ConversationHistoryRow({
       </td>
       <td className="py-4 px-4 text-sm">{duration} min</td>
       <td className="py-4 px-4">
-        <Badge>{suggestionsCount}</Badge>
+        <div className="flex gap-3 text-sm">
+          <span className={introsOffered > 0 ? "text-blue-400" : "text-muted-foreground"}>
+            {introsOffered} offered
+          </span>
+          <span className={introsMade > 0 ? "text-green-400" : "text-muted-foreground"}>
+            {introsMade} made
+          </span>
+        </div>
       </td>
       <td className="py-4 px-4">
         <div className="flex gap-2 justify-end">
