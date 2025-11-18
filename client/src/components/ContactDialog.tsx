@@ -220,6 +220,43 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
     return () => subscription.unsubscribe();
   }, [form]);
 
+  // Auto-detect contact types from title field
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'title' && value.title) {
+        const titleLower = value.title.toLowerCase();
+        const currentTypes = value.contactType || [];
+        const detectedTypes = new Set<'LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'Other'>(currentTypes.filter((t): t is 'LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'Other' => t !== undefined));
+
+        // Define keywords and their corresponding contact types
+        const typeKeywords: Array<{ keywords: string[], type: 'LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' }> = [
+          { keywords: ['general partner', 'gp'], type: 'GP' as const },
+          { keywords: ['limited partner', 'lp'], type: 'LP' as const },
+          { keywords: ['angel investor', 'angel'], type: 'Angel' as const },
+          { keywords: ['family office'], type: 'FamilyOffice' as const },
+          { keywords: ['startup', 'founder', 'ceo', 'cto', 'cofounder', 'co-founder'], type: 'Startup' as const },
+        ];
+
+        // Check for each keyword and add the corresponding type
+        for (const { keywords, type } of typeKeywords) {
+          for (const keyword of keywords) {
+            if (titleLower.includes(keyword)) {
+              detectedTypes.add(type);
+              break; // Found a match for this type, no need to check other keywords
+            }
+          }
+        }
+
+        // Update contactType if any new types were detected
+        const newTypes = Array.from(detectedTypes);
+        if (newTypes.length > currentTypes.filter(t => t !== undefined).length) {
+          form.setValue('contactType', newTypes);
+        }
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
+
   const onSubmit = async (data: ContactFormData) => {
     try {
       const fullName = `${data.firstName}${data.lastName ? ' ' + data.lastName : ''}`;
