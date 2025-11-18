@@ -33,6 +33,7 @@ interface ParsedContact {
   category?: string;
   twitter?: string;
   angellist?: string;
+  bio?: string;
   companyAddress?: string;
   companyEmployees?: string;
   companyFounded?: string;
@@ -106,6 +107,7 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
           const category = row.category || row.Category || row.Catagory || row.catagory || '';
           const twitter = row.twitter || row.Twitter || '';
           const angellist = row.angellist || row.Angellist || row['Angel List'] || row.angel_list || '';
+          const bio = row.bio || row.Bio || row.about || row.About || row.description || row.Description || row.summary || row.Summary || '';
           
           // Company information fields
           const companyAddress = row['Company Address'] || row.company_address || '';
@@ -150,6 +152,7 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
             category: category.trim() || undefined,
             twitter: twitter.trim() || undefined,
             angellist: angellist.trim() || undefined,
+            bio: bio.trim() || undefined,
             companyAddress: companyAddress.trim() || undefined,
             companyEmployees: companyEmployees.trim() || undefined,
             companyFounded: companyFounded.trim() || undefined,
@@ -358,6 +361,63 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
           if (csvContact.linkedinUrl && !pendingDuplicate.linkedin_url) {
             pendingDuplicate.linkedin_url = csvContact.linkedinUrl;
           }
+          if (csvContact.firstName && !pendingDuplicate.first_name) {
+            pendingDuplicate.first_name = csvContact.firstName;
+          }
+          if (csvContact.lastName && !pendingDuplicate.last_name) {
+            pendingDuplicate.last_name = csvContact.lastName;
+          }
+          if (csvContact.location && !pendingDuplicate.location) {
+            pendingDuplicate.location = csvContact.location;
+          }
+          if (csvContact.phone && !pendingDuplicate.phone) {
+            pendingDuplicate.phone = csvContact.phone;
+          }
+          if (csvContact.category && !pendingDuplicate.category) {
+            pendingDuplicate.category = csvContact.category;
+          }
+          if (csvContact.twitter && !pendingDuplicate.twitter) {
+            pendingDuplicate.twitter = csvContact.twitter;
+          }
+          if (csvContact.angellist && !pendingDuplicate.angellist) {
+            pendingDuplicate.angellist = csvContact.angellist;
+          }
+          if (csvContact.bio && !pendingDuplicate.bio) {
+            pendingDuplicate.bio = csvContact.bio;
+          }
+          if (csvContact.companyAddress && !pendingDuplicate.company_address) {
+            pendingDuplicate.company_address = csvContact.companyAddress;
+          }
+          if (csvContact.companyEmployees && !pendingDuplicate.company_employees) {
+            pendingDuplicate.company_employees = csvContact.companyEmployees;
+          }
+          if (csvContact.companyFounded && !pendingDuplicate.company_founded) {
+            pendingDuplicate.company_founded = csvContact.companyFounded;
+          }
+          if (csvContact.companyUrl && !pendingDuplicate.company_url) {
+            pendingDuplicate.company_url = csvContact.companyUrl;
+          }
+          if (csvContact.companyLinkedin && !pendingDuplicate.company_linkedin) {
+            pendingDuplicate.company_linkedin = csvContact.companyLinkedin;
+          }
+          if (csvContact.companyTwitter && !pendingDuplicate.company_twitter) {
+            pendingDuplicate.company_twitter = csvContact.companyTwitter;
+          }
+          if (csvContact.companyFacebook && !pendingDuplicate.company_facebook) {
+            pendingDuplicate.company_facebook = csvContact.companyFacebook;
+          }
+          if (csvContact.companyAngellist && !pendingDuplicate.company_angellist) {
+            pendingDuplicate.company_angellist = csvContact.companyAngellist;
+          }
+          if (csvContact.companyCrunchbase && !pendingDuplicate.company_crunchbase) {
+            pendingDuplicate.company_crunchbase = csvContact.companyCrunchbase;
+          }
+          if (csvContact.companyOwler && !pendingDuplicate.company_owler) {
+            pendingDuplicate.company_owler = csvContact.companyOwler;
+          }
+          if (csvContact.youtubeVimeo && !pendingDuplicate.youtube_vimeo) {
+            pendingDuplicate.youtube_vimeo = csvContact.youtubeVimeo;
+          }
           
           // Update lookup maps with newly added fields
           updatePendingMaps(pendingDuplicate);
@@ -378,6 +438,7 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
             category: csvContact.category || null,
             twitter: csvContact.twitter || null,
             angellist: csvContact.angellist || null,
+            bio: csvContact.bio || null,
             company_address: csvContact.companyAddress || null,
             company_employees: csvContact.companyEmployees || null,
             company_founded: csvContact.companyFounded || null,
@@ -622,7 +683,7 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
                     {file ? file.name : 'Click to select CSV file'}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Supports: name, email, title, company, linkedin, type
+                    Supports all contact fields: name, email, title, company, location, phone, bio, linkedin, twitter, and all company information
                   </p>
                 </label>
               </div>
