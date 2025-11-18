@@ -34,7 +34,7 @@ const ROLE_CONFIG: Record<ContactType, { label: string; color: string; bgColor: 
     bgColor: 'rgba(244, 63, 94, 0.1)',
   },
   Other: {
-    label: 'Other',
+    label: 'PE',
     color: '#6B7280', // gray-500
     bgColor: 'rgba(107, 114, 128, 0.1)',
   },
