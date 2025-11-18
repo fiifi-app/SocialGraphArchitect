@@ -136,18 +136,16 @@ export default function ContactCard({
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-base font-semibold truncate" data-testid="text-contact-name">
-                {fullName}
-              </h3>
-              {displayContactTypes.length > 0 && (
-                <div className="flex items-center gap-1 flex-wrap">
-                  {displayContactTypes.map((type) => (
-                    <RoleTag key={type} type={type} />
-                  ))}
-                </div>
-              )}
-            </div>
+            {displayContactTypes.length > 0 && (
+              <div className="flex items-center gap-1 flex-wrap mb-1">
+                {displayContactTypes.map((type) => (
+                  <RoleTag key={type} type={type} />
+                ))}
+              </div>
+            )}
+            <h3 className="text-base font-semibold truncate" data-testid="text-contact-name">
+              {fullName}
+            </h3>
           </div>
           <div className="flex gap-1">
             <Popover>

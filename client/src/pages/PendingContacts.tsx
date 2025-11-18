@@ -172,18 +172,16 @@ export default function PendingContacts() {
                 <div className="flex flex-col h-full">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <h3 className="text-lg font-semibold truncate">
-                          {contact.name}
-                        </h3>
-                        {displayContactTypes.length > 0 && (
-                          <div className="flex items-center gap-1 flex-wrap">
-                            {displayContactTypes.map((type) => (
-                              <RoleTag key={type} type={type} />
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      {displayContactTypes.length > 0 && (
+                        <div className="flex items-center gap-1 flex-wrap mb-1">
+                          {displayContactTypes.map((type) => (
+                            <RoleTag key={type} type={type} />
+                          ))}
+                        </div>
+                      )}
+                      <h3 className="text-lg font-semibold truncate mb-1">
+                        {contact.name}
+                      </h3>
                       <Badge variant="secondary" className="text-xs">
                         Pending Review
                       </Badge>
