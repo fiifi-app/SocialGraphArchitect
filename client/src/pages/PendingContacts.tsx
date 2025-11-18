@@ -18,19 +18,19 @@ import { useToast } from "@/hooks/use-toast";
 import RoleTag from "@/components/RoleTag";
 
 // Helper function to auto-detect contact types from title
-const detectContactTypesFromTitle = (title: string | undefined): ('LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'Other')[] => {
+const detectContactTypesFromTitle = (title: string | undefined): ('LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'PE')[] => {
   if (!title) return [];
   
   const titleLower = title.toLowerCase();
-  const detectedTypes: ('LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'Other')[] = [];
+  const detectedTypes: ('LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'PE')[] = [];
   
-  const typeKeywords: Array<{ keywords: string[], type: 'LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'Other' }> = [
+  const typeKeywords: Array<{ keywords: string[], type: 'LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'PE' }> = [
     { keywords: ['general partner', ' gp', 'gp '], type: 'GP' },
     { keywords: ['limited partner', ' lp', 'lp '], type: 'LP' },
     { keywords: ['angel investor', 'angel'], type: 'Angel' },
     { keywords: ['family office'], type: 'FamilyOffice' },
     { keywords: ['startup', 'founder', ' ceo', 'ceo ', ' cto', 'cto ', 'cofounder', 'co-founder'], type: 'Startup' },
-    { keywords: ['private equity', ' pe', 'pe '], type: 'Other' },
+    { keywords: ['private equity', ' pe', 'pe '], type: 'PE' },
   ];
   
   for (const { keywords, type } of typeKeywords) {

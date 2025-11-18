@@ -68,7 +68,7 @@ export const contacts = pgTable("contacts", {
   
   // Contact Type (multi-select array)
   contactType: text("contact_type", { 
-    enum: ['LP', 'GP', 'Angel', 'FamilyOffice', 'Startup', 'Other'] 
+    enum: ['LP', 'GP', 'Angel', 'FamilyOffice', 'Startup', 'PE'] 
   }).array().default(sql`ARRAY[]::text[]`),
   isInvestor: boolean("is_investor").notNull().default(false),
   

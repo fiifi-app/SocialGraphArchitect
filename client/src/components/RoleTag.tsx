@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 
-type ContactType = 'LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'Other';
+type ContactType = 'LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'PE';
 
 interface RoleTagProps {
   type: ContactType | null | undefined;
@@ -33,7 +33,7 @@ const ROLE_CONFIG: Record<ContactType, { label: string; color: string; bgColor: 
     color: '#F43F5E', // rose-500
     bgColor: 'rgba(244, 63, 94, 0.1)',
   },
-  Other: {
+  PE: {
     label: 'PE',
     color: '#6B7280', // gray-500
     bgColor: 'rgba(107, 114, 128, 0.1)',

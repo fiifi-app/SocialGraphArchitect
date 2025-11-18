@@ -42,19 +42,19 @@ import {
 import { useState } from "react";
 
 // Helper function to auto-detect contact types from title (same as ContactCard)
-const detectContactTypesFromTitle = (title: string | null | undefined): ('LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'Other')[] => {
+const detectContactTypesFromTitle = (title: string | null | undefined): ('LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'PE')[] => {
   if (!title) return [];
   
   const titleLower = title.toLowerCase();
-  const detectedTypes: ('LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'Other')[] = [];
+  const detectedTypes: ('LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'PE')[] = [];
   
-  const typeKeywords: Array<{ keywords: string[], type: 'LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'Other' }> = [
+  const typeKeywords: Array<{ keywords: string[], type: 'LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'PE' }> = [
     { keywords: ['general partner', ' gp', 'gp '], type: 'GP' },
     { keywords: ['limited partner', ' lp', 'lp '], type: 'LP' },
     { keywords: ['angel investor', 'angel'], type: 'Angel' },
     { keywords: ['family office'], type: 'FamilyOffice' },
     { keywords: ['startup', 'founder', ' ceo', 'ceo ', ' cto', 'cto ', 'cofounder', 'co-founder'], type: 'Startup' },
-    { keywords: ['private equity', ' pe', 'pe '], type: 'Other' },
+    { keywords: ['private equity', ' pe', 'pe '], type: 'PE' },
   ];
   
   for (const { keywords, type } of typeKeywords) {
@@ -99,7 +99,7 @@ const contactFormSchema = z.object({
   
   // Investor Profile fields
   isInvestor: z.boolean().default(false),
-  contactType: z.array(z.enum(['LP', 'GP', 'Angel', 'FamilyOffice', 'Startup', 'Other'])).default([]),
+  contactType: z.array(z.enum(['LP', 'GP', 'Angel', 'FamilyOffice', 'Startup', 'PE'])).default([]),
   checkSizeMin: z.number().int().positive().optional().or(z.literal(0)),
   checkSizeMax: z.number().int().positive().optional().or(z.literal(0)),
   investorNotes: z.string().optional(),
@@ -264,15 +264,16 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
       if (name === 'title' && value.title) {
         const titleLower = value.title.toLowerCase();
         const currentTypes = value.contactType || [];
-        const detectedTypes = new Set<'LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'Other'>(currentTypes.filter((t): t is 'LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'Other' => t !== undefined));
+        const detectedTypes = new Set<'LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'PE'>(currentTypes.filter((t): t is 'LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'PE' => t !== undefined));
 
         // Define keywords and their corresponding contact types
-        const typeKeywords: Array<{ keywords: string[], type: 'LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' }> = [
+        const typeKeywords: Array<{ keywords: string[], type: 'LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'PE' }> = [
           { keywords: ['general partner', 'gp'], type: 'GP' as const },
           { keywords: ['limited partner', 'lp'], type: 'LP' as const },
           { keywords: ['angel investor', 'angel'], type: 'Angel' as const },
           { keywords: ['family office'], type: 'FamilyOffice' as const },
           { keywords: ['startup', 'founder', 'ceo', 'cto', 'cofounder', 'co-founder'], type: 'Startup' as const },
+          { keywords: ['private equity', 'pe'], type: 'PE' as const },
         ];
 
         // Check for each keyword and add the corresponding type
@@ -656,7 +657,7 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
                               { value: 'Angel', label: 'Angel' },
                               { value: 'FamilyOffice', label: 'Family Office' },
                               { value: 'Startup', label: 'Startup' },
-                              { value: 'Other', label: 'Other' },
+                              { value: 'PE', label: 'PE' },
                             ].map((type) => {
                               const isSelected = field.value?.includes(type.value as any);
                               return (
