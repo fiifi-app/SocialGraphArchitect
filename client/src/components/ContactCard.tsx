@@ -98,6 +98,36 @@ export default function ContactCard({
     companyLinkedin || companyTwitter || companyFacebook || companyAngellist || 
     companyCrunchbase || companyOwler || youtubeVimeo);
 
+  // Helper function to check if category duplicates contact type tags
+  const shouldHideCategory = (category: string | undefined, contactTypes: ('LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'Other')[] | undefined): boolean => {
+    if (!category || !contactTypes || contactTypes.length === 0) return false;
+    
+    const categoryLower = category.toLowerCase();
+    
+    // Keywords that indicate the category is duplicating a contact type tag
+    const typeKeywords = [
+      { keywords: ['gp', 'general partner'], hasType: contactTypes.includes('GP') },
+      { keywords: ['lp', 'limited partner'], hasType: contactTypes.includes('LP') },
+      { keywords: ['angel'], hasType: contactTypes.includes('Angel') },
+      { keywords: ['family office'], hasType: contactTypes.includes('FamilyOffice') },
+      { keywords: ['startup', 'founder', 'ceo', 'cto', 'cofounder', 'co-founder'], hasType: contactTypes.includes('Startup') },
+      { keywords: ['pe', 'private equity'], hasType: contactTypes.includes('Other') },
+    ];
+    
+    // Check if category contains keywords for a contact type that's already displayed
+    for (const { keywords, hasType } of typeKeywords) {
+      if (hasType) {
+        for (const keyword of keywords) {
+          if (categoryLower.includes(keyword)) {
+            return true; // Hide category because it duplicates a contact type tag
+          }
+        }
+      }
+    }
+    
+    return false;
+  };
+
   return (
     <Card className="p-5 hover-elevate" data-testid={`contact-card-${id}`}>
       <div className="space-y-3">
@@ -375,8 +405,8 @@ export default function ContactCard({
             </div>
           )}
           
-          {/* 8. Category */}
-          {category && (
+          {/* 8. Category - hide if it duplicates contact type tags */}
+          {category && !shouldHideCategory(category, contactType) && (
             <div className="flex items-center gap-2 text-sm">
               <Badge variant="secondary" className="text-xs" data-testid="badge-category">
                 {category}
