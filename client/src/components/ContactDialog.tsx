@@ -41,6 +41,34 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useState } from "react";
 
+// Helper function to auto-detect contact types from title (same as ContactCard)
+const detectContactTypesFromTitle = (title: string | null | undefined): ('LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'Other')[] => {
+  if (!title) return [];
+  
+  const titleLower = title.toLowerCase();
+  const detectedTypes: ('LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'Other')[] = [];
+  
+  const typeKeywords: Array<{ keywords: string[], type: 'LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'Other' }> = [
+    { keywords: ['general partner', ' gp', 'gp '], type: 'GP' },
+    { keywords: ['limited partner', ' lp', 'lp '], type: 'LP' },
+    { keywords: ['angel investor', 'angel'], type: 'Angel' },
+    { keywords: ['family office'], type: 'FamilyOffice' },
+    { keywords: ['startup', 'founder', ' ceo', 'ceo ', ' cto', 'cto ', 'cofounder', 'co-founder'], type: 'Startup' },
+    { keywords: ['private equity', ' pe', 'pe '], type: 'Other' },
+  ];
+  
+  for (const { keywords, type } of typeKeywords) {
+    for (const keyword of keywords) {
+      if (titleLower.includes(keyword)) {
+        detectedTypes.push(type);
+        break;
+      }
+    }
+  }
+  
+  return detectedTypes;
+};
+
 // Updated schema with all contact fields
 const contactFormSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -149,6 +177,11 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
   // Update form when contact changes
   useEffect(() => {
     if (contact && open) {
+      // Use stored contactType or auto-detect from title if not set
+      const displayContactTypes = contact.contactType && contact.contactType.length > 0 
+        ? contact.contactType 
+        : detectContactTypesFromTitle(contact.title);
+      
       form.reset({
         firstName: contact.firstName || contact.name.split(" ")[0] || "",
         lastName: contact.lastName || contact.name.split(" ").slice(1).join(" ") || "",
@@ -174,7 +207,7 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
         companyOwler: contact.companyOwler || "",
         youtubeVimeo: contact.youtubeVimeo || "",
         isInvestor: contact.isInvestor || false,
-        contactType: contact.contactType || [],
+        contactType: displayContactTypes,
         checkSizeMin: contact.checkSizeMin || 0,
         checkSizeMax: contact.checkSizeMax || 0,
         investorNotes: contact.investorNotes || "",
