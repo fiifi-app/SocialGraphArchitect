@@ -44,6 +44,7 @@ export default function ConversationDetail() {
   }, [segments]);
 
   const conversationTitle = conversation?.title || 'Conversation';
+  const displayTitle = conversationTitle.replace(/^Conversation\s*-\s*/, '');
   const conversationDate = conversation?.recordedAt 
     ? format(conversation.recordedAt, 'MMMM dd, yyyy')
     : '';
@@ -174,7 +175,7 @@ export default function ConversationDetail() {
       <div className="mb-8">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-semibold mb-2">{conversationTitle}</h1>
+            <h1 className="text-2xl font-semibold mb-2">{displayTitle}</h1>
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
               <span>{conversationDate}</span>
               {durationMinutes > 0 && (
@@ -217,7 +218,7 @@ export default function ConversationDetail() {
 
         <TabsContent value="suggestions">
           <div className="max-w-2xl mx-auto">
-            <h2 className="text-xl font-semibold mb-4">Suggested Intro Matches</h2>
+            <h2 className="text-xl font-semibold mb-4">Suggested Matches</h2>
             <p className="text-sm text-muted-foreground mb-6">
               Based on the conversation, here are potential introductions you could make.
             </p>
