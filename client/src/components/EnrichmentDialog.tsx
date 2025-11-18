@@ -66,6 +66,13 @@ export default function EnrichmentDialog({
     if (enrichedData.lastName && enrichedData.lastName !== originalData.lastName) {
       updates.lastName = enrichedData.lastName;
     }
+    
+    // Update canonical name field when firstName or lastName change
+    if (updates.firstName || updates.lastName) {
+      const firstName = updates.firstName || originalData.firstName || '';
+      const lastName = updates.lastName || originalData.lastName || '';
+      updates.name = `${firstName} ${lastName}`.trim();
+    }
     if (enrichedData.email && enrichedData.email !== originalData.email) {
       updates.email = enrichedData.email;
     }
