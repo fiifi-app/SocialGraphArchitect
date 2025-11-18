@@ -55,6 +55,34 @@ interface ContactCardProps {
   investorNotes?: string;
 }
 
+// Helper function to auto-detect contact types from title
+const detectContactTypesFromTitle = (title: string | undefined): ('LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'Other')[] => {
+  if (!title) return [];
+  
+  const titleLower = title.toLowerCase();
+  const detectedTypes: ('LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'Other')[] = [];
+  
+  const typeKeywords: Array<{ keywords: string[], type: 'LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'Other' }> = [
+    { keywords: ['general partner', ' gp', 'gp '], type: 'GP' },
+    { keywords: ['limited partner', ' lp', 'lp '], type: 'LP' },
+    { keywords: ['angel investor', 'angel'], type: 'Angel' },
+    { keywords: ['family office'], type: 'FamilyOffice' },
+    { keywords: ['startup', 'founder', ' ceo', 'ceo ', ' cto', 'cto ', 'cofounder', 'co-founder'], type: 'Startup' },
+    { keywords: ['private equity', ' pe', 'pe '], type: 'Other' },
+  ];
+  
+  for (const { keywords, type } of typeKeywords) {
+    for (const keyword of keywords) {
+      if (titleLower.includes(keyword)) {
+        detectedTypes.push(type);
+        break;
+      }
+    }
+  }
+  
+  return detectedTypes;
+};
+
 export default function ContactCard({
   id,
   fullName,
@@ -97,6 +125,11 @@ export default function ContactCard({
   const hasCompanyInfo = !!(companyAddress || companyEmployees || companyFounded || companyUrl || 
     companyLinkedin || companyTwitter || companyFacebook || companyAngellist || 
     companyCrunchbase || companyOwler || youtubeVimeo);
+  
+  // Use provided contactType or auto-detect from title if not set
+  const displayContactTypes = contactType && contactType.length > 0 
+    ? contactType 
+    : detectContactTypesFromTitle(role);
 
   return (
     <Card className="p-5 hover-elevate" data-testid={`contact-card-${id}`}>
@@ -107,9 +140,9 @@ export default function ContactCard({
               <h3 className="text-base font-semibold truncate" data-testid="text-contact-name">
                 {fullName}
               </h3>
-              {contactType && (
+              {displayContactTypes.length > 0 && (
                 <div className="flex items-center gap-1 flex-wrap">
-                  {(Array.isArray(contactType) ? contactType : [contactType]).map((type) => (
+                  {displayContactTypes.map((type) => (
                     <RoleTag key={type} type={type} />
                   ))}
                 </div>

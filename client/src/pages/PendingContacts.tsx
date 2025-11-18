@@ -15,6 +15,35 @@ import {
 } from "lucide-react";
 import { useContacts, useUpdateContact, useDeleteContact } from "@/hooks/useContacts";
 import { useToast } from "@/hooks/use-toast";
+import RoleTag from "@/components/RoleTag";
+
+// Helper function to auto-detect contact types from title
+const detectContactTypesFromTitle = (title: string | undefined): ('LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'Other')[] => {
+  if (!title) return [];
+  
+  const titleLower = title.toLowerCase();
+  const detectedTypes: ('LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'Other')[] = [];
+  
+  const typeKeywords: Array<{ keywords: string[], type: 'LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'Other' }> = [
+    { keywords: ['general partner', ' gp', 'gp '], type: 'GP' },
+    { keywords: ['limited partner', ' lp', 'lp '], type: 'LP' },
+    { keywords: ['angel investor', 'angel'], type: 'Angel' },
+    { keywords: ['family office'], type: 'FamilyOffice' },
+    { keywords: ['startup', 'founder', ' ceo', 'ceo ', ' cto', 'cto ', 'cofounder', 'co-founder'], type: 'Startup' },
+    { keywords: ['private equity', ' pe', 'pe '], type: 'Other' },
+  ];
+  
+  for (const { keywords, type } of typeKeywords) {
+    for (const keyword of keywords) {
+      if (titleLower.includes(keyword)) {
+        detectedTypes.push(type);
+        break;
+      }
+    }
+  }
+  
+  return detectedTypes;
+};
 
 export default function PendingContacts() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -128,7 +157,13 @@ export default function PendingContacts() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredContacts.map((contact) => (
+            {filteredContacts.map((contact) => {
+              // Auto-detect contact types from title if not set
+              const displayContactTypes = contact.contactType && contact.contactType.length > 0 
+                ? contact.contactType 
+                : detectContactTypesFromTitle(contact.title || undefined);
+              
+              return (
               <Card 
                 key={contact.id} 
                 className="p-6 hover-elevate"
@@ -137,9 +172,18 @@ export default function PendingContacts() {
                 <div className="flex flex-col h-full">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold truncate mb-1">
-                        {contact.name}
-                      </h3>
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <h3 className="text-lg font-semibold truncate">
+                          {contact.name}
+                        </h3>
+                        {displayContactTypes.length > 0 && (
+                          <div className="flex items-center gap-1 flex-wrap">
+                            {displayContactTypes.map((type) => (
+                              <RoleTag key={type} type={type} />
+                            ))}
+                          </div>
+                        )}
+                      </div>
                       <Badge variant="secondary" className="text-xs">
                         Pending Review
                       </Badge>
@@ -205,7 +249,8 @@ export default function PendingContacts() {
                   </div>
                 </div>
               </Card>
-            ))}
+              );
+            })}
           </div>
         </>
       )}

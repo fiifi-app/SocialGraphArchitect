@@ -217,7 +217,8 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
       if (name === 'contactType') {
-        const shouldBeInvestor = hasInvestorType(value.contactType || []);
+        const types = (value.contactType || []).filter(Boolean) as string[];
+        const shouldBeInvestor = hasInvestorType(types);
         form.setValue('isInvestor', shouldBeInvestor);
       }
     });
@@ -624,7 +625,7 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
                               { value: 'Startup', label: 'Startup' },
                               { value: 'Other', label: 'Other' },
                             ].map((type) => {
-                              const isSelected = field.value?.includes(type.value);
+                              const isSelected = field.value?.includes(type.value as any);
                               return (
                                 <Button
                                   key={type.value}
@@ -634,8 +635,8 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
                                   onClick={() => {
                                     const currentValue = field.value || [];
                                     const newValue = isSelected
-                                      ? currentValue.filter((v: string) => v !== type.value)
-                                      : [...currentValue, type.value];
+                                      ? currentValue.filter((v) => v !== type.value)
+                                      : [...currentValue, type.value as any];
                                     field.onChange(newValue);
                                   }}
                                   data-testid={`button-contact-type-${type.value.toLowerCase()}`}
