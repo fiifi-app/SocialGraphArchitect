@@ -24,6 +24,7 @@ export function contactFromDb(dbRow: any): Contact {
     category: dbRow.category,
     twitter: dbRow.twitter,
     angellist: dbRow.angellist,
+    bio: dbRow.bio,
     companyAddress: dbRow.company_address,
     companyEmployees: dbRow.company_employees,
     companyFounded: dbRow.company_founded,
@@ -71,6 +72,7 @@ export function contactToDb(contact: Partial<Contact>): any {
   if ('category' in contact) dbRow.category = contact.category;
   if ('twitter' in contact) dbRow.twitter = contact.twitter;
   if ('angellist' in contact) dbRow.angellist = contact.angellist;
+  if ('bio' in contact) dbRow.bio = contact.bio;
   if ('companyAddress' in contact) dbRow.company_address = contact.companyAddress;
   if ('companyEmployees' in contact) dbRow.company_employees = contact.companyEmployees;
   if ('companyFounded' in contact) dbRow.company_founded = contact.companyFounded;

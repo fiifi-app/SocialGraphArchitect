@@ -310,10 +310,23 @@ serve(async (req) => {
 
       contactData = {
         name: contact.name,
+        firstName: contact.first_name,
+        lastName: contact.last_name,
         email: contact.email,
         company: contact.company,
         linkedinUrl: contact.linkedin_url,
         title: contact.title,
+        location: contact.location,
+        phone: contact.phone,
+        bio: contact.bio,
+        twitter: contact.twitter,
+        companyUrl: contact.company_url,
+        companyAddress: contact.company_address,
+        companyEmployees: contact.company_employees,
+        companyFounded: contact.company_founded,
+        companyLinkedin: contact.company_linkedin,
+        companyTwitter: contact.company_twitter,
+        companyFacebook: contact.company_facebook,
       };
     }
 
