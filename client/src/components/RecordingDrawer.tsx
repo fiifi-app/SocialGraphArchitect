@@ -116,7 +116,10 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
 
   const { state: audioState, controls: audioControls } = useAudioRecorder(handleAudioData);
 
-  const formattedDuration = `${Math.floor(audioState.duration / 60).toString().padStart(2, '0')}:${(audioState.duration % 60).toString().padStart(2, '0')}`;
+  const hours = Math.floor(audioState.duration / 3600);
+  const minutes = Math.floor((audioState.duration % 3600) / 60);
+  const seconds = audioState.duration % 60;
+  const formattedDuration = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
   const handleStartRecording = async () => {
     if (!consentChecked) {
@@ -422,7 +425,7 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
           </div>
         ) : (
           <div className="px-4 flex-1 overflow-auto">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center mb-4">
               <div className="flex items-center gap-3">
                 {isTranscribing && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -435,9 +438,6 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
                     {transcript.length} segment{transcript.length !== 1 ? 's' : ''}
                   </span>
                 )}
-              </div>
-              <div className="text-lg font-mono font-semibold" data-testid="text-duration">
-                {formattedDuration}
               </div>
             </div>
 
@@ -503,6 +503,9 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
                 >
                   {audioState.isPaused ? 'Resume' : 'Pause'}
                 </Button>
+                <div className="text-lg font-mono font-semibold" data-testid="text-duration">
+                  {formattedDuration}
+                </div>
                 <Button
                   variant="destructive"
                   onClick={handleStop}

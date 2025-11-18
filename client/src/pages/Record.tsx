@@ -139,8 +139,11 @@ export default function Record() {
   // Audio recorder
   const { state: audioState, controls: audioControls } = useAudioRecorder(handleAudioData);
 
-  // Format duration for display
-  const formattedDuration = `${Math.floor(audioState.duration / 60).toString().padStart(2, '0')}:${(audioState.duration % 60).toString().padStart(2, '0')}`;
+  // Format duration for display (HH:MM:SS)
+  const hours = Math.floor(audioState.duration / 3600);
+  const minutes = Math.floor((audioState.duration % 3600) / 60);
+  const seconds = audioState.duration % 60;
+  const formattedDuration = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
   // Subscribe to realtime conversation segments
   useEffect(() => {
