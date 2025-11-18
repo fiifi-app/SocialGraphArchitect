@@ -15,8 +15,8 @@ The design draws inspiration from Granola and Linear, emphasizing high informati
 **Technical Implementations:**
 - **Data Access:** Frontend CRUD operations directly access Supabase via its SDK, protected by RLS. AI-driven operations utilize Supabase Edge Functions with service role privileges.
 - **Database Schema:** Comprises 15 tables with RLS, covering user profiles, contacts, investment theses, calendar events, conversations, entity extraction, match suggestions, and introduction workflows.
-- **Contact Management:** Includes full CRUD for contacts, pagination, searching, real-time updates, toast notifications, and comprehensive CSV bulk import with validation and enrichment.
-- **Contact Enrichment:** An Edge Function uses Hunter.io and People Data Labs APIs for email verification and person enrichment, with a preview showing original vs. enriched data.
+- **Contact Management:** Includes full CRUD for contacts, pagination, searching, real-time updates, toast notifications, and comprehensive CSV bulk import with validation and enrichment. Contact type auto-detection recognizes keywords in title field (GP, Angel, Family Office, Startup, etc.) and automatically selects appropriate tags.
+- **Contact Enrichment:** An Edge Function uses Hunter.io and People Data Labs APIs for email verification and person enrichment, with a preview showing original vs. enriched data. LinkedIn bio (summary field) is automatically captured from People Data Labs and displayed on contact cards (first 140 characters) and editable in the contact dialog's "About" section.
 - **Investor Profile Feature:** Incorporates an `is_investor` flag, extended contact types (GP/Angel/FamilyOffice/Startup/Other), check size ranges, and investor notes, conditionally visible based on selected contact types. A feature flag system manages the visibility of these fields based on database migration status.
 - **Google Calendar Integration (OAuth-based):** Full Google Calendar OAuth integration with automatic event sync - **FULLY OPERATIONAL**:
   - Google OAuth 2.0 flow with access/refresh token management stored in user_preferences table
