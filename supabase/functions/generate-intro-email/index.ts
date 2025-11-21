@@ -48,19 +48,57 @@ serve(async (req) => {
     
     console.log('✅ Match data fetched:', match ? 'success' : 'null');
     
-    const { data: segments, error: segmentsError } = await supabase
-      .from('conversation_segments')
-      .select('text')
-      .eq('conversation_id', conversationId)
-      .order('timestamp_ms')
-      .limit(10);
+    // Fetch all conversation context data in parallel
+    const [
+      { data: segments, error: segmentsError },
+      { data: entities, error: entitiesError },
+      { data: participants, error: participantsError },
+      { data: conversation, error: conversationError }
+    ] = await Promise.all([
+      supabase
+        .from('conversation_segments')
+        .select('text')
+        .eq('conversation_id', conversationId)
+        .order('timestamp_ms')
+        .limit(10),
+      supabase
+        .from('conversation_entities')
+        .select('entity_type, value, confidence, context_snippet')
+        .eq('conversation_id', conversationId),
+      supabase
+        .from('conversation_participants')
+        .select('contact_id, contacts(name, company, title)')
+        .eq('conversation_id', conversationId),
+      supabase
+        .from('conversations')
+        .select('title, duration_seconds')
+        .eq('id', conversationId)
+        .single()
+    ]);
     
-    if (segmentsError) {
-      console.error('❌ Error fetching segments:', segmentsError);
-    }
+    if (segmentsError) console.error('❌ Error fetching segments:', segmentsError);
+    if (entitiesError) console.error('❌ Error fetching entities:', entitiesError);
+    if (participantsError) console.error('❌ Error fetching participants:', participantsError);
+    if (conversationError) console.error('❌ Error fetching conversation:', conversationError);
     
     const transcriptSnippets = segments?.map(s => s.text).slice(0, 4) || [];
     console.log('✅ Transcript snippets:', transcriptSnippets.length);
+    
+    // Extract key entities for context
+    const entityMap: { [key: string]: string[] } = {};
+    entities?.forEach(e => {
+      if (!entityMap[e.entity_type]) entityMap[e.entity_type] = [];
+      entityMap[e.entity_type].push(e.value);
+    });
+    
+    // Extract participants
+    const participantsList = participants?.map(p => ({
+      name: p.contacts?.name,
+      company: p.contacts?.company,
+      title: p.contacts?.title
+    })) || [];
+    
+    console.log('✅ Entities:', Object.keys(entityMap).length, 'Participants:', participantsList.length);
     
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
