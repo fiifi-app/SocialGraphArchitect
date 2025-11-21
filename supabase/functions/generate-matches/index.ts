@@ -155,42 +155,51 @@ Deno.serve(async (req) => {
         messages: [{
           role: 'system',
           content: `You are a relationship matching engine for VCs and investors. 
-          Score each contact based on how well their COMPLETE PROFILE and investment thesis match the conversation entities.
+          Score each contact based on how well their investment thesis and profile match the conversation entities.
           Consider ALL contact information:
-          - Investment theses (sectors, stages, check sizes, geos they invest in)
+          - Investment theses (sectors, stages, check sizes)
           - Contact's title, company, and experience
           - Investor type (GP, LP, Angel, Family Office, PE)
           - Check size ranges
-          - Personal background (LinkedIn, Twitter, location, bio)
           - Company information (size, founded date, business focus)
           - Conversation topics and entities mentioned
+          
+          PRIORITY MATCHING CRITERIA (in order of importance):
+          1. Sector/Vertical Match - MOST IMPORTANT: B2B SaaS, fintech, healthcare, AI/ML, biotech, etc.
+          2. Investment Stage - CRITICAL: pre-seed, seed, Series A, Series B+, growth
+          3. Thesis Alignment - CRITICAL: How well contact's stated investment thesis matches conversation
+          4. Check Size Range - CRITICAL: Investment amount range matches conversation mentions
+          5. Investor Type - IMPORTANT: GP, Angel, Family Office, LP, PE match conversation context
+          6. Professional Experience - SECONDARY: Founder background, operating experience
+          7. Company Focus - SECONDARY: Industry relevance and business model
+          8. Geography - DE-EMPHASIZED: Use only as a secondary signal if all else is equal
           
           IMPORTANT: Use the ENTIRE contact profile for rich matching:
           1. Even without a formal thesis, use title/company to infer investment interests
           2. For solo recordings or single-person conversations, match more aggressively
           3. Partial matches are valuable! Contacts don't need to match ALL criteria.
-          4. Geographic match (location) is significant
-          5. Experience (title keywords like GP, Angel, Founder) is important
+          4. Prioritize sector, stage, thesis, and check size above all other signals
+          5. Geography should NOT be a primary reason for matching
           
           Scoring guidelines:
-          - 3 stars: Strong match (3+ overlapping criteria OR thesis perfectly aligns OR deep experience match)
-          - 2 stars: Medium match (2+ overlapping criteria OR moderate thesis alignment OR some relevant experience)
-          - 1 star: Weak match (1+ overlapping criterion OR potential relevance)
+          - 3 stars: Strong match (sector + stage + thesis align) OR (sector + check size + stage match) OR thesis perfectly matches multiple criteria
+          - 2 stars: Medium match (sector + stage match) OR (thesis + check size align) OR (stage + investor type match)
+          - 1 star: Weak match (sector match alone) OR (stage match alone) OR (any single thesis criterion)
           
-          Match on ANY of these:
-          - Investment stage (pre-seed, seed, Series A, Series B+, growth, etc.)
-          - Sector/vertical (B2B SaaS, fintech, healthcare, AI/ML, biotech, etc.)
-          - Check size range (matches conversation amounts mentioned)
-          - Geography (country, region, or stated location preference)
-          - Investor type (GP, Angel, Family Office, LP, PE match conversation context)
-          - Professional experience (founder background, operating experience, etc.)
-          - Company focus/industry relevance
+          Match on THESE criteria (prioritized):
+          1. Investment stage (pre-seed, seed, Series A, Series B+, growth, etc.) - PRIMARY
+          2. Sector/vertical (B2B SaaS, fintech, healthcare, AI/ML, biotech, etc.) - PRIMARY
+          3. Thesis alignment - PRIMARY
+          4. Check size range (matches conversation amounts mentioned) - PRIMARY
+          5. Investor type (GP, Angel, Family Office, LP, PE) - SECONDARY
+          6. Professional experience (founder background, operating experience) - SECONDARY
+          7. Company focus/industry relevance - SECONDARY
           
-          Return JSON array (include ALL matches, even 1-star):
+          Return JSON array (include matches with 2+ primary criteria OR strong single matches):
           - contact_id: string
           - score: number (1-3)
-          - reasons: string[] (what matched, e.g., ["stage: pre-seed", "sector: B2B SaaS", "GP experience", "SF Bay Area", "thesis alignment"])
-          - justification: string (brief explanation why this is a good intro based on all their profile data)`
+          - reasons: string[] (what matched, prioritizing sector/stage/thesis/check-size, e.g., ["sector: B2B SaaS", "stage: Series A", "thesis: enterprise software", "$5M check size"])
+          - justification: string (brief explanation why this is a good intro based on sector, stage, thesis, and check size match)`
         }, {
           role: 'user',
           content: JSON.stringify({
