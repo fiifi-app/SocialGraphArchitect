@@ -49,7 +49,13 @@ export function useMatchSuggestions(conversationId: string) {
       
       return (data || []).map(row => ({
         ...matchFromDb(row),
-        contact: row.contact,
+        contact: row.contact ? {
+          ...row.contact,
+          checkSizeMin: row.contact.check_size_min,
+          checkSizeMax: row.contact.check_size_max,
+          investorNotes: row.contact.investor_notes,
+          contactType: row.contact.contact_type,
+        } : undefined,
       }));
     },
     enabled: !!conversationId,
@@ -87,7 +93,13 @@ export function useTopMatches(conversationId: string, minScore: number = 2) {
       
       return (data || []).map(row => ({
         ...matchFromDb(row),
-        contact: row.contact,
+        contact: row.contact ? {
+          ...row.contact,
+          checkSizeMin: row.contact.check_size_min,
+          checkSizeMax: row.contact.check_size_max,
+          investorNotes: row.contact.investor_notes,
+          contactType: row.contact.contact_type,
+        } : undefined,
       }));
     },
     enabled: !!conversationId,
