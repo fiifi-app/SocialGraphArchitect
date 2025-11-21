@@ -9,6 +9,12 @@ interface ContactDetails {
   email: string | null;
   company: string | null;
   title: string | null;
+  location?: string | null;
+  bio?: string | null;
+  checkSizeMin?: number | null;
+  checkSizeMax?: number | null;
+  investorNotes?: string | null;
+  contactType?: string[] | null;
 }
 
 interface SuggestionCardProps {
@@ -102,8 +108,8 @@ export default function SuggestionCard({
         </Badge>
       </div>
       
-      {(contact.company || contact.title) && <Separator />}
-      <div className="space-y-1.5">
+      {(contact.company || contact.title || contact.location || contact.checkSizeMin) && <Separator />}
+      <div className="space-y-2">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
           Why this match:
         </p>
@@ -115,6 +121,28 @@ export default function SuggestionCard({
             </li>
           ))}
         </ul>
+        
+        {(contact.checkSizeMin || contact.checkSizeMax) && (
+          <div className="mt-2 p-2 bg-muted/50 rounded text-xs space-y-1">
+            <p className="font-medium text-foreground">Check Size: ${contact.checkSizeMin?.toLocaleString() || 'N/A'} - ${contact.checkSizeMax?.toLocaleString() || 'N/A'}</p>
+          </div>
+        )}
+        
+        {contact.investorNotes && (
+          <div className="mt-2 p-2 bg-muted/50 rounded text-xs space-y-1">
+            <p className="font-medium text-foreground">Notes: <span className="font-normal">{contact.investorNotes}</span></p>
+          </div>
+        )}
+        
+        {contact.contactType && contact.contactType.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {contact.contactType.map((type) => (
+              <Badge key={type} variant="secondary" className="text-xs">
+                {type}
+              </Badge>
+            ))}
+          </div>
+        )}
       </div>
       {status === 'pending' && (
         <div className="flex gap-2 pt-2">

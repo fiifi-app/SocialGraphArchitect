@@ -244,6 +244,12 @@ export default function ConversationDetail() {
                         email: match.contact?.email || null,
                         company: match.contact?.company || null,
                         title: match.contact?.title || null,
+                        location: match.contact?.location || null,
+                        bio: match.contact?.bio || null,
+                        checkSizeMin: match.contact?.checkSizeMin || null,
+                        checkSizeMax: match.contact?.checkSizeMax || null,
+                        investorNotes: match.contact?.investorNotes || null,
+                        contactType: match.contact?.contactType || null,
                       }}
                       score={match.score as (1 | 2 | 3)}
                       reasons={(match.reasons as string[]) || []}

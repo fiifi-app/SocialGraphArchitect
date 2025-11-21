@@ -11,6 +11,12 @@ interface MatchWithContact extends MatchSuggestion {
     email: string | null;
     company: string | null;
     title: string | null;
+    location: string | null;
+    bio: string | null;
+    checkSizeMin: number | null;
+    checkSizeMax: number | null;
+    investorNotes: string | null;
+    contactType: string[] | null;
   };
 }
 
@@ -27,7 +33,13 @@ export function useMatchSuggestions(conversationId: string) {
             name,
             email,
             company,
-            title
+            title,
+            location,
+            bio,
+            check_size_min,
+            check_size_max,
+            investor_notes,
+            contact_type
           )
         `)
         .eq('conversation_id', conversationId)
@@ -57,7 +69,13 @@ export function useTopMatches(conversationId: string, minScore: number = 2) {
             name,
             email,
             company,
-            title
+            title,
+            location,
+            bio,
+            check_size_min,
+            check_size_max,
+            investor_notes,
+            contact_type
           )
         `)
         .eq('conversation_id', conversationId)
