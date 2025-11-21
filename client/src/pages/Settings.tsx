@@ -31,7 +31,7 @@ export default function Settings() {
   }, [location, toast, queryClient]);
 
   // Fetch user preferences to check Google Calendar connection status
-  const { data: preferences } = useQuery({
+  const { data: preferences } = useQuery<{google_calendar_connected: boolean} | null>({
     queryKey: ['/user-preferences', user?.id],
     queryFn: async () => {
       if (!user) return null;
@@ -42,7 +42,7 @@ export default function Settings() {
         .single();
       
       if (error) throw error;
-      return data;
+      return (data as {google_calendar_connected: boolean}) || null;
     },
     enabled: !!user,
   });

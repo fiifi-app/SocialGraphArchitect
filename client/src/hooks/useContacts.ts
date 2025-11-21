@@ -109,7 +109,7 @@ export function useCreateContact() {
 export function useUpdateContact() {
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Contact> & { id: string }) => {
-      const dbUpdates = contactToDb(updates) as Record<string, any>;
+      const dbUpdates = contactToDb(updates);
       
       const { data, error } = await supabase
         .from('contacts')

@@ -19,18 +19,18 @@ export default function HomeNew() {
   const { data: todaysEvents, isLoading: eventsLoading } = useTodaysEvents();
   const { data: conversations = [], isLoading: conversationsLoading } = useConversations();
   
-  const { data: allMatches = [] } = useQuery({
+  const { data: allMatches = [] } = useQuery<Array<{id: string; conversation_id: string; status: string}>>({
     queryKey: ['/api/matches/all'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('match_suggestions')
         .select('id, conversation_id, status');
       if (error) throw error;
-      return data;
+      return (data as Array<{id: string; conversation_id: string; status: string}>) || [];
     },
   });
 
-  const { data: conversationSegments = {} } = useQuery({
+  const { data: conversationSegments = {} } = useQuery<Record<string, string[]>>({
     queryKey: ['/api/conversation-segments/all'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -41,7 +41,7 @@ export default function HomeNew() {
       if (error) throw error;
       
       const grouped: Record<string, string[]> = {};
-      (data || []).forEach(segment => {
+      (data as Array<{conversation_id: string; text: string | null}> || []).forEach(segment => {
         if (!grouped[segment.conversation_id]) {
           grouped[segment.conversation_id] = [];
         }
