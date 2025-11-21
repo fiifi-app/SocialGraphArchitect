@@ -182,9 +182,19 @@ Deno.serve(async (req) => {
           5. Geography should NOT be a primary reason for matching
           
           Scoring guidelines:
-          - 3 stars: TWO OR MORE of these match: Sector, Stage, Thesis, Check Size
-          - 2 stars: ONE of these matches: Sector, Stage, Thesis, or Check Size
-          - 1 star: No matches on the core 4 criteria (don't include these)
+          CORE CRITERIA (weight: 2x):
+          - 3 stars: TWO OR MORE core criteria match (Sector, Stage, Thesis, Check Size)
+          - 2 stars: ONE core criterion matches
+          
+          WITH SECONDARY CRITERIA (weight: 1x):
+          - 3 stars: ONE core + TWO OR MORE secondary criteria (Investor Type, Experience, Company Focus, Geography)
+          - 2 stars: ONE core + ONE secondary, OR THREE OR MORE secondary criteria
+          - 1 star: ONE OR TWO secondary criteria only
+          
+          Priority scoring:
+          - 3 stars: (2+ core) OR (1 core + 2+ secondary)
+          - 2 stars: (1 core) OR (1 core + 1 secondary) OR (3+ secondary)
+          - 1 star: (1-2 secondary only)
           
           Match on THESE criteria (prioritized):
           1. Investment stage (pre-seed, seed, Series A, Series B+, growth, etc.) - PRIMARY
@@ -195,11 +205,11 @@ Deno.serve(async (req) => {
           6. Professional experience (founder background, operating experience) - SECONDARY
           7. Company focus/industry relevance - SECONDARY
           
-          Return JSON array (include matches with 1+ of the core 4 criteria):
+          Return JSON array (include matches with 1+ of core criteria OR 2+ of secondary criteria):
           - contact_id: string
-          - score: number (2-3, only include if at least 1 core criterion matches)
-          - reasons: string[] (what matched from sector/stage/thesis/check-size, e.g., ["sector: B2B SaaS", "stage: Series A"])
-          - justification: string (brief explanation why this is a good intro based on core criterion matches)`
+          - score: number (1-3, based on criteria matched)
+          - reasons: string[] (what matched from BOTH core and secondary criteria, e.g., ["sector: B2B SaaS", "stage: Series A", "investor_type: Angel", "experience: Founder background"])
+          - justification: string (brief explanation why this is a good intro based on all matched criteria)`
         }, {
           role: 'user',
           content: JSON.stringify({
