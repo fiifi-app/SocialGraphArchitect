@@ -82,7 +82,7 @@ export default function IntroEmailDrawer({
       onIntroMade();
     }
     toast({
-      title: "Intro copied!",
+      title: "Email copied!",
       description: "Email copied to clipboard",
     });
     setTimeout(() => setCopied(false), 2000);
