@@ -280,7 +280,7 @@ export default function ConversationDetail() {
           matchId={selectedMatchId}
           conversationId={conversationId}
           contactName={selectedContactName}
-          onIntroMade={() => handleUpdateStatus(selectedMatchId, 'accepted')}
+          onIntroMade={() => handleUpdateStatus(selectedMatchId, 'intro_made')}
         />
       )}
     </div>
