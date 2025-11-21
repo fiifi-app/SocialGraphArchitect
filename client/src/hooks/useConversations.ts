@@ -19,7 +19,6 @@ export function useConversations() {
         const { data, error } = await supabase
           .from('conversations')
           .select('*')
-          .eq('owned_by_profile', user.id)
           .order('recorded_at', { ascending: false});
         
         if (error) {

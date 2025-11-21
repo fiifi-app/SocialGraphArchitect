@@ -25,7 +25,6 @@ export function useContacts() {
           const { data, error } = await supabase
             .from('contacts')
             .select('*')
-            .eq('owned_by_profile', user.id)
             .order('created_at', { ascending: false })
             .range(from, from + batchSize - 1);
           
@@ -67,8 +66,7 @@ export function useContactsCount() {
 
         const { count, error } = await supabase
           .from('contacts')
-          .select('*', { count: 'exact', head: true })
-          .eq('owned_by_profile', user.id);
+          .select('*', { count: 'exact', head: true });
         
         if (error) {
           console.error('[useContactsCount] Query error:', error);
