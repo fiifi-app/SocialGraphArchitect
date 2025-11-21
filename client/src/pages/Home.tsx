@@ -205,15 +205,15 @@ export default function HomeNew() {
                               <h4 className="font-semibold mb-2 truncate">
                                 {getDisplayTitle(conversation.id, conversation.title)}
                               </h4>
-                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                              <div className="flex items-center gap-4 text-sm">
                                 <div className="flex items-center gap-1.5">
-                                  <MessageSquare className="h-3.5 w-3.5" />
-                                  <span>{stats.introsOffered} intro{stats.introsOffered !== 1 ? 's' : ''} offered</span>
+                                  <MessageSquare className={`h-3.5 w-3.5 ${stats.introsOffered > 0 ? 'text-sky-400' : 'text-muted-foreground'}`} />
+                                  <span className={stats.introsOffered > 0 ? 'text-sky-400' : 'text-muted-foreground'}>{stats.introsOffered} intro{stats.introsOffered !== 1 ? 's' : ''} offered</span>
                                 </div>
                                 <Separator orientation="vertical" className="h-4" />
                                 <div className="flex items-center gap-1.5">
-                                  <TrendingUp className="h-3.5 w-3.5" />
-                                  <span>{stats.introsMade} intro{stats.introsMade !== 1 ? 's' : ''} made</span>
+                                  <TrendingUp className={`h-3.5 w-3.5 ${stats.introsMade > 0 ? 'text-emerald-400' : 'text-muted-foreground'}`} />
+                                  <span className={stats.introsMade > 0 ? 'text-emerald-400' : 'text-muted-foreground'}>{stats.introsMade} intro{stats.introsMade !== 1 ? 's' : ''} made</span>
                                 </div>
                               </div>
                             </div>
