@@ -91,7 +91,7 @@ export default function IntroEmailDrawer({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="h-1/4">
+      <DrawerContent className="h-3/4 flex flex-col">
         <DrawerHeader>
           <DrawerTitle>Introduction Email</DrawerTitle>
           <DrawerDescription>
@@ -99,7 +99,7 @@ export default function IntroEmailDrawer({
           </DrawerDescription>
         </DrawerHeader>
 
-        <div className="px-4 pb-4 space-y-4 flex-1 overflow-y-auto max-h-96">
+        <div className="px-4 pb-4 space-y-4 flex-1 overflow-y-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -112,7 +112,7 @@ export default function IntroEmailDrawer({
                 </p>
                 <p className="text-sm font-semibold">{email.subject}</p>
               </div>
-              <div>
+              <div className="flex-1 overflow-y-auto">
                 <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
                   Email Body
                 </p>
