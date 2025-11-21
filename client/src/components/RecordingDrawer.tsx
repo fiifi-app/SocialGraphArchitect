@@ -395,9 +395,6 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
                   <div className="w-12 h-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin"></div>
                 </div>
               </div>
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-primary animate-pulse w-3/4"></div>
-              </div>
               <p className="text-sm text-center text-muted-foreground">
                 Processing conversation and generating matches...
               </p>
