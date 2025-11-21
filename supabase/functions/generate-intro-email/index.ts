@@ -72,28 +72,28 @@ CRITICAL RULES FOR INVESTOR EMAILS:
 5. NO fluff: Cut "I hope this finds you well", lengthy introductions, unnecessary pleasantries
 6. Focus: What's in it for THEM, not the people being introduced
 
-FORMATTING RULES:
-- Use proper paragraph breaks (\\n\\n between paragraphs)
-- Use single line breaks (\\n) within paragraphs for clarity
-- Structure: [Greeting] → [Opening] → [1-2 reasons as bullet points] → [CTA] → [Closing]
-- Make it paste-ready for email clients with clear visual hierarchy
-- Add blank line between main sections
+FORMATTING RULES - EXTREMELY IMPORTANT:
+Generate email with these EXACT line breaks:
+1. [Contact Name],\\n\\n
+2. [1-2 sentence hook]\\n\\n
+3. Key reason 1\\n
+4. Key reason 2\\n\\n
+5. [Call to action]\\n\\n
+6. [Closing]
 
-Example format:
-[Name],
+CRITICAL: Use TWO newlines (\\n\\n) between paragraphs and ONE newline (\\n) for bullet points within a section.
 
-[1-2 sentence hook about their focus]
-
-[Reason 1]
-[Reason 2]
-
-[Call to action - one clear ask]
-
-[Professional closing]
+Example (with literal newlines shown as [NL]):
+Sarah,[NL][NL]
+You focus on B2B SaaS investments, and I think I have a great connection for you.[NL][NL]
+- They're building in your target sector with proven traction[NL]
+- Pre-seed stage, which matches your check size[NL][NL]
+Would you be open to an intro?[NL][NL]
+Best, [Your Name]
 
 Return JSON with:
 - subject: 40-50 character subject line
-- body: Plain text email with proper paragraph breaks (use \\n\\n for paragraphs, \\n for line breaks)`,
+- body: Plain text with literal newlines - paragraph breaks use \\n\\n, inline breaks use \\n`,
         }, {
           role: 'user',
           content: JSON.stringify({

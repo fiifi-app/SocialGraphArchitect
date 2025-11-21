@@ -115,8 +115,14 @@ export default function IntroEmailDrawer({
                 <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
                   Email Body
                 </p>
-                <div className="text-sm whitespace-pre-wrap leading-relaxed text-foreground select-text cursor-text">
-                  {stripHtmlTags(email.body)}
+                <div className="text-sm whitespace-pre-wrap leading-relaxed text-foreground select-text cursor-text space-y-2">
+                  {stripHtmlTags(email.body).split('\n\n').map((paragraph, idx) => (
+                    <div key={idx}>
+                      {paragraph.split('\n').map((line, lineIdx) => (
+                        <div key={lineIdx}>{line}</div>
+                      ))}
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
