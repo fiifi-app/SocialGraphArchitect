@@ -80,8 +80,8 @@ export default function Login() {
                 Forgot password?
               </a>
             </div>
-            <div className="relative flex items-center">
-              <Input
+            <div className="relative">
+              <input
                 id="password"
                 type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
@@ -89,21 +89,24 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 data-testid="input-password"
-                className="pr-10"
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm pr-10"
               />
               <button
                 type="button"
+                tabIndex={-1}
                 onClick={(e) => {
                   e.preventDefault();
+                  e.stopPropagation();
+                  console.log('[Login] Password toggle clicked, new state:', !showPassword);
                   setShowPassword(!showPassword);
                 }}
                 data-testid="button-toggle-password"
-                className="absolute right-2 p-1 text-muted-foreground hover:text-foreground transition-colors"
+                className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer"
               >
                 {showPassword ? (
-                  <EyeOff className="w-5 h-5" />
+                  <EyeOff className="w-5 h-5 text-muted-foreground hover:text-foreground" />
                 ) : (
-                  <Eye className="w-5 h-5" />
+                  <Eye className="w-5 h-5 text-muted-foreground hover:text-foreground" />
                 )}
               </button>
             </div>
