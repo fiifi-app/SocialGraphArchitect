@@ -182,7 +182,7 @@ export const matchSuggestions = pgTable("match_suggestions", {
   score: integer("score").notNull(),
   reasons: jsonb("reasons").notNull().default(sql`'[]'::jsonb`),
   justification: text("justification"),
-  status: text("status").notNull().default('pending'), // 'pending' | 'promised' | 'intro_made'
+  status: text("status", { enum: ['pending', 'promised', 'intro_made', 'dismissed', 'maybe'] }).notNull().default('pending'),
   promiseStatus: text("promise_status").default('general'), // 'general' | 'promised'
   promisedAt: timestamp("promised_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
