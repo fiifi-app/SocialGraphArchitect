@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Mail, X, Clock, Building2, Briefcase, Star } from "lucide-react";
+import { Mail, X, Clock, Building2, Briefcase, Star, Check } from "lucide-react";
 
 interface ContactDetails {
   name: string;
@@ -49,12 +49,14 @@ export default function SuggestionCard({
   const statusColors = {
     pending: "",
     promised: "bg-accent/50",
+    intro_made: "bg-emerald-400/20",
     maybe: "bg-muted/50",
     dismissed: "opacity-60",
   };
   
   const statusIcons = {
     promised: <Mail className="w-3.5 h-3.5 text-primary" />,
+    intro_made: <Check className="w-3.5 h-3.5 text-emerald-600" />,
     maybe: <Clock className="w-3.5 h-3.5 text-muted-foreground" />,
     dismissed: <X className="w-3.5 h-3.5 text-muted-foreground" />,
   };
@@ -143,6 +145,19 @@ export default function SuggestionCard({
             data-testid="button-dismiss"
           >
             <X className="w-3 h-3" />
+          </Button>
+        </div>
+      )}
+      {status === 'intro_made' && (
+        <div className="flex gap-2 pt-2">
+          <Button
+            size="sm"
+            disabled
+            className="flex-1 bg-emerald-400 hover:bg-emerald-400 text-emerald-900"
+            data-testid="button-intro-made"
+          >
+            <Check className="w-3 h-3 mr-1" />
+            Intro Made
           </Button>
         </div>
       )}

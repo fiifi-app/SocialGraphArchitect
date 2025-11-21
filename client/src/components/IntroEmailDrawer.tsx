@@ -18,6 +18,7 @@ interface IntroEmailDrawerProps {
   matchId: string;
   conversationId: string;
   contactName: string;
+  onIntroMade?: () => void;
 }
 
 interface GeneratedEmail {
@@ -31,6 +32,7 @@ export default function IntroEmailDrawer({
   matchId,
   conversationId,
   contactName,
+  onIntroMade,
 }: IntroEmailDrawerProps) {
   const [email, setEmail] = useState<GeneratedEmail | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -64,9 +66,12 @@ export default function IntroEmailDrawer({
     const fullEmail = `Subject: ${email.subject}\n\n${email.body}`;
     navigator.clipboard.writeText(fullEmail);
     setCopied(true);
+    if (onIntroMade) {
+      onIntroMade();
+    }
     toast({
-      title: "Copied!",
-      description: "Email copied to clipboard",
+      title: "Intro sent!",
+      description: "Email copied and marked as sent",
     });
     setTimeout(() => setCopied(false), 2000);
   };
