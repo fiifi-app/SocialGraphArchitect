@@ -179,6 +179,14 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
       
       await processParticipants(conversationIdRef.current);
       
+      // Extract entities one final time to ensure all are captured
+      console.log('🔍 Extracting entities from complete transcript...');
+      await extractEntities(conversationIdRef.current);
+      
+      // Generate final matches based on all conversation data
+      console.log('🎯 Generating final matches...');
+      await generateMatches(conversationIdRef.current);
+      
       await updateConversation.mutateAsync({
         id: conversationIdRef.current,
         status: 'completed',
