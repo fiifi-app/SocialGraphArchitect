@@ -25,8 +25,9 @@ serve(async (req) => {
     }
 
     const { matchSuggestionId, conversationId } = await req.json();
+    console.log('📧 Generating email for matchSuggestionId:', matchSuggestionId, 'conversationId:', conversationId);
     
-    const { data: match } = await supabase
+    const { data: match, error: matchError } = await supabase
       .from('match_suggestions')
       .select(`
         *,
@@ -40,14 +41,26 @@ serve(async (req) => {
       .eq('id', matchSuggestionId)
       .single();
     
-    const { data: segments } = await supabase
+    if (matchError) {
+      console.error('❌ Error fetching match:', matchError);
+      throw new Error(`Failed to fetch match: ${matchError.message}`);
+    }
+    
+    console.log('✅ Match data fetched:', match ? 'success' : 'null');
+    
+    const { data: segments, error: segmentsError } = await supabase
       .from('conversation_segments')
       .select('text')
       .eq('conversation_id', conversationId)
       .order('timestamp_ms')
       .limit(10);
     
+    if (segmentsError) {
+      console.error('❌ Error fetching segments:', segmentsError);
+    }
+    
     const transcriptSnippets = segments?.map(s => s.text).slice(0, 4) || [];
+    console.log('✅ Transcript snippets:', transcriptSnippets.length);
     
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -107,16 +120,31 @@ Return JSON with:
       }),
     });
 
+    if (!openaiResponse.ok) {
+      const errorText = await openaiResponse.text();
+      console.error('❌ OpenAI API error:', openaiResponse.status, errorText);
+      throw new Error(`OpenAI API error: ${openaiResponse.status} - ${errorText}`);
+    }
+
     const openaiData = await openaiResponse.json();
+    console.log('✅ OpenAI response received');
+    
+    if (!openaiData.choices || !openaiData.choices[0]?.message?.content) {
+      console.error('❌ Invalid OpenAI response format:', openaiData);
+      throw new Error('Invalid OpenAI response format');
+    }
+    
     const email = JSON.parse(openaiData.choices[0].message.content);
+    console.log('✅ Email generated successfully');
     
     return new Response(
       JSON.stringify({ email }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
+    console.error('💥 Fatal error in generate-intro-email:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

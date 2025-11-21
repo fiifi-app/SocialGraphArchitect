@@ -110,7 +110,7 @@ export function useAddConversationSegment() {
 export function useUpdateConversation() {
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Conversation> & { id: string }) => {
-      const dbUpdates = conversationToDb(updates);
+      const dbUpdates = conversationToDb(updates) as Record<string, any>;
       
       const { data, error } = await supabase
         .from('conversations')
