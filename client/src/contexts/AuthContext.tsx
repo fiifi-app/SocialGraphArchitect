@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User, AuthError } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured, supabaseUrl, supabaseAnonKey } from '@/lib/supabase';
 
 interface AuthContextType {
   user: User | null;
@@ -23,6 +23,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   useEffect(() => {
+    // Validate Supabase configuration
+    if (!isSupabaseConfigured()) {
+      console.error('[AuthContext] Supabase is not configured - credentials missing');
+      console.error('[AuthContext] VITE_SUPABASE_URL:', supabaseUrl ? '✓ Set' : '✗ Missing');
+      console.error('[AuthContext] VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? '✓ Set' : '✗ Missing');
+      setLoading(false);
+      return;
+    }
+
+    console.log('[AuthContext] Supabase configured successfully');
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
