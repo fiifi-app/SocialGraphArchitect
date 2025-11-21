@@ -155,33 +155,42 @@ Deno.serve(async (req) => {
         messages: [{
           role: 'system',
           content: `You are a relationship matching engine for VCs and investors. 
-          Score each contact based on how well their thesis matches the conversation entities.
-          Consider:
-          - Contact's thesis (investment theses from their database record)
-          - Contact's profile (title, company, experience)
+          Score each contact based on how well their COMPLETE PROFILE and investment thesis match the conversation entities.
+          Consider ALL contact information:
+          - Investment theses (sectors, stages, check sizes, geos they invest in)
+          - Contact's title, company, and experience
+          - Investor type (GP, LP, Angel, Family Office, PE)
+          - Check size ranges
+          - Personal background (LinkedIn, Twitter, location, bio)
+          - Company information (size, founded date, business focus)
           - Conversation topics and entities mentioned
           
-          IMPORTANT: Partial matches are valuable! Contacts don't need to match ALL criteria.
-          Even if only one field matches (e.g., just "pre-seed" stage), include it as a match.
+          IMPORTANT: Use the ENTIRE contact profile for rich matching:
+          1. Even without a formal thesis, use title/company to infer investment interests
+          2. For solo recordings or single-person conversations, match more aggressively
+          3. Partial matches are valuable! Contacts don't need to match ALL criteria.
+          4. Geographic match (location) is significant
+          5. Experience (title keywords like GP, Angel, Founder) is important
           
           Scoring guidelines:
-          - 3 stars: Strong match (3+ overlapping criteria OR contact's thesis strongly aligns)
-          - 2 stars: Medium match (2 overlapping criteria OR moderate thesis alignment)
-          - 1 star: Weak match (1 overlapping criterion OR some relevance)
+          - 3 stars: Strong match (3+ overlapping criteria OR thesis perfectly aligns OR deep experience match)
+          - 2 stars: Medium match (2+ overlapping criteria OR moderate thesis alignment OR some relevant experience)
+          - 1 star: Weak match (1+ overlapping criterion OR potential relevance)
           
           Match on ANY of these:
-          - Investment stage (pre-seed, seed, Series A, etc.)
-          - Sector/vertical (B2B SaaS, fintech, healthcare, AI, etc.)
-          - Check size ($1M, $5M, etc.)
-          - Geography (SF Bay Area, NYC, remote, etc.)
-          - Persona type (GP, angel, family office, etc.)
-          - Company background/experience match
+          - Investment stage (pre-seed, seed, Series A, Series B+, growth, etc.)
+          - Sector/vertical (B2B SaaS, fintech, healthcare, AI/ML, biotech, etc.)
+          - Check size range (matches conversation amounts mentioned)
+          - Geography (country, region, or stated location preference)
+          - Investor type (GP, Angel, Family Office, LP, PE match conversation context)
+          - Professional experience (founder background, operating experience, etc.)
+          - Company focus/industry relevance
           
           Return JSON array (include ALL matches, even 1-star):
           - contact_id: string
           - score: number (1-3)
-          - reasons: string[] (what matched, e.g., ["stage: pre-seed", "sector: B2B SaaS", "thesis alignment"])
-          - justification: string (brief explanation why this is a good intro)`
+          - reasons: string[] (what matched, e.g., ["stage: pre-seed", "sector: B2B SaaS", "GP experience", "SF Bay Area", "thesis alignment"])
+          - justification: string (brief explanation why this is a good intro based on all their profile data)`
         }, {
           role: 'user',
           content: JSON.stringify({
@@ -189,12 +198,35 @@ Deno.serve(async (req) => {
             contacts: contacts.map(c => ({
               id: c.id,
               name: c.name,
+              firstName: c.first_name,
+              lastName: c.last_name,
               title: c.title,
               company: c.company,
+              email: c.email,
+              location: c.location,
+              linkedinUrl: c.linkedin_url,
+              twitter: c.twitter,
+              angellist: c.angellist,
+              bio: c.bio,
+              phone: c.phone,
+              category: c.category,
+              companyAddress: c.company_address,
+              companyEmployees: c.company_employees,
+              companyFounded: c.company_founded,
+              companyUrl: c.company_url,
+              companyLinkedin: c.company_linkedin,
+              companyTwitter: c.company_twitter,
+              companyFacebook: c.company_facebook,
+              companyAngellist: c.company_angellist,
+              companyCrunchbase: c.company_crunchbase,
+              companyOwler: c.company_owler,
+              youtubeVimeo: c.youtube_vimeo,
               theses: c.theses,
               investorNotes: c.investor_notes,
+              contactType: c.contact_type,
               checkSizeMin: c.check_size_min,
               checkSizeMax: c.check_size_max,
+              isInvestor: c.is_investor,
             }))
           })
         }],
