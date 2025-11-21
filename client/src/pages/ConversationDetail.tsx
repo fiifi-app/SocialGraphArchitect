@@ -210,7 +210,6 @@ export default function ConversationDetail() {
         <TabsList className="mb-6">
           <TabsTrigger value="suggestions" data-testid="tab-suggestions">Suggested Intros</TabsTrigger>
           <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
-          <TabsTrigger value="emails" data-testid="tab-emails">Intro Emails</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
@@ -266,13 +265,6 @@ export default function ConversationDetail() {
           </div>
         </TabsContent>
 
-        <TabsContent value="emails">
-          <div className="max-w-2xl mx-auto">
-            <div className="bg-card border border-card-border rounded-lg p-8 text-center text-muted-foreground">
-              Introduction email generation coming soon
-            </div>
-          </div>
-        </TabsContent>
       </Tabs>
 
       {selectedMatchId && (
