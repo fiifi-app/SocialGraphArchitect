@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Check, X, Clock, Building2, Briefcase, Star } from "lucide-react";
+import { Mail, X, Clock, Building2, Briefcase, Star } from "lucide-react";
 
 interface ContactDetails {
   name: string;
@@ -16,7 +16,7 @@ interface SuggestionCardProps {
   score: 1 | 2 | 3;
   reasons: string[];
   status?: string;
-  onPromise: () => void;
+  onMakeIntro: () => void;
   onMaybe: () => void;
   onDismiss: () => void;
   isPending?: boolean;
@@ -27,7 +27,7 @@ export default function SuggestionCard({
   score,
   reasons,
   status = 'pending',
-  onPromise,
+  onMakeIntro,
   onMaybe,
   onDismiss,
   isPending = false,
@@ -52,7 +52,7 @@ export default function SuggestionCard({
   };
   
   const statusIcons = {
-    promised: <Check className="w-3.5 h-3.5 text-primary" />,
+    promised: <Mail className="w-3.5 h-3.5 text-primary" />,
     maybe: <Clock className="w-3.5 h-3.5 text-muted-foreground" />,
     dismissed: <X className="w-3.5 h-3.5 text-muted-foreground" />,
   };
@@ -114,13 +114,13 @@ export default function SuggestionCard({
         <div className="flex gap-2 pt-2">
           <Button
             size="sm"
-            onClick={onPromise}
+            onClick={onMakeIntro}
             className="flex-1"
             disabled={isPending}
-            data-testid="button-promise"
+            data-testid="button-make-intro"
           >
-            <Check className="w-3 h-3 mr-1" />
-            Promise
+            <Mail className="w-3 h-3 mr-1" />
+            Make Intro
           </Button>
           <Button
             size="sm"

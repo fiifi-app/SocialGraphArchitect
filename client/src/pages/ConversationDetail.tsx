@@ -236,7 +236,7 @@ export default function ConversationDetail() {
                       score={match.score as (1 | 2 | 3)}
                       reasons={(match.reasons as string[]) || []}
                       status={match.status}
-                      onPromise={() => handleUpdateStatus(match.id, 'promised')}
+                      onMakeIntro={() => handleUpdateStatus(match.id, 'promised')}
                       onMaybe={() => handleUpdateStatus(match.id, 'maybe')}
                       onDismiss={() => handleUpdateStatus(match.id, 'dismissed')}
                       isPending={updateStatus.isPending}
