@@ -6,6 +6,7 @@ import MeetingSummary from "@/components/MeetingSummary";
 import PersonSection from "@/components/PersonSection";
 import SuggestionCard from "@/components/SuggestionCard";
 import IntroEmailPanel from "@/components/IntroEmailPanel";
+import IntroEmailDrawer from "@/components/IntroEmailDrawer";
 import { ArrowLeft, Download } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -27,6 +28,9 @@ export default function ConversationDetail() {
   
   const { toast } = useToast();
   const [promisedIntros, setPromisedIntros] = useState<Record<string, PromisedIntro[]>>({});
+  const [emailDrawerOpen, setEmailDrawerOpen] = useState(false);
+  const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
+  const [selectedContactName, setSelectedContactName] = useState<string>("");
   
   const { data: conversation, isLoading: conversationLoading } = useConversation(conversationId);
   const { data: segments = [], isLoading: segmentsLoading } = useConversationSegments(conversationId);
@@ -91,6 +95,13 @@ export default function ConversationDetail() {
     }));
   };
 
+  const handleMakeIntro = (matchId: string, contactName: string) => {
+    setSelectedMatchId(matchId);
+    setSelectedContactName(contactName);
+    setEmailDrawerOpen(true);
+    handleUpdateStatus(matchId, 'promised');
+  };
+
   const handleUpdateStatus = async (matchId: string, status: string) => {
     try {
       await updateStatus.mutateAsync({ matchId, status });
@@ -102,7 +113,7 @@ export default function ConversationDetail() {
       toast({
         title: statusLabels[status] || 'Status updated',
         description: status === 'promised' 
-          ? 'You can now draft an introduction email' 
+          ? 'Email ready to copy and send' 
           : undefined,
       });
     } catch (error) {
@@ -236,7 +247,8 @@ export default function ConversationDetail() {
                       score={match.score as (1 | 2 | 3)}
                       reasons={(match.reasons as string[]) || []}
                       status={match.status}
-                      onMakeIntro={() => handleUpdateStatus(match.id, 'promised')}
+                      matchId={match.id}
+                      onMakeIntro={() => handleMakeIntro(match.id, match.contact?.name || 'Unknown')}
                       onMaybe={() => handleUpdateStatus(match.id, 'maybe')}
                       onDismiss={() => handleUpdateStatus(match.id, 'dismissed')}
                       isPending={updateStatus.isPending}
@@ -260,6 +272,16 @@ export default function ConversationDetail() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {selectedMatchId && (
+        <IntroEmailDrawer
+          open={emailDrawerOpen}
+          onOpenChange={setEmailDrawerOpen}
+          matchId={selectedMatchId}
+          conversationId={conversationId}
+          contactName={selectedContactName}
+        />
+      )}
     </div>
   );
 }

@@ -20,6 +20,7 @@ interface SuggestionCardProps {
   onMaybe: () => void;
   onDismiss: () => void;
   isPending?: boolean;
+  matchId?: string;
 }
 
 export default function SuggestionCard({
@@ -31,6 +32,7 @@ export default function SuggestionCard({
   onMaybe,
   onDismiss,
   isPending = false,
+  matchId,
 }: SuggestionCardProps) {
   const scoreColors = {
     1: "bg-muted text-muted-foreground",
