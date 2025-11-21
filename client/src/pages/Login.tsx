@@ -89,13 +89,13 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 data-testid="input-password"
-                className="pr-10"
+                className="pr-12"
               />
               <Button
                 type="button"
                 size="icon"
                 variant="ghost"
-                className="absolute right-0 top-1/2 -translate-y-1/2 h-full w-10"
+                className="absolute right-1 top-1/2 -translate-y-1/2 z-10"
                 onClick={() => setShowPassword(!showPassword)}
                 data-testid="button-toggle-password"
               >
