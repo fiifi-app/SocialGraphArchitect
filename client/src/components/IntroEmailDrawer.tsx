@@ -90,32 +90,32 @@ export default function IntroEmailDrawer({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="h-3/4 flex flex-col">
-        <DrawerHeader>
+      <DrawerContent className="h-[80vh] md:h-3/4 flex flex-col max-h-[90vh]">
+        <DrawerHeader className="flex-shrink-0">
           <DrawerTitle>Introduction Email</DrawerTitle>
           <DrawerDescription>
             Pre-crafted double opt-in email for {contactName}
           </DrawerDescription>
         </DrawerHeader>
 
-        <div className="px-4 pb-4 space-y-4 flex-1 overflow-y-auto">
+        <div className="px-4 pb-4 space-y-4 flex-1 overflow-y-auto min-h-0">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
           ) : email ? (
-            <div className="space-y-4 bg-muted/50 p-4 rounded-lg select-text">
+            <div className="space-y-4 bg-muted/50 p-3 md:p-4 rounded-lg select-text">
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
                   Subject
                 </p>
-                <p className="text-sm font-semibold select-text cursor-text">{email.subject}</p>
+                <p className="text-sm font-semibold select-text cursor-text break-words">{email.subject}</p>
               </div>
-              <div className="flex-1 overflow-y-auto">
+              <div className="min-h-0 overflow-y-auto">
                 <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
                   Email Body
                 </p>
-                <pre className="text-sm leading-relaxed text-foreground select-text cursor-text font-sans whitespace-pre-wrap break-words">
+                <pre className="text-xs md:text-sm leading-relaxed text-foreground select-text cursor-text font-sans whitespace-pre-wrap break-words">
                   {stripHtmlTags(email.body)}
                 </pre>
               </div>
@@ -123,7 +123,7 @@ export default function IntroEmailDrawer({
           ) : null}
         </div>
 
-        <DrawerFooter>
+        <DrawerFooter className="flex-shrink-0 gap-2">
           <Button
             onClick={handleCopy}
             disabled={isLoading || !email}

@@ -131,7 +131,7 @@ export default function ConversationDetail() {
 
   if (isLoading) {
     return (
-      <div className="p-8">
+      <div className="p-4 md:p-8">
         <div className="mb-6">
           <Link href="/history">
             <Button variant="ghost" size="sm" data-testid="button-back">
@@ -140,7 +140,7 @@ export default function ConversationDetail() {
             </Button>
           </Link>
         </div>
-        <div className="bg-card rounded-lg border border-card-border p-8 text-center text-muted-foreground">
+        <div className="bg-card rounded-lg border border-card-border p-4 md:p-8 text-center text-muted-foreground">
           Loading conversation...
         </div>
       </div>
@@ -149,7 +149,7 @@ export default function ConversationDetail() {
 
   if (!conversation) {
     return (
-      <div className="p-8">
+      <div className="p-4 md:p-8">
         <div className="mb-6">
           <Link href="/history">
             <Button variant="ghost" size="sm" data-testid="button-back">
@@ -158,7 +158,7 @@ export default function ConversationDetail() {
             </Button>
           </Link>
         </div>
-        <div className="bg-card rounded-lg border border-card-border p-8 text-center text-muted-foreground">
+        <div className="bg-card rounded-lg border border-card-border p-4 md:p-8 text-center text-muted-foreground">
           Conversation not found
         </div>
       </div>
@@ -175,7 +175,7 @@ export default function ConversationDetail() {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-8 overflow-auto">
       <div className="mb-6">
         <Link href="/history">
           <Button variant="ghost" size="sm" data-testid="button-back">
@@ -186,27 +186,27 @@ export default function ConversationDetail() {
       </div>
 
       <div className="mb-8">
-        <div className="flex items-start justify-between mb-4">
+        <div className="flex flex-col md:flex-row items-start gap-4 md:justify-between md:mb-4">
           <div>
-            <h1 className="text-2xl font-semibold mb-2">{displayTitle}</h1>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <h1 className="text-xl md:text-2xl font-semibold mb-2">{displayTitle}</h1>
+            <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 text-sm text-muted-foreground">
               <span>{conversationDate}</span>
               {durationMinutes > 0 && (
                 <>
-                  <span>•</span>
+                  <span className="hidden md:inline">•</span>
                   <span>{durationMinutes} {durationMinutes === 1 ? 'minute' : 'minutes'}</span>
                 </>
               )}
             </div>
           </div>
-          <Button variant="outline" data-testid="button-export">
+          <Button variant="outline" size="sm" className="w-full md:w-auto" data-testid="button-export">
             <Download className="w-4 h-4 mr-2" />
             Export
           </Button>
         </div>
       </div>
 
-      <Tabs defaultValue="suggestions" className="w-full">
+      <Tabs defaultValue="suggestions" className="w-full overflow-hidden">
         <TabsList className="mb-6">
           <TabsTrigger value="suggestions" data-testid="tab-suggestions">Suggested Intros</TabsTrigger>
           <TabsTrigger value="overview" data-testid="tab-overview">Transcript</TabsTrigger>
