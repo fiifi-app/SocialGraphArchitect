@@ -97,7 +97,6 @@ export default function Login() {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  console.log('[Login] Password toggle clicked, new state:', !showPassword);
                   setShowPassword(!showPassword);
                 }}
                 data-testid="button-toggle-password"

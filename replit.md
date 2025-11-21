@@ -3,6 +3,13 @@
 ## Overview
 The Social Graph Connector is a web-based application designed for VCs and investors. Its primary purpose is to help users identify valuable introductions from their conversations by automatically matching discussion topics against their network's investment theses. Key capabilities include recording conversations with live transcription, extracting investment entities (sectors, stages, check sizes, geos, personas, intents), matching these against a contact/thesis database with explainable scoring, and generating double opt-in introduction emails using AI. The project aims to provide multi-user support with secure authentication and a clean, professional user interface.
 
+## Recent Changes
+- **Authentication:** Implemented Supabase PKCE authentication flow for seamless mobile compatibility
+- **Password Visibility Toggle:** Added eye icon button on login page to reveal/hide passwords during entry
+- **Login UI Cleanup:** Removed Supabase connection status indicator for cleaner, more focused login experience
+- **Data Fetching:** Fixed contacts and conversation queries to properly fetch all data without user ID filtering (relies on RLS)
+- **Mobile Support:** Both desktop and mobile versions now working seamlessly with consistent authentication and data access
+
 ## User Preferences
 I prefer the agent to focus on high-level feature implementation and architectural consistency. When making changes, please prioritize the established design guidelines, aiming for a minimalist and professional UI with high information density and clear visual hierarchy. I appreciate detailed explanations for significant changes or complex logic. For UI/UX elements, refer to the `design_guidelines.md` for inspiration from Granola and Linear. I expect the agent to utilize the existing `run_test` tool for E2E testing with Playwright for UI testing. Do not make changes to files or folders not explicitly mentioned or required for the task.
 
@@ -17,7 +24,7 @@ The design draws inspiration from Granola and Linear, emphasizing high informati
 - **Database Schema:** Comprises 15 tables with RLS, covering user profiles, contacts, investment theses, calendar events, conversations, entity extraction, match suggestions, and introduction workflows.
 - **Contact Management:** Includes full CRUD for contacts, pagination, searching, real-time updates, toast notifications, and comprehensive CSV bulk import with validation and enrichment. Contact type auto-detection recognizes keywords in title field (GP, Angel, Family Office, Startup, etc.) and automatically selects appropriate tags.
 - **Contact Enrichment:** A comprehensive Edge Function uses Hunter.io and People Data Labs APIs for deep contact enrichment. From PDL, it captures personal info (name, email, title, company, location, phone, LinkedIn, Twitter, bio), company info (website, address, size, founded date, LinkedIn, Twitter, Facebook), all with preview showing original vs. enriched data side-by-side. LinkedIn bio is displayed on contact cards (first 140 characters) and fully editable in the contact dialog's "About" section.
-- **Investor Profile Feature:** Incorporates an `is_investor` flag, extended contact types (GP/Angel/FamilyOffice/Startup/Other), check size ranges, and investor notes, conditionally visible based on selected contact types. A feature flag system manages the visibility of these fields based on database migration status.
+- **Investor Profile Feature:** Incorporates an `is_investor` flag, extended contact types (GP/Angel/FamilyOffice/Startup/PE), check size ranges, and investor notes, conditionally visible based on selected contact types. A feature flag system manages the visibility of these fields based on database migration status.
 - **Google Calendar Integration (OAuth-based):** Full Google Calendar OAuth integration with automatic event sync - **FULLY OPERATIONAL**:
   - Google OAuth 2.0 flow with access/refresh token management stored in user_preferences table
   - OAuth consent screen configured as "External" with test users added
@@ -44,6 +51,11 @@ The design draws inspiration from Granola and Linear, emphasizing high informati
   - Pending contact workflow: new contacts discovered during conversations require user review/acceptance
   - Contact status field (verified/pending) for managing discovered contacts
   - Comprehensive security: ALL conversation-related Edge Functions enforce ownership verification to prevent cross-tenant data exposure
+- **Authentication System:**
+  - Supabase PKCE flow for mobile-friendly authentication
+  - Password visibility toggle on login page for better UX
+  - Seamless experience across desktop and mobile browsers
+  - Singleton Supabase client to prevent duplicate authentication instances
 
 **System Design Choices:**
 - **Security:** RLS protects all database access. Service role keys are confined to Edge Functions. API keys are secured in Supabase secrets.
