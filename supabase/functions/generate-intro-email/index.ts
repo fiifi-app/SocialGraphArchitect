@@ -172,7 +172,31 @@ Return JSON with:
       throw new Error('Invalid OpenAI response format');
     }
     
-    const email = JSON.parse(openaiData.choices[0].message.content);
+    let emailContent = openaiData.choices[0].message.content;
+    
+    // Remove markdown code block formatting if present
+    if (emailContent.includes('```json')) {
+      emailContent = emailContent.replace(/```json\n?/, '').replace(/```\n?$/, '').trim();
+    } else if (emailContent.includes('```')) {
+      emailContent = emailContent.replace(/```\n?/, '').replace(/```\n?$/, '').trim();
+    }
+    
+    console.log('📝 Parsed email content:', emailContent.substring(0, 100));
+    
+    let email;
+    try {
+      email = JSON.parse(emailContent);
+    } catch (parseError) {
+      console.error('❌ JSON parse error:', parseError);
+      console.error('❌ Content attempted to parse:', emailContent);
+      throw new Error(`Failed to parse email response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+    }
+    
+    if (!email.subject || !email.body) {
+      console.error('❌ Missing required fields in email:', email);
+      throw new Error('Email missing required fields (subject or body)');
+    }
+    
     console.log('✅ Email generated successfully');
     
     return new Response(
