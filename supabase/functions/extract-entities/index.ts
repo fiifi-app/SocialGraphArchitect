@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
       );
     }
     
-    // Use service role to read segments (bypasses RLS)
+    // Use service role to read ALL segments (not just last 30)
     const { data: segments } = await supabaseService
       .from('conversation_segments')
       .select('*')
@@ -55,13 +55,16 @@ Deno.serve(async (req) => {
       .order('timestamp_ms');
     
     if (!segments || segments.length === 0) {
-      throw new Error('No conversation segments found');
+      console.log('No conversation segments found');
+      return new Response(
+        JSON.stringify({ entities: [] }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Limit to last 30 segments (about 2-3 minutes) to avoid timeout
-    const recentSegments = segments.slice(-30);
-    const transcript = recentSegments.map(s => s.text).join('\n');
-    console.log(`Processing ${recentSegments.length} segments (${transcript.length} chars)`);
+    // Use ALL segments for better context - this is key for solo recordings!
+    const transcript = segments.map(s => s.text).join('\n');
+    console.log(`Processing ${segments.length} segments (${transcript.length} chars)`);
     
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openaiApiKey) {
@@ -166,6 +169,13 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    
+    // Delete existing entities for this conversation and insert new ones
+    // This ensures we always have fresh, complete entity data
+    await supabaseService
+      .from('conversation_entities')
+      .delete()
+      .eq('conversation_id', conversationId);
     
     // Use service role client to insert entities (bypasses RLS)
     const { data: insertedEntities, error: insertError } = await supabaseService

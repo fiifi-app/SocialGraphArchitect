@@ -136,9 +136,8 @@ Deno.serve(async (req) => {
         throw new Error('OPENAI_API_KEY not configured');
       }
 
-      // Limit contacts to 100 to avoid payload size issues and timeout
-      const limitedContacts = contacts.slice(0, 100);
-      console.log(`Processing ${limitedContacts.length} contacts for matching`);
+      // Process ALL contacts, not just first 100 - this is critical for quality!
+      console.log(`Processing ${contacts.length} contacts for matching`);
 
       // Wrap OpenAI call in 25-second timeout
       const timeoutPromise = new Promise((_, reject) => 
@@ -157,14 +156,18 @@ Deno.serve(async (req) => {
           role: 'system',
           content: `You are a relationship matching engine for VCs and investors. 
           Score each contact based on how well their thesis matches the conversation entities.
+          Consider:
+          - Contact's thesis (investment theses from their database record)
+          - Contact's profile (title, company, experience)
+          - Conversation topics and entities mentioned
           
           IMPORTANT: Partial matches are valuable! Contacts don't need to match ALL criteria.
           Even if only one field matches (e.g., just "pre-seed" stage), include it as a match.
           
           Scoring guidelines:
-          - 3 stars: Strong match (3+ overlapping criteria OR perfect fit for key criteria)
-          - 2 stars: Medium match (2 overlapping criteria OR good fit on important criteria)
-          - 1 star: Weak match (1 overlapping criterion OR relevant but not perfect fit)
+          - 3 stars: Strong match (3+ overlapping criteria OR contact's thesis strongly aligns)
+          - 2 stars: Medium match (2 overlapping criteria OR moderate thesis alignment)
+          - 1 star: Weak match (1 overlapping criterion OR some relevance)
           
           Match on ANY of these:
           - Investment stage (pre-seed, seed, Series A, etc.)
@@ -172,22 +175,26 @@ Deno.serve(async (req) => {
           - Check size ($1M, $5M, etc.)
           - Geography (SF Bay Area, NYC, remote, etc.)
           - Persona type (GP, angel, family office, etc.)
+          - Company background/experience match
           
           Return JSON array (include ALL matches, even 1-star):
           - contact_id: string
           - score: number (1-3)
-          - reasons: string[] (what matched, e.g., ["stage: pre-seed", "sector: B2B SaaS"])
-          - justification: string (brief explanation why this is a good intro)
-          `
+          - reasons: string[] (what matched, e.g., ["stage: pre-seed", "sector: B2B SaaS", "thesis alignment"])
+          - justification: string (brief explanation why this is a good intro)`
         }, {
           role: 'user',
           content: JSON.stringify({
             entities: entitySummary,
-            contacts: limitedContacts.map(c => ({
+            contacts: contacts.map(c => ({
               id: c.id,
               name: c.name,
+              title: c.title,
               company: c.company,
-              theses: c.theses
+              theses: c.theses,
+              investorNotes: c.investor_notes,
+              checkSizeMin: c.check_size_min,
+              checkSizeMax: c.check_size_max,
             }))
           })
         }],
