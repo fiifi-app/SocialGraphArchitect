@@ -100,101 +100,105 @@ serve(async (req) => {
     
     console.log('✅ Entities:', Object.keys(entityMap).length, 'Participants:', participantsList.length);
     
+    const apiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!apiKey) {
+      console.error('❌ OPENAI_API_KEY not configured');
+      throw new Error('OpenAI API key not configured');
+    }
+    
+    const userPrompt = `Contact: ${JSON.stringify(match.contact)}
+Match Reasons: ${match.reasons?.join(', ')}
+Justification: ${match.justification}
+
+Generate a professional double opt-in introduction email. Return ONLY valid JSON with exactly these two fields:
+{"subject": "...", "body": "..."}
+
+Subject: Under 50 chars, specific to their focus
+Body: 3-4 sentences, direct tone, what's in it for THEM`;
+    
+    console.log('📤 Sending request to OpenAI...');
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-4o-mini',
         messages: [{
           role: 'system',
-          content: `Generate a SHORT, high-impact double opt-in introduction email optimized for investor engagement.
-
-CRITICAL RULES FOR INVESTOR EMAILS:
-1. Subject line: Under 50 characters, specific to their focus area, creates curiosity (NOT "Introduction to X")
-2. Body: 3-4 sentences MAX in opening paragraph
-3. Structure: 
-   - Personalized 1-sentence opener mentioning their specific focus
-   - 1-2 specific reasons why THIS connection matters to THEM (not generic)
-   - 1 clear CTA (request response, not permission)
-4. Tone: Direct, respectful, assumes they'll be interested
-5. NO fluff: Cut "I hope this finds you well", lengthy introductions, unnecessary pleasantries
-6. Focus: What's in it for THEM, not the people being introduced
-
-FORMATTING RULES - EXTREMELY IMPORTANT:
-Generate email with these EXACT line breaks:
-1. [Contact Name],\\n\\n
-2. [1-2 sentence hook]\\n\\n
-3. Key reason 1\\n
-4. Key reason 2\\n\\n
-5. [Call to action]\\n\\n
-6. [Closing]
-
-CRITICAL: Use TWO newlines (\\n\\n) between paragraphs and ONE newline (\\n) for bullet points within a section.
-
-Example (with literal newlines shown as [NL]):
-Sarah,[NL][NL]
-You focus on B2B SaaS investments, and I think I have a great connection for you.[NL][NL]
-- They're building in your target sector with proven traction[NL]
-- Pre-seed stage, which matches your check size[NL][NL]
-Would you be open to an intro?[NL][NL]
-Best, [Your Name]
-
-Return JSON with:
-- subject: 40-50 character subject line
-- body: Plain text with literal newlines - paragraph breaks use \\n\\n, inline breaks use \\n`,
+          content: `You are an expert at writing professional introduction emails for investors. 
+Generate ONLY a valid JSON object with "subject" and "body" fields.
+Do NOT include markdown, code blocks, or any text outside the JSON.`
         }, {
           role: 'user',
-          content: JSON.stringify({
-            contact: match.contact,
-            match_reasons: match.reasons,
-            justification: match.justification,
-            conversation_snippets: transcriptSnippets,
-          })
+          content: userPrompt
         }],
         temperature: 0.7,
+        max_tokens: 500,
       }),
     });
 
     if (!openaiResponse.ok) {
       const errorText = await openaiResponse.text();
-      console.error('❌ OpenAI API error:', openaiResponse.status, errorText);
-      throw new Error(`OpenAI API error: ${openaiResponse.status} - ${errorText}`);
+      console.error('❌ OpenAI API error:', openaiResponse.status);
+      console.error('❌ Error details:', errorText);
+      throw new Error(`OpenAI API error: ${openaiResponse.status} - ${errorText.substring(0, 200)}`);
     }
 
-    const openaiData = await openaiResponse.json();
+    let openaiData;
+    try {
+      openaiData = await openaiResponse.json();
+    } catch (e) {
+      console.error('❌ Failed to parse OpenAI response as JSON');
+      throw new Error('Invalid response from OpenAI');
+    }
+    
     console.log('✅ OpenAI response received');
     
     if (!openaiData.choices || !openaiData.choices[0]?.message?.content) {
-      console.error('❌ Invalid OpenAI response format:', openaiData);
-      throw new Error('Invalid OpenAI response format');
+      console.error('❌ Invalid OpenAI response format:', JSON.stringify(openaiData).substring(0, 200));
+      throw new Error('Invalid OpenAI response format - missing choices');
     }
     
-    let emailContent = openaiData.choices[0].message.content;
+    let emailContent = openaiData.choices[0].message.content.trim();
+    console.log('📝 Raw response:', emailContent.substring(0, 150));
     
-    // Remove markdown code block formatting if present
-    if (emailContent.includes('```json')) {
-      emailContent = emailContent.replace(/```json\n?/, '').replace(/```\n?$/, '').trim();
-    } else if (emailContent.includes('```')) {
-      emailContent = emailContent.replace(/```\n?/, '').replace(/```\n?$/, '').trim();
+    // Remove markdown code blocks
+    emailContent = emailContent
+      .replace(/^```json\s*\n?/i, '')
+      .replace(/^```\s*\n?/i, '')
+      .replace(/\n?```\s*$/i, '')
+      .trim();
+    
+    // Extract JSON if it's embedded in text
+    const jsonMatch = emailContent.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      emailContent = jsonMatch[0];
     }
     
-    console.log('📝 Parsed email content:', emailContent.substring(0, 100));
+    console.log('📝 Cleaned content:', emailContent.substring(0, 150));
     
     let email;
     try {
       email = JSON.parse(emailContent);
     } catch (parseError) {
-      console.error('❌ JSON parse error:', parseError);
-      console.error('❌ Content attempted to parse:', emailContent);
-      throw new Error(`Failed to parse email response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+      console.error('❌ JSON parse failed');
+      console.error('❌ Content:', emailContent.substring(0, 300));
+      throw new Error(`Failed to parse email JSON: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
     }
     
     if (!email.subject || !email.body) {
-      console.error('❌ Missing required fields in email:', email);
-      throw new Error('Email missing required fields (subject or body)');
+      console.error('❌ Missing fields. Got:', Object.keys(email));
+      throw new Error('Email missing subject or body field');
+    }
+    
+    // Ensure body is a string
+    if (typeof email.body !== 'string') {
+      email.body = String(email.body);
+    }
+    if (typeof email.subject !== 'string') {
+      email.subject = String(email.subject);
     }
     
     console.log('✅ Email generated successfully');
