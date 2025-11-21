@@ -6,6 +6,8 @@ import { Card } from "@/components/ui/card";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
+import { isSupabaseConfigured, supabaseUrl, supabaseAnonKey } from "@/lib/supabase";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -45,6 +47,44 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center p-8 bg-background">
       <Card className="w-full max-w-md p-8">
+        {/* Supabase Connection Status - Visible on all devices */}
+        <div className="mb-6 p-4 rounded-lg border bg-card">
+          <div className="flex items-center gap-2 mb-3">
+            {isSupabaseConfigured() ? (
+              <>
+                <CheckCircle2 className="w-5 h-5 text-green-600" />
+                <span className="font-semibold text-sm text-green-700">Supabase Connected</span>
+              </>
+            ) : (
+              <>
+                <AlertCircle className="w-5 h-5 text-red-600" />
+                <span className="font-semibold text-sm text-red-700">Supabase Not Connected</span>
+              </>
+            )}
+          </div>
+          <div className="space-y-1 text-xs text-muted-foreground">
+            <div className="flex items-center justify-between">
+              <span>Supabase URL:</span>
+              <span>{supabaseUrl ? '✓ Set' : '✗ Missing'}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Supabase Key:</span>
+              <span>{supabaseAnonKey ? '✓ Set' : '✗ Missing'}</span>
+            </div>
+          </div>
+          {!isSupabaseConfigured() && (
+            <div className="mt-3 pt-3 border-t text-xs text-muted-foreground">
+              <p className="font-semibold mb-1">To fix:</p>
+              <ol className="list-decimal list-inside space-y-1">
+                <li>Go to Replit Secrets</li>
+                <li>Add VITE_SUPABASE_URL</li>
+                <li>Add VITE_SUPABASE_ANON_KEY</li>
+                <li>Restart the app</li>
+              </ol>
+            </div>
+          )}
+        </div>
+
         <div className="mb-8 text-center">
           <h1 className="text-2xl font-semibold mb-2">Welcome Back</h1>
           <p className="text-sm text-muted-foreground">
