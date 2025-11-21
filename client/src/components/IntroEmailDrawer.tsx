@@ -91,7 +91,7 @@ export default function IntroEmailDrawer({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent>
+      <DrawerContent className="h-1/4">
         <DrawerHeader>
           <DrawerTitle>Introduction Email</DrawerTitle>
           <DrawerDescription>
