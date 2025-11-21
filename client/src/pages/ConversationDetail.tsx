@@ -105,18 +105,13 @@ export default function ConversationDetail() {
   const handleUpdateStatus = async (matchId: string, status: string) => {
     try {
       await updateStatus.mutateAsync({ matchId, status });
-      const statusLabels: Record<string, string> = {
-        promised: 'Intro promised!',
-        intro_made: 'Intro sent!',
-        maybe: 'Not a fit - removed from suggestions',
-        dismissed: 'Match dismissed',
-      };
-      toast({
-        title: statusLabels[status] || 'Status updated',
-        description: status === 'promised' 
-          ? 'Email ready to copy and send' 
-          : undefined,
-      });
+      // Only show toast for 'promised' status, skip 'intro_made' to avoid redundant notification
+      if (status === 'promised') {
+        toast({
+          title: 'Intro promised!',
+          description: 'Email ready to copy and send',
+        });
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Please try again';
       toast({
