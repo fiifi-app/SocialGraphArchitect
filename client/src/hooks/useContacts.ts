@@ -8,30 +8,47 @@ export function useContacts() {
   return useQuery<Contact[]>({
     queryKey: ['/api/contacts'],
     queryFn: async () => {
-      let allContacts: any[] = [];
-      let from = 0;
-      const batchSize = 1000;
-      let hasMore = true;
-
-      while (hasMore) {
-        const { data, error } = await supabase
-          .from('contacts')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .range(from, from + batchSize - 1);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
         
-        if (error) throw error;
-        
-        if (data && data.length > 0) {
-          allContacts = [...allContacts, ...data];
-          from += batchSize;
-          hasMore = data.length === batchSize;
-        } else {
-          hasMore = false;
+        if (!user) {
+          console.warn('[useContacts] No authenticated user found');
+          throw new Error('Not authenticated');
         }
+
+        let allContacts: any[] = [];
+        let from = 0;
+        const batchSize = 1000;
+        let hasMore = true;
+
+        while (hasMore) {
+          const { data, error } = await supabase
+            .from('contacts')
+            .select('*')
+            .eq('owned_by_profile', user.id)
+            .order('created_at', { ascending: false })
+            .range(from, from + batchSize - 1);
+          
+          if (error) {
+            console.error('[useContacts] Query error:', error);
+            throw error;
+          }
+          
+          if (data && data.length > 0) {
+            allContacts = [...allContacts, ...data];
+            from += batchSize;
+            hasMore = data.length === batchSize;
+          } else {
+            hasMore = false;
+          }
+        }
+        
+        console.log('[useContacts] Loaded contacts:', allContacts.length);
+        return allContacts.map(contactFromDb);
+      } catch (error) {
+        console.error('[useContacts] Failed to load contacts:', error);
+        throw error;
       }
-      
-      return allContacts.map(contactFromDb);
     },
   });
 }
@@ -40,12 +57,29 @@ export function useContactsCount() {
   return useQuery<number>({
     queryKey: ['/api/contacts/count'],
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from('contacts')
-        .select('*', { count: 'exact', head: true });
-      
-      if (error) throw error;
-      return count || 0;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          console.warn('[useContactsCount] No authenticated user found');
+          return 0;
+        }
+
+        const { count, error } = await supabase
+          .from('contacts')
+          .select('*', { count: 'exact', head: true })
+          .eq('owned_by_profile', user.id);
+        
+        if (error) {
+          console.error('[useContactsCount] Query error:', error);
+          throw error;
+        }
+        console.log('[useContactsCount] Total contacts:', count);
+        return count || 0;
+      } catch (error) {
+        console.error('[useContactsCount] Failed to get count:', error);
+        throw error;
+      }
     },
   });
 }

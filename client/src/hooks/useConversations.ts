@@ -8,13 +8,30 @@ export function useConversations() {
   return useQuery<Conversation[]>({
     queryKey: ['/api/conversations'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('conversations')
-        .select('*')
-        .order('recorded_at', { ascending: false});
-      
-      if (error) throw error;
-      return (data || []).map(conversationFromDb);
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          console.warn('[useConversations] No authenticated user found');
+          throw new Error('Not authenticated');
+        }
+
+        const { data, error } = await supabase
+          .from('conversations')
+          .select('*')
+          .eq('owned_by_profile', user.id)
+          .order('recorded_at', { ascending: false});
+        
+        if (error) {
+          console.error('[useConversations] Query error:', error);
+          throw error;
+        }
+        console.log('[useConversations] Loaded conversations:', (data || []).length);
+        return (data || []).map(conversationFromDb);
+      } catch (error) {
+        console.error('[useConversations] Failed to load conversations:', error);
+        throw error;
+      }
     },
   });
 }
