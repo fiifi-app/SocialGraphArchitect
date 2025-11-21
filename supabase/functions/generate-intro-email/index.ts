@@ -59,19 +59,28 @@ serve(async (req) => {
         model: 'gpt-4',
         messages: [{
           role: 'system',
-          content: `Generate a warm, professional double opt-in introduction email.
-          
-          Include:
-          - Brief introduction of both parties
-          - 3-4 bullet points from the conversation that explain why this intro makes sense
-          - Warm, conversational tone
-          - Ask for permission to make the introduction
-          
-          Return JSON with:
-          - subject: email subject line
-          - body: full email body (HTML format)
-          - bullets: array of 3-4 key points from conversation
-          `
+          content: `Generate a SHORT, high-impact double opt-in introduction email optimized for investor engagement.
+
+CRITICAL RULES FOR INVESTOR EMAILS:
+1. Subject line: Under 50 characters, specific to their focus area, creates curiosity (NOT "Introduction to X")
+2. Body: 3-4 sentences MAX in opening paragraph
+3. Structure: 
+   - Personalized 1-sentence opener mentioning their specific focus
+   - 1-2 specific reasons why THIS connection matters to THEM (not generic)
+   - 1 clear CTA (request response, not permission)
+4. Tone: Direct, respectful, assumes they'll be interested
+5. NO fluff: Cut "I hope this finds you well", lengthy introductions, unnecessary pleasantries
+6. Focus: What's in it for THEM, not the people being introduced
+
+Best practices:
+- Lead with their interest/thesis area
+- Be specific about the connection/opportunity
+- Make it easy to say yes
+- Include a simple ask (coffee, brief call, intro confirmation)
+
+Return JSON with:
+- subject: 40-50 character subject line
+- body: Plain text email (keep formatting minimal)`,
         }, {
           role: 'user',
           content: JSON.stringify({
