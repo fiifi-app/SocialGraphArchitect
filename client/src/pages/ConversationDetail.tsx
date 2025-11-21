@@ -178,7 +178,7 @@ export default function ConversationDetail() {
     <div className="p-4 md:p-8 overflow-auto">
       <div className="mb-6">
         <Link href="/history">
-          <Button variant="ghost" size="sm" data-testid="button-back">
+          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" data-testid="button-back">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to History
           </Button>

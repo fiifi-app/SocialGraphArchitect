@@ -65,7 +65,7 @@ export default function History() {
               Review past meetings and intro suggestions
             </p>
           </div>
-          <Button variant="outline" data-testid="button-export-history">
+          <Button variant="outline" size="sm" data-testid="button-export-history">
             <Download className="w-4 h-4 mr-2" />
             Export
           </Button>

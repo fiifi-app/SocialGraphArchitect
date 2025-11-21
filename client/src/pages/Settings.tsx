@@ -147,6 +147,7 @@ export default function Settings() {
               </p>
               <Button
                 variant="outline"
+                size="sm"
                 onClick={handleDisconnectCalendar}
                 disabled={disconnectMutation.isPending}
                 data-testid="button-disconnect-calendar"
@@ -160,6 +161,7 @@ export default function Settings() {
                 Connect your Google Calendar to automatically sync upcoming meetings and receive push notifications before they start.
               </p>
               <Button
+                size="sm"
                 onClick={handleConnectCalendar}
                 data-testid="button-connect-calendar"
               >

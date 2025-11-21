@@ -66,6 +66,7 @@ export default function Contacts() {
           <div className="flex gap-3">
             <Button 
               variant="outline" 
+              size="sm"
               onClick={() => setShowCsvUploadDialog(true)}
               data-testid="button-import-csv"
             >
@@ -73,6 +74,7 @@ export default function Contacts() {
               Import CSV
             </Button>
             <Button 
+              size="sm"
               onClick={() => {
                 setEditingContact(null);
                 setShowContactDialog(true);
