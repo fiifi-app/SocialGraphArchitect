@@ -209,7 +209,7 @@ export default function ConversationDetail() {
       <Tabs defaultValue="suggestions" className="w-full">
         <TabsList className="mb-6">
           <TabsTrigger value="suggestions" data-testid="tab-suggestions">Suggested Intros</TabsTrigger>
-          <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
+          <TabsTrigger value="overview" data-testid="tab-overview">Transcript</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
