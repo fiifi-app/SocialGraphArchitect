@@ -72,15 +72,28 @@ CRITICAL RULES FOR INVESTOR EMAILS:
 5. NO fluff: Cut "I hope this finds you well", lengthy introductions, unnecessary pleasantries
 6. Focus: What's in it for THEM, not the people being introduced
 
-Best practices:
-- Lead with their interest/thesis area
-- Be specific about the connection/opportunity
-- Make it easy to say yes
-- Include a simple ask (coffee, brief call, intro confirmation)
+FORMATTING RULES:
+- Use proper paragraph breaks (\\n\\n between paragraphs)
+- Use single line breaks (\\n) within paragraphs for clarity
+- Structure: [Greeting] → [Opening] → [1-2 reasons as bullet points] → [CTA] → [Closing]
+- Make it paste-ready for email clients with clear visual hierarchy
+- Add blank line between main sections
+
+Example format:
+[Name],
+
+[1-2 sentence hook about their focus]
+
+[Reason 1]
+[Reason 2]
+
+[Call to action - one clear ask]
+
+[Professional closing]
 
 Return JSON with:
 - subject: 40-50 character subject line
-- body: Plain text email (keep formatting minimal)`,
+- body: Plain text email with proper paragraph breaks (use \\n\\n for paragraphs, \\n for line breaks)`,
         }, {
           role: 'user',
           content: JSON.stringify({
