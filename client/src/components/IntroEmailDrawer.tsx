@@ -105,18 +105,18 @@ export default function IntroEmailDrawer({
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
           ) : email ? (
-            <div className="space-y-4 bg-muted/50 p-4 rounded-lg">
+            <div className="space-y-4 bg-muted/50 p-4 rounded-lg select-text">
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
                   Subject
                 </p>
-                <p className="text-sm font-semibold">{email.subject}</p>
+                <p className="text-sm font-semibold select-text cursor-text">{email.subject}</p>
               </div>
               <div className="flex-1 overflow-y-auto">
                 <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
                   Email Body
                 </p>
-                <div className="text-sm whitespace-pre-wrap leading-relaxed text-foreground">
+                <div className="text-sm whitespace-pre-wrap leading-relaxed text-foreground select-text cursor-text">
                   {stripHtmlTags(email.body)}
                 </div>
               </div>
