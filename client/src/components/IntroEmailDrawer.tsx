@@ -34,7 +34,6 @@ function stripHtmlTags(html: string): string {
     .replace(/&quot;/g, '"') // Replace quotes
     .replace(/&apos;/g, "'") // Replace apostrophes
     .replace(/&amp;/g, '&') // Replace ampersands (do last)
-    .replace(/\n\n+/g, '\n') // Collapse multiple newlines
     .trim();
 }
 
