@@ -108,7 +108,7 @@ export default function ConversationDetail() {
       const statusLabels: Record<string, string> = {
         promised: 'Intro promised!',
         intro_made: 'Intro sent!',
-        maybe: 'Marked as maybe',
+        maybe: 'Not a fit - removed from suggestions',
         dismissed: 'Match dismissed',
       };
       toast({
@@ -234,9 +234,9 @@ export default function ConversationDetail() {
             <p className="text-sm text-muted-foreground mb-6">
               Based on the conversation, here are potential introductions you could make.
             </p>
-            {matches.length > 0 ? (
+            {matches.filter(match => match.status === 'pending').length > 0 ? (
               <div className="space-y-4">
-                {matches.map((match) => (
+                {matches.filter(match => match.status === 'pending').map((match) => (
                   <div key={match.id}>
                     <SuggestionCard
                       contact={{
@@ -250,7 +250,7 @@ export default function ConversationDetail() {
                       status={match.status}
                       matchId={match.id}
                       onMakeIntro={() => handleMakeIntro(match.id, match.contact?.name || 'Unknown')}
-                      onMaybe={() => handleUpdateStatus(match.id, 'maybe')}
+                      onMaybe={() => handleUpdateStatus(match.id, 'dismissed')}
                       onDismiss={() => handleUpdateStatus(match.id, 'dismissed')}
                       isPending={updateStatus.isPending}
                     />

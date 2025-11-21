@@ -130,23 +130,13 @@ export default function SuggestionCard({
           </Button>
           <Button
             size="sm"
-            variant="outline"
+            variant="destructive"
             onClick={onMaybe}
             className="flex-1"
             disabled={isPending}
-            data-testid="button-maybe"
+            data-testid="button-not-a-fit"
           >
-            <Clock className="w-3 h-3 mr-1" />
-            Maybe
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onDismiss}
-            disabled={isPending}
-            data-testid="button-dismiss"
-          >
-            <X className="w-3 h-3" />
+            Not a Fit
           </Button>
         </div>
       )}
