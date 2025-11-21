@@ -1,0 +1,61 @@
+Unchecked runtime.lastError: The message port closed before a response was received.Understand this error
+39Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.Understand this error
+ed1e693c96a75807.js:2 Unrecognized feature: 'ambient-light-sensor'.
+z @ ed1e693c96a75807.js:2Understand this warning
+ed1e693c96a75807.js:2 Unrecognized feature: 'battery'.
+z @ ed1e693c96a75807.js:2Understand this warning
+ed1e693c96a75807.js:2 Unrecognized feature: 'execution-while-not-rendered'.
+z @ ed1e693c96a75807.js:2Understand this warning
+ed1e693c96a75807.js:2 Unrecognized feature: 'execution-while-out-of-viewport'.
+z @ ed1e693c96a75807.js:2Understand this warning
+ed1e693c96a75807.js:2 Unrecognized feature: 'layout-animations'.
+z @ ed1e693c96a75807.js:2Understand this warning
+ed1e693c96a75807.js:2 Unrecognized feature: 'legacy-image-formats'.
+z @ ed1e693c96a75807.js:2Understand this warning
+ed1e693c96a75807.js:2 Unrecognized feature: 'navigation-override'.
+z @ ed1e693c96a75807.js:2Understand this warning
+ed1e693c96a75807.js:2 Unrecognized feature: 'oversized-images'.
+z @ ed1e693c96a75807.js:2Understand this warning
+ed1e693c96a75807.js:2 Unrecognized feature: 'publickey-credentials'.
+z @ ed1e693c96a75807.js:2Understand this warning
+ed1e693c96a75807.js:2 Unrecognized feature: 'speaker-selection'.
+z @ ed1e693c96a75807.js:2Understand this warning
+ed1e693c96a75807.js:2 Unrecognized feature: 'unoptimized-images'.
+z @ ed1e693c96a75807.js:2Understand this warning
+ed1e693c96a75807.js:2 Unrecognized feature: 'unsized-media'.
+z @ ed1e693c96a75807.js:2Understand this warning
+ed1e693c96a75807.js:2 Unrecognized feature: 'pointer-lock'.
+z @ ed1e693c96a75807.js:2Understand this warning
+ed1e693c96a75807.js:2 Allow attribute will take precedence over 'allowfullscreen'.
+z @ ed1e693c96a75807.js:2Understand this warning
+ed1e693c96a75807.js:2 Allow attribute will take precedence over 'allowpaymentrequest'.
+z @ ed1e693c96a75807.js:2Understand this warning
+7e8a36ce6e4f0505.js:2 [Coframe] Mutation callback infinite loop protection triggered, disconnecting mutation observer Object
+(anonymous) @ 7e8a36ce6e4f0505.js:2Understand this error
+48f324d39e922734.js:2 WebSocket connection to 'wss://eval.janeway.platform.replit.com/wsv2/v2.public.Q2dZSTlxdi95QVlTQmdpVnlQL0lCaUlIYW1GdVpYZGhlVEFBT3M4QkNpUTJZemM1TW1JMll5MHpZVEJtTFRSbE5ERXRPV00zWWkxa1lUWXpaakF5TVRneVlUTVNBMjVwZUJvWmNtVndiR2wwTFhKbGNHd3RabWxzWlhNdGFtRnVaWGRoZVNJVVUyOWphV0ZzUjNKaGNHaEJjbU5vYVhSbFkzUXFDMEpwWjBSaFpHUjVUV0ZqUWxjS0duSmxjR3hwZEMxeVpYQnNMV0pzYjJOcmN5MXFZVzVsZDJGNUVoaHlaWEJzYVhRdGNtVndiQzF0WlhSaExXcGhibVYzWVhrYUgzSmxjR3hwZEMxdFlYSm5ZWEpwYm1VdFlteHZZMnR6TFdwaGJtVjNZWGxLQndpQW43a1hFQUZRQUhnQVVpVUlBUkNBZ0lDQUlCa0FBQUFBQUFBUVFDR...lNXbmRJUkhGMVkyZDVTakZ6YTNkYVZFZEVVU1V5Um5jME1GTllWWGRpVTNGSE0xbzFWRnBhZGs1c2FHNW9kVWhPWm1aeWF6VjFWMDVXVG1kRFRHUllVbnBVVTJsU2NVbElZWFZ4TTNWUGNISk9PRzQwVVV0WEpUSkdlbWxzVjJOQmRHRjRORzExTkd3ME9GQXpSRkJKYkRSSFRYbFVkazVhVVd4VFEwZFJOWE5FVDJST2NXNVNZMmRLWlVsdFZEZHpkbGNsTWtKemFqWkNNR1ZOZGpkcU1EaHFlVmR0VjFveVVtWm1XRUl6VlZOcFdFOU1SbkphTTFZeGJYazFWR1ZLVlc5SWRGUTFhMWhyU2pWTGJFdDZjRUVsTTBRbE0wUT3OrWPCM4oQakJDnm89zDjeG8CScOVlHlkZNfpKowZomQ-qhS7kB3ujw0uEiDx20gjWMtuTblAvIOXaRqueSjwM.Q2dad2NtOWtPak1pQ25KbGNHeHBkQzVqYjIwPQ' failed: 
+(anonymous) @ 48f324d39e922734.js:2Understand this error
+48f324d39e922734.js:2 WebSocket connection to 'wss://eval.janeway.platform.replit.com/wsv2/v2.public.Q2dZSTlxdi95QVlTQmdpVnlQL0lCaUlIYW1GdVpYZGhlVEFBT3M4QkNpUTJZemM1TW1JMll5MHpZVEJtTFRSbE5ERXRPV00zWWkxa1lUWXpaakF5TVRneVlUTVNBMjVwZUJvWmNtVndiR2wwTFhKbGNHd3RabWxzWlhNdGFtRnVaWGRoZVNJVVUyOWphV0ZzUjNKaGNHaEJjbU5vYVhSbFkzUXFDMEpwWjBSaFpHUjVUV0ZqUWxjS0duSmxjR3hwZEMxeVpYQnNMV0pzYjJOcmN5MXFZVzVsZDJGNUVoaHlaWEJzYVhRdGNtVndiQzF0WlhSaExXcGhibVYzWVhrYUgzSmxjR3hwZEMxdFlYSm5ZWEpwYm1VdFlteHZZMnR6TFdwaGJtVjNZWGxLQndpQW43a1hFQUZRQUhnQVVpVUlBUkNBZ0lDQUlCa0FBQUFBQUFBUVFDR...lNXbmRJUkhGMVkyZDVTakZ6YTNkYVZFZEVVU1V5Um5jME1GTllWWGRpVTNGSE0xbzFWRnBhZGs1c2FHNW9kVWhPWm1aeWF6VjFWMDVXVG1kRFRHUllVbnBVVTJsU2NVbElZWFZ4TTNWUGNISk9PRzQwVVV0WEpUSkdlbWxzVjJOQmRHRjRORzExTkd3ME9GQXpSRkJKYkRSSFRYbFVkazVhVVd4VFEwZFJOWE5FVDJST2NXNVNZMmRLWlVsdFZEZHpkbGNsTWtKemFqWkNNR1ZOZGpkcU1EaHFlVmR0VjFveVVtWm1XRUl6VlZOcFdFOU1SbkphTTFZeGJYazFWR1ZLVlc5SWRGUTFhMWhyU2pWTGJFdDZjRUVsTTBRbE0wUT3OrWPCM4oQakJDnm89zDjeG8CScOVlHlkZNfpKowZomQ-qhS7kB3ujw0uEiDx20gjWMtuTblAvIOXaRqueSjwM.Q2dad2NtOWtPak1pQ25KbGNHeHBkQzVqYjIwPQ' failed: 
+(anonymous) @ 48f324d39e922734.js:2Understand this error
+workspace_iframe.html?initialPath=%2F&id=%3Ar1f8%3A:32 Unrecognized feature: 'ambient-light-sensor'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar1f8%3A:32 Unrecognized feature: 'battery'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar1f8%3A:32 Unrecognized feature: 'execution-while-not-rendered'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar1f8%3A:32 Unrecognized feature: 'execution-while-out-of-viewport'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar1f8%3A:32 Unrecognized feature: 'layout-animations'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar1f8%3A:32 Unrecognized feature: 'legacy-image-formats'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar1f8%3A:32 Unrecognized feature: 'navigation-override'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar1f8%3A:32 Unrecognized feature: 'oversized-images'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar1f8%3A:32 Unrecognized feature: 'publickey-credentials'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar1f8%3A:32 Unrecognized feature: 'speaker-selection'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar1f8%3A:32 Unrecognized feature: 'unoptimized-images'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar1f8%3A:32 Unrecognized feature: 'unsized-media'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar1f8%3A:32 Allow attribute will take precedence over 'allowfullscreen'.Understand this warning
+workspace_iframe.html?initialPath=%2F&id=%3Ar1f8%3A:32 Allow attribute will take precedence over 'allowpaymentrequest'.Understand this warning
+chrome-extension://pbanhockgagggenencehbnadejlgchfc/assets/userReportLinkedCandidate.json:1  Failed to load resource: net::ERR_FILE_NOT_FOUNDUnderstand this error
+chrome-extension://pbanhockgagggenencehbnadejlgchfc/assets/userReportLinkedCandidate.json:1  Failed to load resource: net::ERR_FILE_NOT_FOUNDUnderstand this error
+injected.js:37 handleUpdateStatus called: Object
+injected.js:37 Updating match: Object
+mtelyxosqqaeadrrrtgk.supabase.co/rest/v1/match_suggestions?id=eq.7e3e689a-b5c6-44e1-8e68-977ede5135ab&select=*:1  Failed to load resource: the server responded with a status of 406 ()Understand this error
+injected.js:37 Supabase update error: Object
+(anonymous) @ injected.js:37Understand this error
+injected.js:37 Error in handleUpdateStatus: Error: Cannot coerce the result to a single JSON object
+    at Object.mutationFn (useMatches.ts:151:15)

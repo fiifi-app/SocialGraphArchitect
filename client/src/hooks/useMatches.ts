@@ -138,20 +138,16 @@ export function useConversationMatchStats() {
 export function useUpdateMatchStatus(conversationId: string) {
   return useMutation({
     mutationFn: async ({ matchId, status }: { matchId: string; status: string }) => {
-      console.log('Updating match:', { matchId, status });
       const { data, error } = await supabase
         .from('match_suggestions')
         .update({ status })
         .eq('id', matchId)
-        .select()
-        .single();
+        .select();
       
       if (error) {
-        console.error('Supabase update error:', error);
         throw new Error(error.message || 'Failed to update match');
       }
-      console.log('Match updated successfully:', data);
-      return data;
+      return data?.[0] || null;
     },
     onMutate: async ({ matchId, status }) => {
       await queryClient.cancelQueries({ 
