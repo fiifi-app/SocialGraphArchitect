@@ -107,6 +107,7 @@ export default function ConversationDetail() {
       await updateStatus.mutateAsync({ matchId, status });
       const statusLabels: Record<string, string> = {
         promised: 'Intro promised!',
+        intro_made: 'Intro sent!',
         maybe: 'Marked as maybe',
         dismissed: 'Match dismissed',
       };
@@ -117,9 +118,10 @@ export default function ConversationDetail() {
           : undefined,
       });
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Please try again';
       toast({
         title: "Error updating match",
-        description: "Please try again",
+        description: errorMessage,
         variant: "destructive",
       });
     }
