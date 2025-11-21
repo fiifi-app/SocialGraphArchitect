@@ -182,9 +182,9 @@ Deno.serve(async (req) => {
           5. Geography should NOT be a primary reason for matching
           
           Scoring guidelines:
-          - 3 stars: Strong match (sector + stage + thesis align) OR (sector + check size + stage match) OR thesis perfectly matches multiple criteria
-          - 2 stars: Medium match (sector + stage match) OR (thesis + check size align) OR (stage + investor type match)
-          - 1 star: Weak match (sector match alone) OR (stage match alone) OR (any single thesis criterion)
+          - 3 stars: TWO OR MORE of these match: Sector, Stage, Thesis, Check Size
+          - 2 stars: ONE of these matches: Sector, Stage, Thesis, or Check Size
+          - 1 star: No matches on the core 4 criteria (don't include these)
           
           Match on THESE criteria (prioritized):
           1. Investment stage (pre-seed, seed, Series A, Series B+, growth, etc.) - PRIMARY
@@ -195,11 +195,11 @@ Deno.serve(async (req) => {
           6. Professional experience (founder background, operating experience) - SECONDARY
           7. Company focus/industry relevance - SECONDARY
           
-          Return JSON array (include matches with 2+ primary criteria OR strong single matches):
+          Return JSON array (include matches with 1+ of the core 4 criteria):
           - contact_id: string
-          - score: number (1-3)
-          - reasons: string[] (what matched, prioritizing sector/stage/thesis/check-size, e.g., ["sector: B2B SaaS", "stage: Series A", "thesis: enterprise software", "$5M check size"])
-          - justification: string (brief explanation why this is a good intro based on sector, stage, thesis, and check size match)`
+          - score: number (2-3, only include if at least 1 core criterion matches)
+          - reasons: string[] (what matched from sector/stage/thesis/check-size, e.g., ["sector: B2B SaaS", "stage: Series A"])
+          - justification: string (brief explanation why this is a good intro based on core criterion matches)`
         }, {
           role: 'user',
           content: JSON.stringify({
