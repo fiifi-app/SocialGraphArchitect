@@ -43,11 +43,11 @@ export function useMatchSuggestions(conversationId: string) {
           )
         `)
         .eq('conversation_id', conversationId)
-        .order('score', { ascending: false });
+        .order('score', { ascending: false }) as any;
       
       if (error) throw error;
       
-      return (data || []).map(row => ({
+      return (data || []).map((row: any) => ({
         ...matchFromDb(row),
         contact: row.contact ? {
           ...row.contact,
@@ -87,11 +87,11 @@ export function useTopMatches(conversationId: string, minScore: number = 2) {
         .eq('conversation_id', conversationId)
         .gte('score', minScore)
         .order('score', { ascending: false })
-        .limit(10);
+        .limit(10) as any;
       
       if (error) throw error;
       
-      return (data || []).map(row => ({
+      return (data || []).map((row: any) => ({
         ...matchFromDb(row),
         contact: row.contact ? {
           ...row.contact,
@@ -112,13 +112,13 @@ export function useConversationMatchStats() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('match_suggestions')
-        .select('conversation_id, status');
+        .select('conversation_id, status') as any;
       
       if (error) throw error;
       
       const stats: Record<string, { introsOffered: number; introsMade: number }> = {};
       
-      (data || []).forEach(match => {
+      (data || []).forEach((match: any) => {
         if (!stats[match.conversation_id]) {
           stats[match.conversation_id] = { introsOffered: 0, introsMade: 0 };
         }
