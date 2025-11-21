@@ -39,9 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsPasswordRecovery(true);
       } else if (event === 'SIGNED_IN') {
         // Clear recovery flag after successful sign-in (password updated)
-        if (isPasswordRecovery) {
-          setIsPasswordRecovery(false);
-        }
+        setIsPasswordRecovery(false);
       }
       
       setSession(session);
@@ -49,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [isPasswordRecovery]);
+  }, []);
 
   const signUp = async (email: string, password: string, fullName?: string) => {
     const { data, error } = await supabase.auth.signUp({
