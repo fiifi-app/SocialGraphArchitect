@@ -104,6 +104,7 @@ export default function ConversationDetail() {
 
   const handleUpdateStatus = async (matchId: string, status: string) => {
     try {
+      console.log('handleUpdateStatus called:', { matchId, status });
       await updateStatus.mutateAsync({ matchId, status });
       const statusLabels: Record<string, string> = {
         promised: 'Intro promised!',
@@ -118,7 +119,8 @@ export default function ConversationDetail() {
           : undefined,
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Please try again';
+      console.error('Error in handleUpdateStatus:', error);
+      const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
       toast({
         title: "Error updating match",
         description: errorMessage,
