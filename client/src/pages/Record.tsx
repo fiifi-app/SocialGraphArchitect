@@ -25,6 +25,7 @@ import {
 } from "@/lib/edgeFunctions";
 import { supabase } from "@/lib/supabase";
 import { calendarEventFromDb } from "@/lib/supabaseHelpers";
+import { requestNotificationPermission, notifyProcessingComplete } from "@/lib/notifications";
 import type { CalendarEvent } from "@shared/schema";
 import { format } from "date-fns";
 
@@ -249,6 +250,9 @@ export default function Record() {
     try {
       console.log('🎬 Starting recording...');
       
+      // Request notification permission upfront
+      await requestNotificationPermission();
+      
       // Create conversation in database
       console.log('📝 Creating conversation...');
       const conversation = await createConversation.mutateAsync({
@@ -343,6 +347,13 @@ export default function Record() {
         title: "Recording saved!",
         description: description || "Conversation processed successfully.",
       });
+      
+      // Send push notification with match count
+      const matchCount = suggestions.length;
+      if (matchCount > 0) {
+        const conversationTitle = calendarEvent ? calendarEvent.title : 'Your conversation';
+        notifyProcessingComplete(conversationTitle, matchCount);
+      }
       
       // Redirect to history
       setTimeout(() => {
