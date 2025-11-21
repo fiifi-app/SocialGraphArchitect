@@ -49,6 +49,7 @@ export default function SuggestionCard({
   const statusColors = {
     pending: "",
     promised: "bg-accent/50",
+    accepted: "bg-emerald-400/20",
     intro_made: "bg-emerald-400/20",
     maybe: "bg-muted/50",
     dismissed: "opacity-60",
@@ -56,6 +57,7 @@ export default function SuggestionCard({
   
   const statusIcons = {
     promised: <Mail className="w-3.5 h-3.5 text-primary" />,
+    accepted: <Check className="w-3.5 h-3.5 text-emerald-600" />,
     intro_made: <Check className="w-3.5 h-3.5 text-emerald-600" />,
     maybe: <Clock className="w-3.5 h-3.5 text-muted-foreground" />,
     dismissed: <X className="w-3.5 h-3.5 text-muted-foreground" />,
@@ -148,7 +150,7 @@ export default function SuggestionCard({
           </Button>
         </div>
       )}
-      {status === 'intro_made' && (
+      {(status === 'intro_made' || status === 'accepted') && (
         <div className="flex gap-2 pt-2">
           <Button
             size="sm"

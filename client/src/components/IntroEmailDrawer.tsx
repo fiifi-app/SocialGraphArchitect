@@ -26,6 +26,18 @@ interface GeneratedEmail {
   body: string;
 }
 
+function stripHtmlTags(html: string): string {
+  // Remove HTML tags and decode entities
+  return html
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/&nbsp;/g, ' ') // Replace non-breaking spaces
+    .replace(/&quot;/g, '"') // Replace quotes
+    .replace(/&apos;/g, "'") // Replace apostrophes
+    .replace(/&amp;/g, '&') // Replace ampersands (do last)
+    .replace(/\n\n+/g, '\n') // Collapse multiple newlines
+    .trim();
+}
+
 export default function IntroEmailDrawer({
   open,
   onOpenChange,
@@ -63,7 +75,8 @@ export default function IntroEmailDrawer({
 
   const handleCopy = () => {
     if (!email) return;
-    const fullEmail = `Subject: ${email.subject}\n\n${email.body}`;
+    const plainTextBody = stripHtmlTags(email.body);
+    const fullEmail = `Subject: ${email.subject}\n\n${plainTextBody}`;
     navigator.clipboard.writeText(fullEmail);
     setCopied(true);
     if (onIntroMade) {
@@ -104,7 +117,7 @@ export default function IntroEmailDrawer({
                   Email Body
                 </p>
                 <div className="text-sm whitespace-pre-wrap leading-relaxed text-foreground">
-                  {email.body}
+                  {stripHtmlTags(email.body)}
                 </div>
               </div>
             </div>
