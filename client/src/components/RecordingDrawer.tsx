@@ -328,7 +328,7 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
     const interval = setInterval(async () => {
       const now = Date.now();
       
-      if (now - lastExtractTimeRef.current >= 30000 && transcript.length > 0) {
+      if (now - lastExtractTimeRef.current >= 15000 && transcript.length > 0) {
         try {
           await extractParticipants(conversationId);
           lastExtractTimeRef.current = now;
@@ -337,7 +337,7 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
         }
       }
       
-      if (now - lastMatchTimeRef.current >= 30000 && transcript.length > 0) {
+      if (now - lastMatchTimeRef.current >= 15000 && transcript.length > 0) {
         try {
           console.log('🔍 Extracting entities...');
           await extractEntities(conversationId);
