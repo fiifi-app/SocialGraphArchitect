@@ -80,7 +80,7 @@ export default function Login() {
                 Forgot password?
               </a>
             </div>
-            <div className="relative">
+            <div className="relative flex items-center">
               <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
@@ -89,22 +89,23 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 data-testid="input-password"
-                className="pr-12"
+                className="pr-10"
               />
-              <Button
+              <button
                 type="button"
-                size="icon"
-                variant="ghost"
-                className="absolute right-1 top-1/2 -translate-y-1/2 z-10"
-                onClick={() => setShowPassword(!showPassword)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setShowPassword(!showPassword);
+                }}
                 data-testid="button-toggle-password"
+                className="absolute right-2 p-1 text-muted-foreground hover:text-foreground transition-colors"
               >
                 {showPassword ? (
                   <EyeOff className="w-5 h-5" />
                 ) : (
                   <Eye className="w-5 h-5" />
                 )}
-              </Button>
+              </button>
             </div>
           </div>
 
