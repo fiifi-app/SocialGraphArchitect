@@ -38,9 +38,9 @@ export function useIntroductionStats() {
     queryKey: ['/api/introductions/stats'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('introduction_threads')
-        .select('created_at')
-        .in('current_status', ['sent', 'accepted', 'meeting_scheduled']);
+        .from('match_suggestions')
+        .select('created_at, status')
+        .in('status', ['intro_made', 'accepted']);
       
       if (error) throw error;
       

@@ -187,6 +187,9 @@ export function useUpdateMatchStatus(conversationId: string) {
       queryClient.invalidateQueries({ 
         queryKey: ['/api/conversations/match-stats'] 
       });
+      queryClient.invalidateQueries({ 
+        queryKey: ['/api/introductions/stats'] 
+      });
     },
   });
 }
