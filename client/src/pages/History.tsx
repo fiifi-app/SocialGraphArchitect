@@ -103,12 +103,12 @@ export default function History() {
 
           <Card className="p-4" data-testid="stat-card-intros">
             <div className="flex items-start gap-3">
-              <div className="p-2 rounded-md bg-chart-2/20">
-                <TrendingUp className="w-5 h-5 text-chart-2" />
+              <div className="p-2 rounded-md bg-green-100 dark:bg-green-900/30">
+                <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-muted-foreground mb-1">Intros Made</p>
-                <p className="text-2xl font-semibold mb-2" data-testid="text-intros-made">
+                <p className="text-2xl font-semibold mb-2 text-green-700 dark:text-green-400" data-testid="text-intros-made">
                   {introStatsLoading ? "..." : stats.intros.total.toLocaleString()}
                 </p>
                 <Separator className="my-2" />
