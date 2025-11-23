@@ -240,7 +240,7 @@ export default function HomeNew() {
           onClick={() => setDrawerOpen(true)}
           data-testid="button-new-meeting"
         >
-          <Mic className="h-10 w-10" />
+          <Mic className="h-12 w-12" />
         </Button>
       </div>
 
