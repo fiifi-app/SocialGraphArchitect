@@ -448,16 +448,20 @@ export default function Record() {
             </Card>
           )}
 
-          <Button
-            size="lg"
-            disabled={!consentChecked || createConversation.isPending}
-            onClick={handleStartRecording}
-            data-testid="button-start-recording"
-            className="gap-2 px-8 w-[768px]"
-          >
-            <Mic className="w-5 h-5" />
-            {createConversation.isPending ? 'Starting...' : 'Start Recording'}
-          </Button>
+          <div className="flex flex-col items-center gap-4">
+            <Button
+              size="lg"
+              disabled={!consentChecked || createConversation.isPending}
+              onClick={handleStartRecording}
+              data-testid="button-start-recording"
+              className="w-32 h-32 rounded-3xl bg-primary hover:bg-primary shadow-xl hover:shadow-2xl transition-all duration-200"
+            >
+              <Mic className="w-12 h-12 text-primary-foreground" />
+            </Button>
+            <p className="text-sm text-muted-foreground">
+              {createConversation.isPending ? 'Starting...' : 'Tap to start recording'}
+            </p>
+          </div>
         </div>
       </div>
     );
