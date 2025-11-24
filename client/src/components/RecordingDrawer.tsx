@@ -382,8 +382,8 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="h-[50vh]">
-        <DrawerHeader>
+      <DrawerContent className="h-[60vh] md:h-[50vh]">
+        <DrawerHeader className="pb-2">
           <DrawerTitle>{isRecording ? 'Recording in Progress' : 'New Meeting'}</DrawerTitle>
         </DrawerHeader>
 
@@ -404,8 +404,8 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
             </div>
           </div>
         ) : !isRecording ? (
-          <div className="px-4 space-y-4 overflow-auto">
-            <div className="space-y-2">
+          <div className="px-4 space-y-3 overflow-auto flex-1">
+            <div className="space-y-1.5">
               <Label htmlFor="title">Meeting Title</Label>
               <Input
                 id="title"
@@ -416,14 +416,14 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
               />
             </div>
 
-            <div className="flex items-center gap-3 p-4 bg-muted/30 rounded-lg border">
+            <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border">
               <Checkbox
                 id="consent-drawer"
                 checked={consentChecked}
                 onCheckedChange={(checked) => setConsentChecked(checked as boolean)}
                 data-testid="checkbox-consent"
               />
-              <label htmlFor="consent-drawer" className="text-sm cursor-pointer select-none">
+              <label htmlFor="consent-drawer" className="text-sm cursor-pointer select-none leading-snug">
                 I have consent from all parties to record this conversation
               </label>
             </div>
@@ -497,8 +497,8 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
           </div>
         )}
 
-        <DrawerFooter>
-          <div className="flex items-center justify-between w-full gap-4">
+        <DrawerFooter className="pt-3 pb-4">
+          <div className="flex items-center justify-between w-full gap-3">
             {isProcessing ? null : isRecording ? (
               <>
                 <Button
