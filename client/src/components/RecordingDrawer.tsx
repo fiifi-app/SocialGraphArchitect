@@ -62,6 +62,7 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [activeTab, setActiveTab] = useState("matches");
   const conversationIdRef = useRef<string | null>(null);
   const lastExtractTimeRef = useRef<number>(0);
   const lastMatchTimeRef = useRef<number>(0);
@@ -154,6 +155,7 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
     console.log('✅ Conversation created:', result.id);
     setConversationId(result.id);
     conversationIdRef.current = result.id;
+    setActiveTab("transcript"); // Auto-switch to transcript tab when recording starts
 
     console.log('🎤 Starting audio recorder...');
     await audioControls.startRecording();
@@ -227,6 +229,7 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
     setConversationId(null);
     setTranscript([]);
     setSuggestions([]);
+    setActiveTab("matches");
     conversationIdRef.current = null;
     lastExtractTimeRef.current = 0;
     lastMatchTimeRef.current = 0;
@@ -382,7 +385,7 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="h-[60vh] md:h-[50vh]">
+      <DrawerContent className={isRecording ? "h-screen" : "h-[60vh] md:h-[50vh]"}>
         <DrawerHeader className="pb-2">
           <DrawerTitle>{isRecording ? 'Recording in Progress' : 'New Meeting'}</DrawerTitle>
         </DrawerHeader>
@@ -430,34 +433,23 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
           </div>
         ) : (
           <div className="px-4 flex-1 overflow-auto">
-            <div className="flex items-center mb-4">
-              <div className="flex items-center gap-3">
-                {isTranscribing && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-                    <span>Transcribing...</span>
-                  </div>
-                )}
-                {!isTranscribing && transcript.length > 0 && (
-                  <span className="text-sm text-muted-foreground">
-                    {transcript.length} segment{transcript.length !== 1 ? 's' : ''}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <Tabs defaultValue="matches">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="mb-4">
                 <TabsTrigger value="matches">
                   Matches {suggestions.length > 0 && `(${suggestions.length})`}
                 </TabsTrigger>
-                <TabsTrigger value="transcript">
-                  Transcript {transcript.length > 0 && `(${transcript.length})`}
+                <TabsTrigger value="transcript" className="relative">
+                  {isTranscribing && (
+                    <div className="absolute left-2 top-1/2 -translate-y-1/2 w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                  )}
+                  <span className={isTranscribing ? "ml-3" : ""}>
+                    Transcript {transcript.length > 0 && `(${transcript.length})`}
+                  </span>
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="matches">
-                <div className="space-y-2 h-48 overflow-auto">
+                <div className="space-y-2 overflow-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
                   {suggestions.length > 0 ? (
                     suggestions.map((suggestion, idx) => (
                       <SuggestionCard 
@@ -481,7 +473,7 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
               </TabsContent>
 
               <TabsContent value="transcript">
-                <Card className="p-0 h-48 overflow-auto">
+                <Card className="p-0 overflow-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
                   {transcript.length > 0 ? (
                     <TranscriptView transcript={transcript} />
                   ) : (
