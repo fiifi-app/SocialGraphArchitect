@@ -140,7 +140,7 @@ export function useUpdateMatchStatus(conversationId: string) {
     mutationFn: async ({ matchId, status }: { matchId: string; status: string }) => {
       const { data, error } = await supabase
         .from('match_suggestions')
-        .update({ status })
+        .update({ status } as any)
         .eq('id', matchId)
         .select();
       
