@@ -424,16 +424,21 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
               />
             </div>
 
-            <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border">
-              <Checkbox
-                id="consent-drawer"
-                checked={consentChecked}
-                onCheckedChange={(checked) => setConsentChecked(checked as boolean)}
-                data-testid="checkbox-consent"
-              />
-              <label htmlFor="consent-drawer" className="text-sm cursor-pointer select-none leading-snug">
-                I have consent from all parties to record this conversation
-              </label>
+            <div className="space-y-2">
+              <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border">
+                <Checkbox
+                  id="consent-drawer"
+                  checked={consentChecked}
+                  onCheckedChange={(checked) => setConsentChecked(checked as boolean)}
+                  data-testid="checkbox-consent"
+                />
+                <label htmlFor="consent-drawer" className="text-sm cursor-pointer select-none leading-snug">
+                  I have consent from all parties to record this conversation
+                </label>
+              </div>
+              <p className="text-xs text-muted-foreground text-center px-2">
+                If you are matching from your phone you must be on speaker
+              </p>
             </div>
           </div>
         ) : (
