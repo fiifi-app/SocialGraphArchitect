@@ -8,9 +8,10 @@ interface TranscriptEntry {
 
 interface TranscriptViewProps {
   transcript: TranscriptEntry[];
+  userName?: string;
 }
 
-export default function TranscriptView({ transcript }: TranscriptViewProps) {
+export default function TranscriptView({ transcript, userName }: TranscriptViewProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,7 +46,7 @@ export default function TranscriptView({ transcript }: TranscriptViewProps) {
           <div className="flex-1">
             {entry.speaker && (
               <span className="text-sm font-medium text-foreground block mb-1">
-                {entry.speaker}
+                {entry.speaker === 'Unknown' && userName ? userName : entry.speaker}
               </span>
             )}
             <p className="text-base text-foreground leading-relaxed">{entry.text}</p>

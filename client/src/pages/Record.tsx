@@ -6,10 +6,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import RecordingIndicator from "@/components/RecordingIndicator";
 import TranscriptView from "@/components/TranscriptView";
 import SuggestionCard from "@/components/SuggestionCard";
+import ContactValidationPopover from "@/components/ContactValidationPopover";
 import { Mic, Calendar, Clock, MapPin, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, useSearch } from "wouter";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
+import { useProfile } from "@/hooks/useProfile";
 import { 
   useCreateConversation, 
   useUpdateConversation,
@@ -57,6 +59,8 @@ export default function Record() {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [calendarEvent, setCalendarEvent] = useState<CalendarEvent | null>(null);
+  const [validationPopoverOpen, setValidationPopoverOpen] = useState(false);
+  const [speakersDetected, setSpeakersDetected] = useState<string[]>([]);
   const conversationIdRef = useRef<string | null>(null);
   const lastExtractTimeRef = useRef<number>(0);
   const lastMatchTimeRef = useRef<number>(0);
@@ -65,6 +69,7 @@ export default function Record() {
   
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const { data: profile } = useProfile();
   const createConversation = useCreateConversation();
   const updateConversation = useUpdateConversation();
 
@@ -329,6 +334,15 @@ export default function Record() {
         status: 'completed',
       });
       
+      // Extract speakers from transcript for validation
+      const detectedSpeakers = Array.from(new Set(
+        transcript
+          .map(entry => entry.speaker)
+          .filter(Boolean) as string[]
+      ));
+      setSpeakersDetected(detectedSpeakers);
+      setValidationPopoverOpen(true);
+      
       // Show results
       const { newContacts, updatedContacts, duplicatesFound } = processResult.results || {};
       
@@ -355,11 +369,6 @@ export default function Record() {
         notifyProcessingComplete(conversationTitle, matchCount);
       }
       
-      // Redirect to history
-      setTimeout(() => {
-        setLocation('/history');
-      }, 1500);
-      
     } catch (error) {
       console.error('Error stopping recording:', error);
       toast({
@@ -369,6 +378,23 @@ export default function Record() {
       });
       setIsProcessing(false);
     }
+  };
+
+  const handleValidationComplete = (data: {
+    speakers: Record<string, 'new' | 'existing'>;
+    keywords: {
+      sector?: string;
+      checkSize?: string;
+      geo?: string;
+    };
+  }) => {
+    console.log('Validation complete:', data);
+    // TODO: Save the speaker choices and keywords to the conversation
+    
+    // Redirect to history after a short delay
+    setTimeout(() => {
+      setLocation('/history');
+    }, 800);
   };
 
   if (!audioState.isRecording) {
@@ -515,7 +541,7 @@ export default function Record() {
           <TabsContent value="transcript">
             <Card className="p-0 h-96 overflow-auto">
               {transcript.length > 0 ? (
-                <TranscriptView transcript={transcript} />
+                <TranscriptView transcript={transcript} userName={profile?.fullName} />
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8">
                   <Mic className="w-12 h-12 mb-3 opacity-50" />
@@ -553,6 +579,15 @@ export default function Record() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <ContactValidationPopover
+        open={validationPopoverOpen}
+        onOpenChange={setValidationPopoverOpen}
+        speakersDetected={speakersDetected}
+        userName={profile?.fullName || 'You'}
+        onValidate={handleValidationComplete}
+        isProcessing={false}
+      />
     </div>
   );
 }
