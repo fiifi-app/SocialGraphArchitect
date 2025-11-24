@@ -299,15 +299,23 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
             return;
           }
           
+          // Type-safe contact data
+          const contact = contactData as {
+            name: string;
+            email: string | null;
+            company: string | null;
+            title: string | null;
+          };
+          
           setSuggestions((prev) => {
             const updated = [
               ...prev,
               {
                 contact: {
-                  name: contactData.name,
-                  email: contactData.email,
-                  company: contactData.company,
-                  title: contactData.title,
+                  name: contact.name,
+                  email: contact.email,
+                  company: contact.company,
+                  title: contact.title,
                 },
                 score: (match.score || 1) as 1 | 2 | 3,
                 reasons: match.reasons || [],
@@ -329,13 +337,22 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
   }, [conversationId, toast]);
 
   useEffect(() => {
-    if (!conversationId || !audioState.isRecording || audioState.isPaused) return;
+    if (!conversationId || !audioState.isRecording || audioState.isPaused) {
+      console.log('⏸️ Match generation interval not started:', { conversationId, isRecording: audioState.isRecording, isPaused: audioState.isPaused });
+      return;
+    }
+
+    console.log('▶️ Starting match generation interval for conversation:', conversationId);
 
     const interval = setInterval(async () => {
       const now = Date.now();
+      const currentTranscriptLength = transcript.length;
       
-      if (now - lastExtractTimeRef.current >= 10000 && transcript.length > 0) {
+      console.log('⏰ Interval tick - Transcript length:', currentTranscriptLength, 'Time since last match:', now - lastMatchTimeRef.current);
+      
+      if (now - lastExtractTimeRef.current >= 10000 && currentTranscriptLength > 0) {
         try {
+          console.log('👥 Extracting participants...');
           await extractParticipants(conversationId);
           lastExtractTimeRef.current = now;
         } catch (error) {
@@ -343,7 +360,7 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
         }
       }
       
-      if (now - lastMatchTimeRef.current >= 10000 && transcript.length > 0) {
+      if (now - lastMatchTimeRef.current >= 10000 && currentTranscriptLength > 0) {
         try {
           console.log('🔍 Extracting entities...');
           await extractEntities(conversationId);
@@ -383,8 +400,11 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
       }
     }, 5000);
 
-    return () => clearInterval(interval);
-  }, [conversationId, audioState.isRecording, audioState.isPaused, transcript.length, toast]);
+    return () => {
+      console.log('⏹️ Clearing match generation interval');
+      clearInterval(interval);
+    };
+  }, [conversationId, audioState.isRecording, audioState.isPaused, toast]);
 
   const isRecording = audioState.isRecording;
 
@@ -467,7 +487,7 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
                         contact={suggestion.contact}
                         score={suggestion.score}
                         reasons={suggestion.reasons}
-                        onPromise={() => console.log('Promise', suggestion.contact.name)}
+                        onMakeIntro={() => console.log('Make Intro', suggestion.contact.name)}
                         onMaybe={() => console.log('Maybe', suggestion.contact.name)}
                         onDismiss={() => console.log('Dismiss', suggestion.contact.name)}
                       />
