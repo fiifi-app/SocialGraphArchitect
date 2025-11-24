@@ -68,6 +68,7 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
   const lastMatchTimeRef = useRef<number>(0);
   const audioQueueRef = useRef<Blob[]>([]);
   const isUploadingRef = useRef(false);
+  const matchDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -241,6 +242,37 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
     }
   }, [open]);
 
+  // Trigger match generation when new transcript arrives
+  const triggerMatchGeneration = useCallback(() => {
+    if (!conversationIdRef.current) return;
+
+    // Clear existing debounce timer
+    if (matchDebounceTimerRef.current) {
+      clearTimeout(matchDebounceTimerRef.current);
+    }
+
+    // Debounce: wait 3 seconds after last transcript segment before generating matches
+    matchDebounceTimerRef.current = setTimeout(async () => {
+      const conversationId = conversationIdRef.current;
+      if (!conversationId) return;
+
+      try {
+        console.log('🔍 Extracting entities for instant match generation...');
+        await extractEntities(conversationId);
+        
+        console.log('🎯 Generating matches...');
+        const matchData = await generateMatches(conversationId);
+        
+        if (matchData.matches && matchData.matches.length > 0) {
+          console.log(`🎉 Found ${matchData.matches.length} new matches!`);
+          // Matches will appear via real-time subscription
+        }
+      } catch (error) {
+        console.error('Match generation error:', error);
+      }
+    }, 3000); // 3 second debounce
+  }, []);
+
   useEffect(() => {
     if (!conversationId) return;
 
@@ -267,6 +299,9 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
               text: segment.text || '',
             },
           ]);
+          
+          // Trigger match generation when new content arrives
+          triggerMatchGeneration();
         }
       )
       .on(
@@ -333,78 +368,31 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
     return () => {
       console.log('🔌 Unsubscribing from conversation:', conversationId);
       supabase.removeChannel(channel);
+      
+      // Clear any pending match generation
+      if (matchDebounceTimerRef.current) {
+        clearTimeout(matchDebounceTimerRef.current);
+      }
     };
-  }, [conversationId, toast]);
+  }, [conversationId, toast, triggerMatchGeneration]);
 
+  // Periodic participant extraction (less critical, can stay on interval)
   useEffect(() => {
     if (!conversationId || !audioState.isRecording || audioState.isPaused) {
-      console.log('⏸️ Match generation interval not started:', { conversationId, isRecording: audioState.isRecording, isPaused: audioState.isPaused });
       return;
     }
 
-    console.log('▶️ Starting match generation interval for conversation:', conversationId);
-
     const interval = setInterval(async () => {
-      const now = Date.now();
-      const currentTranscriptLength = transcript.length;
-      
-      console.log('⏰ Interval tick - Transcript length:', currentTranscriptLength, 'Time since last match:', now - lastMatchTimeRef.current);
-      
-      if (now - lastExtractTimeRef.current >= 10000 && currentTranscriptLength > 0) {
-        try {
-          console.log('👥 Extracting participants...');
-          await extractParticipants(conversationId);
-          lastExtractTimeRef.current = now;
-        } catch (error) {
-          console.error('Participant extraction error:', error);
-        }
+      try {
+        console.log('👥 Extracting participants...');
+        await extractParticipants(conversationId);
+      } catch (error) {
+        console.error('Participant extraction error:', error);
       }
-      
-      if (now - lastMatchTimeRef.current >= 10000 && currentTranscriptLength > 0) {
-        try {
-          console.log('🔍 Extracting entities...');
-          await extractEntities(conversationId);
-          
-          console.log('🎯 Generating matches...');
-          const matchData = await generateMatches(conversationId);
-          
-          if (matchData.matches && matchData.matches.length > 0) {
-            console.log(`🎉 Found ${matchData.matches.length} matches!`);
-            const newSuggestions = matchData.matches
-              .map((m: any) => ({
-                contact: {
-                  name: m.contact_name || 'Unknown',
-                  email: m.contact_email || null,
-                  company: m.contact_company || null,
-                  title: m.contact_title || null,
-                },
-                score: m.score,
-                reasons: m.reasons || [],
-              }))
-              .sort((a: Suggestion, b: Suggestion) => b.score - a.score); // Sort by score descending (3 stars first)
-            
-            setSuggestions(newSuggestions);
-            
-            const highValueMatches = newSuggestions.filter((s: Suggestion) => s.score === 3);
-            if (highValueMatches.length > 0) {
-              toast({
-                title: "New match found!",
-                description: `${highValueMatches[0].contact.name} - ${highValueMatches[0].score} stars`,
-              });
-            }
-          }
-          lastMatchTimeRef.current = now;
-        } catch (error) {
-          console.error('Match generation error:', error);
-        }
-      }
-    }, 5000);
+    }, 15000); // Extract participants every 15 seconds
 
-    return () => {
-      console.log('⏹️ Clearing match generation interval');
-      clearInterval(interval);
-    };
-  }, [conversationId, audioState.isRecording, audioState.isPaused, toast]);
+    return () => clearInterval(interval);
+  }, [conversationId, audioState.isRecording, audioState.isPaused]);
 
   const isRecording = audioState.isRecording;
 
