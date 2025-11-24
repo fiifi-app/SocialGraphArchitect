@@ -155,7 +155,6 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
     console.log('✅ Conversation created:', result.id);
     setConversationId(result.id);
     conversationIdRef.current = result.id;
-    setActiveTab("transcript"); // Auto-switch to transcript tab when recording starts
 
     console.log('🎤 Starting audio recorder...');
     await audioControls.startRecording();
@@ -300,19 +299,23 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
             return;
           }
           
-          setSuggestions((prev) => [
-            ...prev,
-            {
-              contact: {
-                name: contactData.name,
-                email: contactData.email,
-                company: contactData.company,
-                title: contactData.title,
+          setSuggestions((prev) => {
+            const updated = [
+              ...prev,
+              {
+                contact: {
+                  name: contactData.name,
+                  email: contactData.email,
+                  company: contactData.company,
+                  title: contactData.title,
+                },
+                score: (match.score || 1) as 1 | 2 | 3,
+                reasons: match.reasons || [],
               },
-              score: (match.score || 1) as 1 | 2 | 3,
-              reasons: match.reasons || [],
-            },
-          ]);
+            ];
+            // Sort by score descending (3 stars first)
+            return updated.sort((a, b) => b.score - a.score);
+          });
         }
       )
       .subscribe((status) => {
@@ -331,7 +334,7 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
     const interval = setInterval(async () => {
       const now = Date.now();
       
-      if (now - lastExtractTimeRef.current >= 15000 && transcript.length > 0) {
+      if (now - lastExtractTimeRef.current >= 10000 && transcript.length > 0) {
         try {
           await extractParticipants(conversationId);
           lastExtractTimeRef.current = now;
@@ -340,7 +343,7 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
         }
       }
       
-      if (now - lastMatchTimeRef.current >= 15000 && transcript.length > 0) {
+      if (now - lastMatchTimeRef.current >= 10000 && transcript.length > 0) {
         try {
           console.log('🔍 Extracting entities...');
           await extractEntities(conversationId);
@@ -350,16 +353,18 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
           
           if (matchData.matches && matchData.matches.length > 0) {
             console.log(`🎉 Found ${matchData.matches.length} matches!`);
-            const newSuggestions = matchData.matches.map((m: any) => ({
-              contact: {
-                name: m.contact_name || 'Unknown',
-                email: m.contact_email || null,
-                company: m.contact_company || null,
-                title: m.contact_title || null,
-              },
-              score: m.score,
-              reasons: m.reasons || [],
-            }));
+            const newSuggestions = matchData.matches
+              .map((m: any) => ({
+                contact: {
+                  name: m.contact_name || 'Unknown',
+                  email: m.contact_email || null,
+                  company: m.contact_company || null,
+                  title: m.contact_title || null,
+                },
+                score: m.score,
+                reasons: m.reasons || [],
+              }))
+              .sort((a: Suggestion, b: Suggestion) => b.score - a.score); // Sort by score descending (3 stars first)
             
             setSuggestions(newSuggestions);
             
