@@ -236,7 +236,7 @@ export default function HomeNew() {
       <div className="fixed bottom-8 right-8 z-50">
         <Button
           size="lg"
-          className="rounded-3xl h-[50px] w-[50px] shadow-xl hover:shadow-2xl bg-primary hover:bg-primary transition-all duration-200"
+          className="rounded-3xl h-[65px] w-[65px] shadow-xl hover:shadow-2xl bg-primary hover:bg-primary transition-all duration-200"
           onClick={() => setDrawerOpen(true)}
           data-testid="button-new-meeting"
         >
