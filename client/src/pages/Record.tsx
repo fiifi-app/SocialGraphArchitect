@@ -541,7 +541,7 @@ export default function Record() {
           <TabsContent value="transcript">
             <Card className="p-0 h-96 overflow-auto">
               {transcript.length > 0 ? (
-                <TranscriptView transcript={transcript} userName={profile?.fullName} />
+                <TranscriptView transcript={transcript} userName={profile?.fullName || undefined} />
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8">
                   <Mic className="w-12 h-12 mb-3 opacity-50" />
@@ -561,7 +561,7 @@ export default function Record() {
                     contact={suggestion.contact}
                     score={suggestion.score}
                     reasons={suggestion.reasons}
-                    onPromise={() => console.log('Promised', suggestion.contact.name)}
+                    onMakeIntro={() => console.log('Promised', suggestion.contact.name)}
                     onMaybe={() => console.log('Maybe', suggestion.contact.name)}
                     onDismiss={() => console.log('Dismissed', suggestion.contact.name)}
                   />
