@@ -137,8 +137,17 @@ Deno.serve(async (req) => {
         throw new Error('OPENAI_API_KEY not configured');
       }
 
-      // Process ALL contacts, not just first 100 - this is critical for quality!
-      console.log(`Processing ${contacts.length} contacts for matching`);
+      // Prioritize contacts: investors first, then those with theses, limit to 100
+      const prioritizedContacts = contacts
+        .sort((a, b) => {
+          // Investors with theses first
+          const aScore = (a.is_investor ? 2 : 0) + (a.theses?.length > 0 ? 1 : 0);
+          const bScore = (b.is_investor ? 2 : 0) + (b.theses?.length > 0 ? 1 : 0);
+          return bScore - aScore;
+        })
+        .slice(0, 100); // Limit to 100 contacts to stay within token limits
+
+      console.log(`Processing ${prioritizedContacts.length} prioritized contacts (from ${contacts.length} total)`);
 
       // Wrap OpenAI call in 25-second timeout
       const timeoutPromise = new Promise((_, reject) => 
@@ -152,97 +161,40 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-4o-mini',
         messages: [{
           role: 'system',
           content: `You are a relationship matching engine for VCs and investors. 
-          Score each contact based on how well their investment thesis and profile match the conversation entities.
-          Consider ALL contact information:
-          - Investment theses (sectors, stages, check sizes)
-          - Contact's title, company, and experience
-          - Investor type (GP, LP, Angel, Family Office, PE)
-          - Check size ranges
-          - Company information (size, founded date, business focus)
-          - Conversation topics and entities mentioned
-          
-          PRIORITY MATCHING CRITERIA (in order of importance):
-          1. Sector/Vertical Match - MOST IMPORTANT: B2B SaaS, fintech, healthcare, AI/ML, biotech, etc.
-          2. Investment Stage - CRITICAL: pre-seed, seed, Series A, Series B+, growth
-          3. Thesis Alignment - CRITICAL: How well contact's stated investment thesis matches conversation
-          4. Check Size Range - CRITICAL: Investment amount range matches conversation mentions
-          5. Investor Type - IMPORTANT: GP, Angel, Family Office, LP, PE match conversation context
-          6. Professional Experience - SECONDARY: Founder background, operating experience
-          7. Company Focus - SECONDARY: Industry relevance and business model
-          8. Geography - DE-EMPHASIZED: Use only as a secondary signal if all else is equal
-          
-          IMPORTANT: Use the ENTIRE contact profile for rich matching:
-          1. Even without a formal thesis, use title/company to infer investment interests
-          2. For solo recordings or single-person conversations, match more aggressively
-          3. Partial matches are valuable! Contacts don't need to match ALL criteria.
-          4. Prioritize sector, stage, thesis, and check size above all other signals
-          5. Geography should NOT be a primary reason for matching
-          
-          Scoring guidelines:
-          CORE CRITERIA (weight: 2x):
-          - 3 stars: TWO OR MORE core criteria match (Sector, Stage, Thesis, Check Size)
-          - 2 stars: ONE core criterion matches
-          
-          WITH SECONDARY CRITERIA (weight: 1x):
-          - 3 stars: ONE core + TWO OR MORE secondary criteria (Investor Type, Experience, Company Focus, Geography)
-          - 2 stars: ONE core + ONE secondary, OR THREE OR MORE secondary criteria
-          - 1 star: ONE OR TWO secondary criteria only
-          
-          Priority scoring:
-          - 3 stars: (2+ core) OR (1 core + 2+ secondary)
-          - 2 stars: (1 core) OR (1 core + 1 secondary) OR (3+ secondary)
-          - 1 star: (1-2 secondary only)
-          
-          Match on THESE criteria (prioritized):
-          1. Investment stage (pre-seed, seed, Series A, Series B+, growth, etc.) - PRIMARY
-          2. Sector/vertical (B2B SaaS, fintech, healthcare, AI/ML, biotech, etc.) - PRIMARY
-          3. Thesis alignment - PRIMARY
-          4. Check size range (matches conversation amounts mentioned) - PRIMARY
-          5. Investor type (GP, Angel, Family Office, LP, PE) - SECONDARY
-          6. Professional experience (founder background, operating experience) - SECONDARY
-          7. Company focus/industry relevance - SECONDARY
-          
-          Return JSON array (include matches with 1+ of core criteria OR 2+ of secondary criteria):
-          - contact_id: string
-          - score: number (1-3, based on criteria matched)
-          - reasons: string[] (what matched from BOTH core and secondary criteria, e.g., ["sector: B2B SaaS", "stage: Series A", "investor_type: Angel", "experience: Founder background"])
-          - justification: string (brief explanation why this is a good intro based on all matched criteria)`
+Score contacts based on how well they match conversation entities.
+
+MATCHING CRITERIA (in order):
+1. Sector/Vertical (B2B SaaS, fintech, healthcare, AI/ML, etc.)
+2. Investment Stage (pre-seed, seed, Series A, B+, growth)
+3. Check Size Range
+4. Investor Type (GP, LP, Angel, Family Office, PE)
+5. Professional Experience
+
+Scoring:
+- 3 stars: 2+ criteria match strongly
+- 2 stars: 1 criterion matches
+- 1 star: Weak/partial match
+
+Return JSON array ONLY (no markdown, no explanation):
+[{"contact_id":"uuid","score":1-3,"reasons":["reason1"],"justification":"brief why"}]
+
+If no matches, return: []`
         }, {
           role: 'user',
           content: JSON.stringify({
             entities: entitySummary,
-            contacts: contacts.map(c => ({
+            contacts: prioritizedContacts.map(c => ({
               id: c.id,
               name: c.name,
-              firstName: c.first_name,
-              lastName: c.last_name,
               title: c.title,
               company: c.company,
-              email: c.email,
-              location: c.location,
-              linkedinUrl: c.linkedin_url,
-              twitter: c.twitter,
-              angellist: c.angellist,
-              bio: c.bio,
-              phone: c.phone,
-              category: c.category,
-              companyAddress: c.company_address,
-              companyEmployees: c.company_employees,
-              companyFounded: c.company_founded,
-              companyUrl: c.company_url,
-              companyLinkedin: c.company_linkedin,
-              companyTwitter: c.company_twitter,
-              companyFacebook: c.company_facebook,
-              companyAngellist: c.company_angellist,
-              companyCrunchbase: c.company_crunchbase,
-              companyOwler: c.company_owler,
-              youtubeVimeo: c.youtube_vimeo,
-              theses: c.theses,
-              investorNotes: c.investor_notes,
+              bio: c.bio?.substring(0, 200),
+              theses: c.theses?.map((t: any) => ({ sectors: t.sectors, stages: t.stages })),
+              investorNotes: c.investor_notes?.substring(0, 200),
               contactType: c.contact_type,
               checkSizeMin: c.check_size_min,
               checkSizeMax: c.check_size_max,
@@ -250,7 +202,8 @@ Deno.serve(async (req) => {
             }))
           })
         }],
-        temperature: 0.5,
+        temperature: 0.3,
+        max_tokens: 2000,
       }),
     });
 
