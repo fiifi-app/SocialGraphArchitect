@@ -188,8 +188,8 @@ export default function Record() {
     const interval = setInterval(async () => {
       const now = Date.now();
       
-      // Extract participants every 30s
-      if (now - lastExtractTimeRef.current >= 30000 && transcript.length > 0) {
+      // Extract participants every 15s (was 30s)
+      if (now - lastExtractTimeRef.current >= 15000 && transcript.length > 0) {
         try {
           await extractParticipants(conversationId);
           lastExtractTimeRef.current = now;
@@ -198,8 +198,8 @@ export default function Record() {
         }
       }
       
-      // Generate matches every 30s
-      if (now - lastMatchTimeRef.current >= 30000 && transcript.length > 0) {
+      // Generate matches every 15s (was 30s)
+      if (now - lastMatchTimeRef.current >= 15000 && transcript.length > 0) {
         try {
           // First extract entities from the conversation
           console.log('🔍 Extracting entities from conversation...');
@@ -327,6 +327,30 @@ export default function Record() {
       
       // Process participants (duplicate detection, auto-fill, pending contacts)
       const processResult = await processParticipants(conversationId);
+      
+      // Extract entities from complete transcript
+      console.log('🔍 Extracting entities from complete transcript...');
+      await extractEntities(conversationId);
+      
+      // Generate final matches based on all conversation data
+      console.log('🎯 Generating final matches...');
+      const matchData = await generateMatches(conversationId);
+      console.log('✅ Match generation result:', matchData);
+      
+      if (matchData.matches && matchData.matches.length > 0) {
+        console.log(`🎉 Found ${matchData.matches.length} matches!`);
+        const newSuggestions = matchData.matches.map((m: any) => ({
+          contact: {
+            name: m.contact_name || 'Unknown',
+            email: m.contact_email || null,
+            company: m.contact_company || null,
+            title: m.contact_title || null,
+          },
+          score: m.score as 1 | 2 | 3,
+          reasons: m.reasons || [],
+        }));
+        setSuggestions(newSuggestions);
+      }
       
       // Mark conversation as completed
       await updateConversation.mutateAsync({
