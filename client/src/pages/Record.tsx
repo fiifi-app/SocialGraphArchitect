@@ -193,14 +193,15 @@ export default function Record() {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'match_suggestions',
           filter: `conversation_id=eq.${conversationId}`,
         },
         async (payload) => {
-          console.log('🎯 Real-time match received:', payload.new);
-          const match = payload.new;
+          console.log('🎯 Real-time match event:', payload.eventType, payload.new);
+          const match = payload.new as any;
+          if (!match || !match.contact_id) return;
           
           // Fetch contact details for this match
           const { data: contactData, error } = await supabase
@@ -234,20 +235,29 @@ export default function Record() {
           };
           
           setSuggestions(prev => {
-            // Check if this contact already exists
-            const exists = prev.some(s => s.contact.name === newSuggestion.contact.name);
-            if (exists) return prev;
+            // Check if contact already exists, update if so
+            const existingIndex = prev.findIndex(s => s.contact.name === contact.name);
             
+            if (existingIndex >= 0) {
+              // Update existing match with new score/reasons
+              const updated = [...prev];
+              updated[existingIndex] = newSuggestion;
+              return updated.sort((a, b) => b.score - a.score);
+            }
+            
+            // Add new match
             const updated = [...prev, newSuggestion].sort((a, b) => b.score - a.score);
             return updated;
           });
           
-          // Open drawer and show toast for new matches
-          setConnectionsDrawerOpen(true);
-          toast({
-            title: "Connection found!",
-            description: `${contact.name} matches this conversation`,
-          });
+          // Open drawer and show toast only for new INSERT events
+          if (payload.eventType === 'INSERT') {
+            setConnectionsDrawerOpen(true);
+            toast({
+              title: "Connection found!",
+              description: `${contact.name} matches this conversation`,
+            });
+          }
         }
       )
       .subscribe();

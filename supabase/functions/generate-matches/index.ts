@@ -317,37 +317,46 @@ Deno.serve(async (req) => {
       );
     }
     
-    // Use service role client to insert matches (bypasses RLS)
-    const { data: insertedMatches, error: insertError } = await supabaseService
-      .from('match_suggestions')
-      .insert(
-        allMatches.map((m: any) => ({
-          conversation_id: conversationId,
-          contact_id: m.contact_id,
-          score: m.score,
-          reasons: m.reasons,
-          justification: m.justification,
-          status: 'pending',
-        }))
-      )
-      .select(`
-        id,
-        conversation_id,
-        contact_id,
-        score,
-        reasons,
-        justification,
-        status,
-        created_at,
-        contacts:contact_id ( name )
-      `);
+    // Use service role client to upsert matches (bypasses RLS, handles duplicates)
+    const matchRecords = allMatches.map((m: any) => ({
+      conversation_id: conversationId,
+      contact_id: m.contact_id,
+      score: m.score,
+      reasons: m.reasons,
+      justification: m.justification,
+      status: 'pending',
+    }));
     
-    if (insertError) {
-      console.error('Insert error:', insertError);
-      throw insertError;
+    // Insert new matches only (skip existing ones)
+    const insertedMatches: any[] = [];
+    for (const record of matchRecords) {
+      const { data, error } = await supabaseService
+        .from('match_suggestions')
+        .upsert(record, { 
+          onConflict: 'conversation_id,contact_id',
+          ignoreDuplicates: false 
+        })
+        .select(`
+          id,
+          conversation_id,
+          contact_id,
+          score,
+          reasons,
+          justification,
+          status,
+          created_at,
+          contacts:contact_id ( name )
+        `)
+        .single();
+      
+      if (!error && data) {
+        insertedMatches.push(data);
+      } else if (error) {
+        console.log('Upsert note for contact:', record.contact_id, error.message);
+      }
     }
     
-    console.log('Inserted matches:', insertedMatches?.length || 0);
+    console.log('Upserted matches:', insertedMatches.length);
     
     // Flatten nested contact names
     const matchesWithNames = insertedMatches?.map((m: any) => ({

@@ -268,14 +268,15 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'match_suggestions',
           filter: `conversation_id=eq.${conversationId}`,
         },
         async (payload) => {
-          console.log('🎯 Received match suggestion:', payload.new);
-          const match = payload.new;
+          console.log('🎯 Received match suggestion event:', payload.eventType, payload.new);
+          const match = payload.new as any;
+          if (!match || !match.contact_id) return;
           
           // Fetch the contact details for this match
           const { data: contactData, error } = await supabase
@@ -287,11 +288,6 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
           // Guard against missing or failed contact fetch
           if (error || !contactData) {
             console.error('Failed to fetch contact for match:', error);
-            toast({
-              title: "Error loading contact",
-              description: "Failed to load contact details for a new match",
-              variant: "destructive",
-            });
             return;
           }
           
@@ -303,23 +299,40 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
             title: string | null;
           };
           
+          const newSuggestion = {
+            contact: {
+              name: contact.name,
+              email: contact.email,
+              company: contact.company,
+              title: contact.title,
+            },
+            score: (match.score || 1) as 1 | 2 | 3,
+            reasons: match.reasons || [],
+          };
+          
           setSuggestions((prev) => {
-            const updated = [
-              ...prev,
-              {
-                contact: {
-                  name: contact.name,
-                  email: contact.email,
-                  company: contact.company,
-                  title: contact.title,
-                },
-                score: (match.score || 1) as 1 | 2 | 3,
-                reasons: match.reasons || [],
-              },
-            ];
-            // Sort by score descending (3 stars first)
+            // Check if contact already exists, update if so
+            const existingIndex = prev.findIndex(s => s.contact.name === contact.name);
+            
+            if (existingIndex >= 0) {
+              // Update existing match with new score/reasons
+              const updated = [...prev];
+              updated[existingIndex] = newSuggestion;
+              return updated.sort((a, b) => b.score - a.score);
+            }
+            
+            // Add new match
+            const updated = [...prev, newSuggestion];
             return updated.sort((a, b) => b.score - a.score);
           });
+          
+          // Show toast only for new matches (INSERT events)
+          if (payload.eventType === 'INSERT') {
+            toast({
+              title: "Connection found!",
+              description: `${contact.name} matches this conversation`,
+            });
+          }
         }
       )
       .subscribe((status) => {
