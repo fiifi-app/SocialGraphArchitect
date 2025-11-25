@@ -1,3 +1,11 @@
+/**
+ * TypeScript type definitions for the Supabase database schema.
+ * 
+ * NOTE: This file uses Drizzle ORM schemas for type generation only.
+ * The actual database operations are performed using Supabase client.
+ * This file is NOT connected to any Replit/Neon database.
+ */
+
 import { sql } from "drizzle-orm";
 import { pgTable, text, varchar, real, timestamp, jsonb, integer, boolean, decimal, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
