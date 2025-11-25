@@ -188,8 +188,8 @@ export default function Record() {
     const interval = setInterval(async () => {
       const now = Date.now();
       
-      // Extract participants every 15s (was 30s)
-      if (now - lastExtractTimeRef.current >= 15000 && transcript.length > 0) {
+      // Extract participants every 5s
+      if (now - lastExtractTimeRef.current >= 5000 && transcript.length > 0) {
         try {
           await extractParticipants(conversationId);
           lastExtractTimeRef.current = now;
@@ -198,8 +198,8 @@ export default function Record() {
         }
       }
       
-      // Generate matches every 15s (was 30s)
-      if (now - lastMatchTimeRef.current >= 15000 && transcript.length > 0) {
+      // Generate matches every 5s
+      if (now - lastMatchTimeRef.current >= 5000 && transcript.length > 0) {
         try {
           // First extract entities from the conversation
           console.log('🔍 Extracting entities from conversation...');
