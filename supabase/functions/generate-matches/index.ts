@@ -48,21 +48,53 @@ Deno.serve(async (req) => {
       );
     }
     
-    // Use service role to read entities and contacts (bypasses RLS)
-    const { data: entities } = await supabaseService
+    // Use service role to read entities (bypasses RLS)
+    const { data: entities, error: entitiesError } = await supabaseService
       .from('conversation_entities')
       .select('*')
       .eq('conversation_id', conversationId);
     
-    const { data: contacts } = await supabaseService
+    if (entitiesError) {
+      console.error('Failed to fetch entities:', entitiesError);
+    }
+    
+    console.log('Fetched entities:', entities?.length || 0);
+    
+    // Fetch only essential contact fields to avoid timeout with large datasets
+    // Split into investor-prioritized contacts (first 500) for efficiency
+    const { data: contacts, error: contactsError } = await supabaseService
       .from('contacts')
       .select(`
-        *,
-        theses (*)
+        id,
+        name,
+        first_name,
+        last_name,
+        title,
+        company,
+        bio,
+        investor_notes,
+        contact_type,
+        check_size_min,
+        check_size_max,
+        is_investor,
+        theses (
+          sectors,
+          stages
+        )
       `)
-      .eq('owned_by_profile', user.id);
+      .eq('owned_by_profile', user.id)
+      .order('is_investor', { ascending: false })
+      .limit(1000);  // Limit to 1000 contacts to prevent timeout
+    
+    if (contactsError) {
+      console.error('Failed to fetch contacts:', contactsError);
+      throw new Error(`Failed to fetch contacts: ${contactsError.message}`);
+    }
+    
+    console.log('Fetched contacts:', contacts?.length || 0);
     
     if (!contacts || contacts.length === 0) {
+      console.log('No contacts found for user');
       return new Response(
         JSON.stringify({ matches: [] }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
