@@ -4,6 +4,10 @@
 The Social Graph Connector is a web-based application designed for VCs and investors. Its primary purpose is to help users identify valuable introductions from their conversations by automatically matching discussion topics against their network's investment theses. Key capabilities include recording conversations with live transcription, extracting investment entities (sectors, stages, check sizes, geos, personas, intents), matching these against a contact/thesis database with explainable scoring, and generating double opt-in introduction emails using AI. The project aims to provide multi-user support with secure authentication and a clean, professional user interface.
 
 ## Recent Changes
+- **Transcript Speaker Names:** TranscriptView and StructuredTranscriptView now display the logged-in user's registered name (from profile) instead of "Unknown"
+- **Post-Conversation Validation Popover:** New ContactValidationPopover component appears after recording stops, allowing users to:
+  - Identify detected speakers and mark them as "new contact" or "existing contact"
+  - Capture conversation keywords (Sector, Check Size, Geographic Focus) for better context tracking
 - **Authentication:** Implemented Supabase PKCE authentication flow for seamless mobile compatibility
 - **Password Visibility Toggle:** Added eye icon button on login page to reveal/hide passwords during entry
 - **Login UI Cleanup:** Removed Supabase connection status indicator for cleaner, more focused login experience

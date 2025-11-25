@@ -12,12 +12,14 @@ interface StructuredTranscriptViewProps {
   transcript: TranscriptEntry[];
   conversationTitle: string;
   conversationDate: Date;
+  userName?: string;
 }
 
 export default function StructuredTranscriptView({ 
   transcript, 
   conversationTitle,
-  conversationDate 
+  conversationDate,
+  userName
 }: StructuredTranscriptViewProps) {
   if (transcript.length === 0) {
     return (
@@ -52,20 +54,23 @@ export default function StructuredTranscriptView({
             </span>
           </Badge>
           
-          {speakers.map((speaker, idx) => (
-            <Badge 
-              key={idx}
-              variant="secondary" 
-              className="flex items-center gap-2 px-3 py-1.5"
-            >
-              <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
-                <span className="text-xs font-semibold text-primary">
-                  {speaker?.charAt(0).toUpperCase() || 'U'}
-                </span>
-              </div>
-              <span>{speaker || 'Unknown'}</span>
-            </Badge>
-          ))}
+          {speakers.map((speaker, idx) => {
+            const displayName = speaker === 'Unknown' && userName ? userName : (speaker || 'Unknown');
+            return (
+              <Badge 
+                key={idx}
+                variant="secondary" 
+                className="flex items-center gap-2 px-3 py-1.5"
+              >
+                <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
+                  <span className="text-xs font-semibold text-primary">
+                    {displayName.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <span>{displayName}</span>
+              </Badge>
+            );
+          })}
         </div>
 
         <div className="space-y-8">
@@ -76,21 +81,24 @@ export default function StructuredTranscriptView({
                 Discussion Section {parseInt(groupIdx) + 1}
               </h2>
               <ul className="space-y-3 ml-4">
-                {entries.map((entry, idx) => (
-                  <li key={idx} className="flex gap-3">
-                    <span className="text-muted-foreground mt-1.5">•</span>
-                    <div className="flex-1">
-                      {entry.speaker && (
-                        <span className="font-medium text-sm text-muted-foreground mr-2">
-                          {entry.speaker}:
+                {entries.map((entry, idx) => {
+                  const speakerDisplayName = entry.speaker === 'Unknown' && userName ? userName : entry.speaker;
+                  return (
+                    <li key={idx} className="flex gap-3">
+                      <span className="text-muted-foreground mt-1.5">•</span>
+                      <div className="flex-1">
+                        {speakerDisplayName && (
+                          <span className="font-medium text-sm text-muted-foreground mr-2">
+                            {speakerDisplayName}:
+                          </span>
+                        )}
+                        <span className="text-base leading-relaxed">
+                          {entry.text}
                         </span>
-                      )}
-                      <span className="text-base leading-relaxed">
-                        {entry.text}
-                      </span>
-                    </div>
-                  </li>
-                ))}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}

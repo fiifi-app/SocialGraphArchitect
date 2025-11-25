@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useMemo } from "react";
 import { useConversation, useConversationSegments } from "@/hooks/useConversations";
 import { useMatchSuggestions, useUpdateMatchStatus } from "@/hooks/useMatches";
+import { useProfile } from "@/hooks/useProfile";
 import { format } from "date-fns";
 
 interface PromisedIntro {
@@ -35,6 +36,7 @@ export default function ConversationDetail() {
   const { data: conversation, isLoading: conversationLoading } = useConversation(conversationId);
   const { data: segments = [], isLoading: segmentsLoading } = useConversationSegments(conversationId);
   const { data: matches = [], isLoading: matchesLoading } = useMatchSuggestions(conversationId);
+  const { data: profile } = useProfile();
   const updateStatus = useUpdateMatchStatus(conversationId);
 
   const transcript = useMemo(() => {
@@ -214,6 +216,7 @@ export default function ConversationDetail() {
                 transcript={transcript}
                 conversationTitle={conversationTitle}
                 conversationDate={conversation.recordedAt}
+                userName={profile?.fullName || undefined}
               />
             </div>
           ) : (
