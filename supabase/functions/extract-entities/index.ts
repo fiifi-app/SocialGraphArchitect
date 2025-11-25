@@ -84,9 +84,10 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         model: 'gpt-3.5-turbo',
+        response_format: { type: "json_object" },
         messages: [{
           role: 'system',
-          content: `Extract investment entities AND person names from this VC/investor conversation. Return a JSON array with objects containing:
+          content: `Extract investment entities AND person names from this VC/investor conversation. Return ONLY a valid JSON object with an "entities" array containing:
           - entity_type: one of ["sector", "stage", "check_size", "geo", "persona", "intent", "person_name"]
           - value: the extracted value
           - confidence: 0.0-1.0 confidence score
@@ -105,27 +106,23 @@ Deno.serve(async (req) => {
           - "looking for technical founders" → entity_type: "persona", value: "technical founders"
           - "enterprise buyers" → entity_type: "persona", value: "enterprise buyers"
           
-          Example output:
-          [
-            {
-              "entity_type": "sector",
-              "value": "B2B SaaS",
-              "confidence": 0.95,
-              "context_snippet": "It's a B2B SaaS startup"
-            },
-            {
-              "entity_type": "person_name",
-              "value": "Matt Hooper",
-              "confidence": 0.95,
-              "context_snippet": "good match for Matt Hooper"
-            },
-            {
-              "entity_type": "person_name",
-              "value": "Vance Weber",
-              "confidence": 0.95,
-              "context_snippet": "Vance is on the other side"
-            }
-          ]`
+          CRITICAL: Return ONLY valid JSON in this exact format:
+          {
+            "entities": [
+              {
+                "entity_type": "sector",
+                "value": "B2B SaaS",
+                "confidence": 0.95,
+                "context_snippet": "It's a B2B SaaS startup"
+              },
+              {
+                "entity_type": "person_name",
+                "value": "Matt Hooper",
+                "confidence": 0.95,
+                "context_snippet": "good match for Matt Hooper"
+              }
+            ]
+          }`
         }, {
           role: 'user',
           content: transcript
@@ -159,7 +156,20 @@ Deno.serve(async (req) => {
       content = content.replace(/```\n?/g, '');
     }
     
-    const entities = JSON.parse(content.trim());
+    let parsedResponse;
+    try {
+      parsedResponse = JSON.parse(content.trim());
+    } catch (parseError) {
+      console.error('Failed to parse OpenAI response as JSON:', content);
+      console.error('Parse error:', parseError);
+      // Return empty entities instead of throwing
+      return new Response(
+        JSON.stringify({ entities: [] }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const entities = parsedResponse.entities || parsedResponse;
     console.log('Parsed entities:', JSON.stringify(entities));
     
     if (!Array.isArray(entities) || entities.length === 0) {
