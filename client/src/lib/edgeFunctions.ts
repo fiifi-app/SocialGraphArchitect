@@ -45,28 +45,36 @@ export async function enrichContact(contactId: string, provider?: 'hunter' | 'pd
 }
 
 export async function extractEntities(conversationId: string) {
+  console.log('[5s interval] Extracting entities...');
   const { data, error } = await supabase.functions.invoke('extract-entities', {
     body: { conversationId }
   });
   
   if (error) {
     console.error('❌ Extract entities error:', error);
-    console.error('❌ Error data:', data);
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error context:', error.context);
+    console.error('❌ Response data:', data);
     throw error;
   }
+  console.log('✅ Entities extracted successfully:', data);
   return data;
 }
 
 export async function generateMatches(conversationId: string) {
+  console.log('[5s interval] Generating matches...');
   const { data, error } = await supabase.functions.invoke('generate-matches', {
     body: { conversationId }
   });
   
   if (error) {
     console.error('❌ Generate matches error:', error);
-    console.error('❌ Error data:', data);
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error context:', error.context);
+    console.error('❌ Response data:', data);
     throw error;
   }
+  console.log('✅ Matches generated successfully:', data);
   return data;
 }
 
