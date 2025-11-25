@@ -251,7 +251,7 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
       clearTimeout(matchDebounceTimerRef.current);
     }
 
-    // Debounce: wait 3 seconds after last transcript segment before generating matches
+    // Debounce: wait 2 seconds after last transcript segment before generating matches
     matchDebounceTimerRef.current = setTimeout(async () => {
       const conversationId = conversationIdRef.current;
       if (!conversationId) return;
@@ -270,7 +270,7 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
       } catch (error) {
         console.error('Match generation error:', error);
       }
-    }, 3000); // 3 second debounce
+    }, 2000); // 2 second debounce for faster matches
   }, []);
 
   useEffect(() => {
@@ -389,7 +389,7 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
       } catch (error) {
         console.error('Participant extraction error:', error);
       }
-    }, 15000); // Extract participants every 15 seconds
+    }, 5000); // Extract participants every 5 seconds
 
     return () => clearInterval(interval);
   }, [conversationId, audioState.isRecording, audioState.isPaused]);

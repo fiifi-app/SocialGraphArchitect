@@ -3,11 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
 import RecordingIndicator from "@/components/RecordingIndicator";
 import TranscriptView from "@/components/TranscriptView";
 import SuggestionCard from "@/components/SuggestionCard";
 import ContactValidationPopover from "@/components/ContactValidationPopover";
-import { Mic, Calendar, Clock, MapPin, Users } from "lucide-react";
+import { Mic, Calendar, Clock, MapPin, Users, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, useSearch } from "wouter";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
@@ -61,6 +63,7 @@ export default function Record() {
   const [calendarEvent, setCalendarEvent] = useState<CalendarEvent | null>(null);
   const [validationPopoverOpen, setValidationPopoverOpen] = useState(false);
   const [speakersDetected, setSpeakersDetected] = useState<string[]>([]);
+  const [connectionsDrawerOpen, setConnectionsDrawerOpen] = useState(false);
   const conversationIdRef = useRef<string | null>(null);
   const lastExtractTimeRef = useRef<number>(0);
   const lastMatchTimeRef = useRef<number>(0);
@@ -181,16 +184,90 @@ export default function Record() {
     };
   }, [conversationId]);
 
-  // Periodic AI processing (every 30 seconds)
+  // Real-time subscription for match suggestions
+  useEffect(() => {
+    if (!conversationId) return;
+
+    const matchChannel = supabase
+      .channel(`matches:${conversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'match_suggestions',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        async (payload) => {
+          console.log('🎯 Real-time match received:', payload.new);
+          const match = payload.new;
+          
+          // Fetch contact details for this match
+          const { data: contactData, error } = await supabase
+            .from('contacts')
+            .select('name, email, company, title')
+            .eq('id', match.contact_id)
+            .single();
+          
+          if (error || !contactData) {
+            console.error('Failed to fetch contact for match:', error);
+            return;
+          }
+          
+          // Type the contact data
+          const contact = contactData as {
+            name: string;
+            email: string | null;
+            company: string | null;
+            title: string | null;
+          };
+          
+          const newSuggestion: Suggestion = {
+            contact: {
+              name: contact.name,
+              email: contact.email,
+              company: contact.company,
+              title: contact.title,
+            },
+            score: (match.score || 1) as 1 | 2 | 3,
+            reasons: match.reasons || [],
+          };
+          
+          setSuggestions(prev => {
+            // Check if this contact already exists
+            const exists = prev.some(s => s.contact.name === newSuggestion.contact.name);
+            if (exists) return prev;
+            
+            const updated = [...prev, newSuggestion].sort((a, b) => b.score - a.score);
+            return updated;
+          });
+          
+          // Open drawer and show toast for new matches
+          setConnectionsDrawerOpen(true);
+          toast({
+            title: "Connection found!",
+            description: `${contact.name} matches this conversation`,
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(matchChannel);
+    };
+  }, [conversationId, toast]);
+
+  // Periodic AI processing (every 5 seconds for real-time connections)
   useEffect(() => {
     if (!conversationId || !audioState.isRecording || audioState.isPaused) return;
 
     const interval = setInterval(async () => {
       const now = Date.now();
       
-      // Extract participants every 30s
-      if (now - lastExtractTimeRef.current >= 30000 && transcript.length > 0) {
+      // Extract participants every 5s
+      if (now - lastExtractTimeRef.current >= 5000 && transcript.length > 0) {
         try {
+          console.log('👥 Extracting participants...');
           await extractParticipants(conversationId);
           lastExtractTimeRef.current = now;
         } catch (error) {
@@ -198,8 +275,8 @@ export default function Record() {
         }
       }
       
-      // Generate matches every 30s
-      if (now - lastMatchTimeRef.current >= 30000 && transcript.length > 0) {
+      // Generate matches every 5s for real-time connections
+      if (now - lastMatchTimeRef.current >= 5000 && transcript.length > 0) {
         try {
           // First extract entities from the conversation
           console.log('🔍 Extracting entities from conversation...');
@@ -213,28 +290,7 @@ export default function Record() {
           
           if (matchData.matches && matchData.matches.length > 0) {
             console.log(`🎉 Found ${matchData.matches.length} matches!`);
-            // Update suggestions with new matches
-            const newSuggestions = matchData.matches.map((m: any) => ({
-              contact: {
-                name: m.contact_name || 'Unknown',
-                email: m.contact_email || null,
-                company: m.contact_company || null,
-                title: m.contact_title || null,
-              },
-              score: m.score,
-              reasons: m.reasons || [],
-            }));
-            
-            setSuggestions(newSuggestions);
-            
-            // Toast for new high-value matches
-            const highValueMatches = newSuggestions.filter((s: Suggestion) => s.score === 3);
-            if (highValueMatches.length > 0) {
-              toast({
-                title: "New match found!",
-                description: `${highValueMatches[0].contact.name} - ${highValueMatches[0].score} stars`,
-              });
-            }
+            // Matches will be updated via real-time subscription
           } else {
             console.log('⚠️ No matches found');
           }
@@ -247,7 +303,7 @@ export default function Record() {
     }, 5000); // Check every 5 seconds
 
     return () => clearInterval(interval);
-  }, [conversationId, audioState.isRecording, audioState.isPaused, transcript.length, toast]);
+  }, [conversationId, audioState.isRecording, audioState.isPaused, transcript.length]);
 
   const handleStartRecording = async () => {
     if (!consentChecked) return;
@@ -519,13 +575,60 @@ export default function Record() {
                   {transcript.length} transcript segment{transcript.length !== 1 ? 's' : ''}
                 </p>
               )}
-              {suggestions.length > 0 && (
-                <p className="text-sm text-muted-foreground">
-                  • {suggestions.length} match{suggestions.length !== 1 ? 'es' : ''} found
-                </p>
-              )}
             </div>
           </div>
+          
+          <Sheet open={connectionsDrawerOpen} onOpenChange={setConnectionsDrawerOpen}>
+            <SheetTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="relative"
+                data-testid="button-open-connections"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Connections
+                {suggestions.length > 0 && (
+                  <Badge 
+                    variant="default" 
+                    className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs"
+                  >
+                    {suggestions.length}
+                  </Badge>
+                )}
+              </Button>
+            </SheetTrigger>
+            <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+              <SheetHeader>
+                <SheetTitle className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  Live Connections
+                </SheetTitle>
+              </SheetHeader>
+              <div className="mt-6 space-y-4">
+                {suggestions.length > 0 ? (
+                  suggestions.map((suggestion, idx) => (
+                    <SuggestionCard
+                      key={idx}
+                      contact={suggestion.contact}
+                      score={suggestion.score}
+                      reasons={suggestion.reasons}
+                      onMakeIntro={() => console.log('Make intro', suggestion.contact.name)}
+                      onMaybe={() => console.log('Maybe', suggestion.contact.name)}
+                      onDismiss={() => console.log('Dismissed', suggestion.contact.name)}
+                    />
+                  ))
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                    <Users className="w-12 h-12 mb-3 opacity-50" />
+                    <p className="text-base font-medium">Searching for connections...</p>
+                    <p className="text-sm mt-2 text-center">
+                      Matches will appear here every 5 seconds as we analyze your conversation
+                    </p>
+                  </div>
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
 
         <Tabs defaultValue="transcript" className="w-full">
