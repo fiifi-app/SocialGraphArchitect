@@ -32,6 +32,7 @@ Deno.serve(async (req) => {
     }
 
     const { conversationId } = await req.json();
+    console.log('🔍 Received conversationId:', conversationId, 'length:', conversationId?.length, 'type:', typeof conversationId);
     
     // Verify conversation ownership using user client
     const { data: conversation } = await supabaseUser
