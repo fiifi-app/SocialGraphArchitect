@@ -188,8 +188,8 @@ export default function Record() {
     const interval = setInterval(async () => {
       const now = Date.now();
       
-      // Extract participants every 5s
-      if (now - lastExtractTimeRef.current >= 5000 && transcript.length > 0) {
+      // Extract participants every 30s
+      if (now - lastExtractTimeRef.current >= 30000 && transcript.length > 0) {
         try {
           await extractParticipants(conversationId);
           lastExtractTimeRef.current = now;
@@ -198,8 +198,8 @@ export default function Record() {
         }
       }
       
-      // Generate matches every 5s
-      if (now - lastMatchTimeRef.current >= 5000 && transcript.length > 0) {
+      // Generate matches every 30s
+      if (now - lastMatchTimeRef.current >= 30000 && transcript.length > 0) {
         try {
           // First extract entities from the conversation
           console.log('🔍 Extracting entities from conversation...');
@@ -327,30 +327,6 @@ export default function Record() {
       
       // Process participants (duplicate detection, auto-fill, pending contacts)
       const processResult = await processParticipants(conversationId);
-      
-      // Extract entities from complete transcript
-      console.log('🔍 Extracting entities from complete transcript...');
-      await extractEntities(conversationId);
-      
-      // Generate final matches based on all conversation data
-      console.log('🎯 Generating final matches...');
-      const matchData = await generateMatches(conversationId);
-      console.log('✅ Match generation result:', matchData);
-      
-      if (matchData.matches && matchData.matches.length > 0) {
-        console.log(`🎉 Found ${matchData.matches.length} matches!`);
-        const newSuggestions = matchData.matches.map((m: any) => ({
-          contact: {
-            name: m.contact_name || 'Unknown',
-            email: m.contact_email || null,
-            company: m.contact_company || null,
-            title: m.contact_title || null,
-          },
-          score: m.score as 1 | 2 | 3,
-          reasons: m.reasons || [],
-        }));
-        setSuggestions(newSuggestions);
-      }
       
       // Mark conversation as completed
       await updateConversation.mutateAsync({
@@ -565,7 +541,7 @@ export default function Record() {
           <TabsContent value="transcript">
             <Card className="p-0 h-96 overflow-auto">
               {transcript.length > 0 ? (
-                <TranscriptView transcript={transcript} userName={profile?.fullName || undefined} />
+                <TranscriptView transcript={transcript} userName={profile?.fullName} />
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8">
                   <Mic className="w-12 h-12 mb-3 opacity-50" />
@@ -585,7 +561,7 @@ export default function Record() {
                     contact={suggestion.contact}
                     score={suggestion.score}
                     reasons={suggestion.reasons}
-                    onMakeIntro={() => console.log('Promised', suggestion.contact.name)}
+                    onPromise={() => console.log('Promised', suggestion.contact.name)}
                     onMaybe={() => console.log('Maybe', suggestion.contact.name)}
                     onDismiss={() => console.log('Dismissed', suggestion.contact.name)}
                   />
