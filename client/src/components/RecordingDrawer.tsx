@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/card";
 import TranscriptView from "@/components/TranscriptView";
 import SuggestionCard from "@/components/SuggestionCard";
 import { Mic, Square, Users } from "lucide-react";
+import AudioWaveform from "@/components/AudioWaveform";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
@@ -500,8 +501,9 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
                 >
                   {audioState.isPaused ? 'Resume' : 'Pause'}
                 </Button>
-                <div className="text-lg font-mono font-semibold" data-testid="text-duration">
-                  {formattedDuration}
+                <div className="flex items-center justify-center gap-2" data-testid="text-duration">
+                  <AudioWaveform isActive={isTranscribing && !audioState.isPaused} />
+                  <span className="text-lg font-mono font-semibold">{formattedDuration}</span>
                 </div>
                 <Button
                   variant="destructive"
