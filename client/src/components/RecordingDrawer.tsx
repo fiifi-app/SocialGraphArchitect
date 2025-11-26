@@ -444,13 +444,8 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
                 <TabsTrigger value="matches">
                   Matches {suggestions.length > 0 && `(${suggestions.length})`}
                 </TabsTrigger>
-                <TabsTrigger value="transcript" className="relative">
-                  {isTranscribing && (
-                    <div className="absolute left-2 top-1/2 -translate-y-1/2 w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-                  )}
-                  <span className={isTranscribing ? "ml-3" : ""}>
-                    Transcript {transcript.length > 0 && `(${transcript.length})`}
-                  </span>
+                <TabsTrigger value="transcript">
+                  Transcript {transcript.length > 0 && `(${transcript.length})`}
                 </TabsTrigger>
               </TabsList>
 
