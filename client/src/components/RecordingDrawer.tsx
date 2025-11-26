@@ -114,10 +114,9 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
 
   const { state: audioState, controls: audioControls } = useAudioRecorder(handleAudioData);
 
-  const hours = Math.floor(audioState.duration / 3600);
-  const minutes = Math.floor((audioState.duration % 3600) / 60);
+  const totalMinutes = Math.floor(audioState.duration / 60);
   const seconds = audioState.duration % 60;
-  const formattedDuration = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  const formattedDuration = `${totalMinutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 
   const handleStartRecording = async () => {
     if (!consentChecked) {
