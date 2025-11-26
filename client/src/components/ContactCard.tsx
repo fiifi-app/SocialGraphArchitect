@@ -134,31 +134,19 @@ export default function ContactCard({
   return (
     <Card className="p-5 hover-elevate" data-testid={`contact-card-${id}`}>
       <div className="space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            {displayContactTypes.length > 0 && (
-              <div className="flex items-center gap-1 flex-wrap mb-1">
-                {displayContactTypes.map((type) => (
-                  <RoleTag key={type} type={type} />
-                ))}
-              </div>
-            )}
-            <h3 className="text-base font-semibold truncate" data-testid="text-contact-name">
-              {fullName}
-            </h3>
-          </div>
-          <div className="flex gap-1">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  data-testid="button-more-info"
-                  title="View company information"
-                >
-                  <Info className="w-4 h-4" />
-                </Button>
-              </PopoverTrigger>
+        {/* Icons at the top, right-aligned */}
+        <div className="flex items-center justify-end gap-1">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                data-testid="button-more-info"
+                title="View company information"
+              >
+                <Info className="w-4 h-4" />
+              </Button>
+            </PopoverTrigger>
               <PopoverContent className="w-80 p-0" align="end" sideOffset={5}>
                 <div className="p-4 border-b">
                   <h4 className="font-semibold text-sm">Company Information</h4>
@@ -316,15 +304,28 @@ export default function ContactCard({
             >
               <Sparkles className="w-4 h-4" />
             </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={onEdit}
-              data-testid="button-edit-contact"
-            >
-              <Edit className="w-4 h-4" />
-            </Button>
-          </div>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={onEdit}
+            data-testid="button-edit-contact"
+          >
+            <Edit className="w-4 h-4" />
+          </Button>
+        </div>
+        
+        {/* Name and role tags below icons */}
+        <div>
+          {displayContactTypes.length > 0 && (
+            <div className="flex items-center gap-1 flex-wrap mb-1">
+              {displayContactTypes.map((type) => (
+                <RoleTag key={type} type={type} />
+              ))}
+            </div>
+          )}
+          <h3 className="text-base font-semibold" data-testid="text-contact-name">
+            {fullName}
+          </h3>
         </div>
         
         <EnrichmentDialog
