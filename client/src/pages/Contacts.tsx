@@ -58,10 +58,7 @@ export default function Contacts() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-semibold mb-2">Contacts</h1>
-            <p className="text-muted-foreground">
-              Manage your network and investment theses
-            </p>
+            <h1 className="text-3xl font-semibold">Contacts</h1>
           </div>
           <div className="flex gap-3">
             <Button 
