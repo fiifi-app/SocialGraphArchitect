@@ -39,9 +39,10 @@ export default function AudioWaveform({
         return (
           <div
             key={index}
-            className="w-[3px] bg-primary rounded-full transition-all duration-100 ease-in-out"
+            className="w-[3px] rounded-full transition-all duration-100 ease-in-out"
             style={{
               height: `${displayHeight}%`,
+              backgroundColor: '#F97316',
             }}
           />
         );
