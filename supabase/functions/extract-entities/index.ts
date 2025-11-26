@@ -84,51 +84,32 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-4o-mini',
         response_format: { type: "json_object" },
         messages: [{
           role: 'system',
-          content: `Extract investment entities AND person names from this VC/investor conversation. Return ONLY a valid JSON object with an "entities" array containing:
-          - entity_type: one of ["sector", "stage", "check_size", "geo", "persona", "intent", "person_name"]
-          - value: the extracted value
-          - confidence: 0.0-1.0 confidence score
-          - context_snippet: the relevant quote from the conversation
-          
-          CRITICAL DISTINCTION:
-          - "person_name": Use when a SPECIFIC PERSON'S ACTUAL NAME is mentioned (e.g., "Matt Hooper", "Vance Weber", "Susan Schofer")
-          - "persona": Use ONLY for TYPES/CATEGORIES of people (e.g., "founders", "enterprise buyers", "technical CTOs")
-          
-          Examples of "person_name" (use this type!):
-          - "Matt Hooper would be a good match" → entity_type: "person_name", value: "Matt Hooper"
-          - "I think Vance Weber could help" → entity_type: "person_name", value: "Vance Weber"
-          - "Susan Schofer from SOSV" → entity_type: "person_name", value: "Susan Schofer"
-          
-          Examples of "persona" (different!):
-          - "looking for technical founders" → entity_type: "persona", value: "technical founders"
-          - "enterprise buyers" → entity_type: "persona", value: "enterprise buyers"
-          
-          CRITICAL: Return ONLY valid JSON in this exact format:
-          {
-            "entities": [
-              {
-                "entity_type": "sector",
-                "value": "B2B SaaS",
-                "confidence": 0.95,
-                "context_snippet": "It's a B2B SaaS startup"
-              },
-              {
-                "entity_type": "person_name",
-                "value": "Matt Hooper",
-                "confidence": 0.95,
-                "context_snippet": "good match for Matt Hooper"
-              }
-            ]
-          }`
+          content: `You extract entities from VC/investor conversations. ALWAYS extract person names when mentioned.
+
+ENTITY TYPES:
+- "person_name": ANY person's full name (first + last name). ALWAYS extract these. Examples: "Roy Bahat", "Matt Hooper", "Sarah Chen"
+- "sector": Industry/vertical (B2B SaaS, fintech, healthcare, AI/ML)
+- "stage": Investment stage (pre-seed, seed, Series A, Series B)
+- "check_size": Dollar amounts ($1M, $5 million, 1-5 million range)
+- "geo": Locations (San Francisco, New York, Europe)
+- "persona": Types of people, NOT names (founders, CTOs, investors)
+
+CRITICAL RULES:
+1. ALWAYS extract person_name when you see "FirstName LastName" pattern
+2. "Roy Bahat" = person_name, NOT persona
+3. "Matt Hooper" = person_name, NOT persona
+4. "investors" = persona (no specific name)
+
+Return JSON: {"entities": [{"entity_type": "...", "value": "...", "confidence": 0.9, "context_snippet": "..."}]}`
         }, {
           role: 'user',
-          content: transcript
+          content: `Extract ALL entities from this transcript. ESPECIALLY extract any person names mentioned:\n\n${transcript}`
         }],
-        temperature: 0.3,
+        temperature: 0.2,
       }),
     });
 
