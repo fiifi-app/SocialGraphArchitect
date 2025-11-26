@@ -181,9 +181,14 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
       console.log('🔍 Extracting entities from complete transcript...');
       await extractEntities(conversationIdRef.current);
       
-      // Generate final matches based on all conversation data
+      // Generate final matches based on all conversation data (non-blocking)
       console.log('🎯 Generating final matches...');
-      await generateMatches(conversationIdRef.current);
+      try {
+        await generateMatches(conversationIdRef.current);
+      } catch (matchError) {
+        console.log('⚠️ Match generation skipped:', matchError);
+        // Non-blocking - matches will be available via real-time subscription
+      }
       
       await updateConversation.mutateAsync({
         id: conversationIdRef.current,
@@ -191,8 +196,8 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
       });
 
       toast({
-        title: "Matches and transcripts completed!",
-        description: "Your conversation has been processed successfully",
+        title: "Recording completed!",
+        description: "Your conversation has been saved successfully",
       });
 
       setLocation(`/conversation/${conversationIdRef.current}`);
