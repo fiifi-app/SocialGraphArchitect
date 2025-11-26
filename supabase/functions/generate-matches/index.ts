@@ -5,6 +5,172 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Fuzzy name matching with similarity scoring
+function fuzzyNameMatch(mentionedName: string, contactName: string): { match: boolean; score: number; type: string } {
+  const mentioned = mentionedName.toLowerCase().trim();
+  const contact = contactName.toLowerCase().trim();
+  
+  // Exact match
+  if (mentioned === contact) {
+    return { match: true, score: 1.0, type: 'exact' };
+  }
+  
+  // One contains the other (e.g., "Roy Bahat" in "Roy E. Bahat")
+  if (contact.includes(mentioned) || mentioned.includes(contact)) {
+    return { match: true, score: 0.95, type: 'contains' };
+  }
+  
+  // Split into parts
+  const mentionedParts = mentioned.split(/\s+/).filter(p => p.length > 1);
+  const contactParts = contact.split(/\s+/).filter(p => p.length > 1);
+  
+  if (mentionedParts.length < 2 || contactParts.length < 1) {
+    return { match: false, score: 0, type: 'none' };
+  }
+  
+  const mentionedFirst = mentionedParts[0];
+  const mentionedLast = mentionedParts[mentionedParts.length - 1];
+  const contactFirst = contactParts[0];
+  const contactLast = contactParts[contactParts.length - 1];
+  
+  // Check for nickname matches (Matt/Matthew, Rob/Robert, etc.)
+  const nicknames: Record<string, string[]> = {
+    'matt': ['matthew', 'mat'],
+    'matthew': ['matt', 'mat'],
+    'rob': ['robert', 'bob', 'bobby'],
+    'robert': ['rob', 'bob', 'bobby'],
+    'bob': ['robert', 'rob', 'bobby'],
+    'mike': ['michael', 'mick'],
+    'michael': ['mike', 'mick'],
+    'jim': ['james', 'jimmy'],
+    'james': ['jim', 'jimmy'],
+    'bill': ['william', 'will', 'billy'],
+    'william': ['bill', 'will', 'billy'],
+    'tom': ['thomas', 'tommy'],
+    'thomas': ['tom', 'tommy'],
+    'joe': ['joseph', 'joey'],
+    'joseph': ['joe', 'joey'],
+    'dan': ['daniel', 'danny'],
+    'daniel': ['dan', 'danny'],
+    'chris': ['christopher', 'kristopher'],
+    'christopher': ['chris'],
+    'alex': ['alexander', 'alexandra'],
+    'alexander': ['alex'],
+    'sam': ['samuel', 'samantha'],
+    'samuel': ['sam'],
+    'nick': ['nicholas', 'nicolas'],
+    'nicholas': ['nick', 'nicolas'],
+    'steve': ['steven', 'stephen'],
+    'steven': ['steve', 'stephen'],
+    'stephen': ['steve', 'steven'],
+    'tony': ['anthony'],
+    'anthony': ['tony'],
+    'dave': ['david'],
+    'david': ['dave'],
+    'ed': ['edward', 'eddie'],
+    'edward': ['ed', 'eddie'],
+    'sara': ['sarah'],
+    'sarah': ['sara'],
+    'kate': ['katherine', 'catherine', 'kathy'],
+    'katherine': ['kate', 'kathy', 'katie'],
+    'liz': ['elizabeth', 'beth', 'lizzy'],
+    'elizabeth': ['liz', 'beth', 'lizzy'],
+    'jen': ['jennifer', 'jenny'],
+    'jennifer': ['jen', 'jenny'],
+  };
+  
+  // Check first name match (exact or nickname)
+  let firstNameMatch = false;
+  if (mentionedFirst === contactFirst) {
+    firstNameMatch = true;
+  } else if (contactFirst.startsWith(mentionedFirst) || mentionedFirst.startsWith(contactFirst)) {
+    firstNameMatch = true;
+  } else if (nicknames[mentionedFirst]?.includes(contactFirst) || nicknames[contactFirst]?.includes(mentionedFirst)) {
+    firstNameMatch = true;
+  }
+  
+  // Check last name match (exact or close)
+  let lastNameMatch = false;
+  if (mentionedLast === contactLast) {
+    lastNameMatch = true;
+  } else if (levenshteinDistance(mentionedLast, contactLast) <= 2) {
+    lastNameMatch = true;
+  }
+  
+  // Both first and last match
+  if (firstNameMatch && lastNameMatch) {
+    return { match: true, score: 0.9, type: 'fuzzy-both' };
+  }
+  
+  // Only last name matches exactly (common for formal references)
+  if (mentionedLast === contactLast && mentionedParts.length === 1) {
+    return { match: true, score: 0.7, type: 'last-only' };
+  }
+  
+  // Levenshtein distance for close spelling
+  const fullDistance = levenshteinDistance(mentioned, contact);
+  const maxLen = Math.max(mentioned.length, contact.length);
+  const similarity = 1 - (fullDistance / maxLen);
+  
+  if (similarity >= 0.8) {
+    return { match: true, score: similarity, type: 'levenshtein' };
+  }
+  
+  return { match: false, score: 0, type: 'none' };
+}
+
+// Levenshtein distance for fuzzy string matching
+function levenshteinDistance(a: string, b: string): number {
+  const matrix: number[][] = [];
+  
+  for (let i = 0; i <= b.length; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= a.length; j++) {
+    matrix[0][j] = j;
+  }
+  
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b.charAt(i - 1) === a.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+  
+  return matrix[b.length][a.length];
+}
+
+// Check if a value matches any item in an array (case-insensitive, partial match)
+function matchesAny(value: string, items: string[]): boolean {
+  const valueLower = value.toLowerCase();
+  return items.some(item => {
+    const itemLower = item.toLowerCase();
+    return valueLower.includes(itemLower) || itemLower.includes(valueLower);
+  });
+}
+
+// Parse check size from string (e.g., "$5,000,000" -> 5000000)
+function parseCheckSize(value: string): number | null {
+  const cleaned = value.replace(/[$,]/g, '').toLowerCase();
+  const match = cleaned.match(/(\d+(?:\.\d+)?)\s*(k|m|million|thousand)?/);
+  if (!match) return null;
+  
+  let num = parseFloat(match[1]);
+  const suffix = match[2];
+  
+  if (suffix === 'k' || suffix === 'thousand') num *= 1000;
+  if (suffix === 'm' || suffix === 'million') num *= 1000000;
+  
+  return num;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -30,6 +196,8 @@ Deno.serve(async (req) => {
     }
 
     const { conversationId } = await req.json();
+    console.log('=== GENERATE MATCHES START ===');
+    console.log('Conversation ID:', conversationId);
     
     const { data: conversation } = await supabaseUser
       .from('conversations')
@@ -44,11 +212,25 @@ Deno.serve(async (req) => {
       );
     }
     
+    // Get entities
     const { data: entities } = await supabaseService
       .from('conversation_entities')
       .select('*')
       .eq('conversation_id', conversationId);
     
+    console.log('=== ENTITIES RECEIVED ===');
+    console.log('Total entities:', entities?.length || 0);
+    entities?.forEach(e => console.log(`  - ${e.entity_type}: "${e.value}"`));
+    
+    if (!entities || entities.length === 0) {
+      console.log('NO ENTITIES - returning empty matches');
+      return new Response(
+        JSON.stringify({ matches: [] }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Get contacts with theses
     const { data: contacts } = await supabaseService
       .from('contacts')
       .select(`
@@ -58,238 +240,237 @@ Deno.serve(async (req) => {
       `)
       .eq('owned_by_profile', user.id);
     
+    console.log('=== CONTACTS LOADED ===');
+    console.log('Total contacts:', contacts?.length || 0);
+    
     if (!contacts || contacts.length === 0) {
+      console.log('NO CONTACTS - returning empty matches');
       return new Response(
         JSON.stringify({ matches: [] }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const personNames = entities?.filter(e => e.entity_type === 'person_name').map(e => e.value.toLowerCase()) || [];
-    const otherEntities = entities?.filter(e => e.entity_type !== 'person_name') || [];
+    // Parse entities by type
+    const sectors = entities.filter(e => e.entity_type === 'sector').map(e => e.value);
+    const stages = entities.filter(e => e.entity_type === 'stage').map(e => e.value);
+    const checkSizes = entities.filter(e => e.entity_type === 'check_size').map(e => e.value);
+    const geos = entities.filter(e => e.entity_type === 'geo').map(e => e.value);
+    const personNames = entities.filter(e => e.entity_type === 'person_name').map(e => e.value);
     
-    const entitySummary = otherEntities.reduce((acc, e) => {
-      if (!acc[e.entity_type]) acc[e.entity_type] = [];
-      acc[e.entity_type].push(e.value);
-      return acc;
-    }, {} as Record<string, string[]>);
+    console.log('=== PARSED ENTITIES ===');
+    console.log('Sectors:', sectors);
+    console.log('Stages:', stages);
+    console.log('Check sizes:', checkSizes);
+    console.log('Geos:', geos);
+    console.log('Person names:', personNames);
+    
+    // Parse check size values
+    const parsedCheckSizes = checkSizes.map(cs => parseCheckSize(cs)).filter(v => v !== null) as number[];
+    const minCheckSize = parsedCheckSizes.length > 0 ? Math.min(...parsedCheckSizes) : null;
+    const maxCheckSize = parsedCheckSizes.length > 0 ? Math.max(...parsedCheckSizes) : null;
+    console.log('Parsed check size range:', minCheckSize, '-', maxCheckSize);
 
-    console.log('Entity summary:', entitySummary);
-    console.log('Person names mentioned:', personNames);
-    console.log('Total contacts:', contacts.length);
-
-    // Name matching for person names mentioned
-    const nameMatches = contacts.filter(c => {
-      if (!c.name) return false;
-      const contactNameLower = c.name.toLowerCase();
+    // Score each contact
+    interface Match {
+      contact_id: string;
+      contact_name: string;
+      score: number;
+      reasons: string[];
+      justification: string;
+      matchDetails: {
+        sectorMatch: boolean;
+        stageMatch: boolean;
+        checkSizeMatch: boolean;
+        nameMatch: boolean;
+        nameMatchScore: number;
+        nameMatchType: string;
+        geoMatch: boolean;
+      };
+    }
+    
+    const matches: Match[] = [];
+    
+    console.log('=== SCORING CONTACTS ===');
+    
+    for (const contact of contacts) {
+      let score = 0;
+      const reasons: string[] = [];
+      const matchDetails = {
+        sectorMatch: false,
+        stageMatch: false,
+        checkSizeMatch: false,
+        nameMatch: false,
+        nameMatchScore: 0,
+        nameMatchType: 'none',
+        geoMatch: false,
+      };
       
-      return personNames.some(mentionedName => {
-        if (contactNameLower.includes(mentionedName) || mentionedName.includes(contactNameLower)) {
-          return true;
-        }
-        
-        const mentionedParts = mentionedName.split(/\s+/).filter(p => p.length > 0);
-        const contactParts = contactNameLower.split(/\s+/).filter(p => p.length > 0);
-        
-        if (mentionedParts.length >= 2) {
-          const firstName = mentionedParts[0];
-          const lastName = mentionedParts[mentionedParts.length - 1];
-          const hasFirstName = contactParts.some(part => part.includes(firstName) || firstName.includes(part));
-          const hasLastName = contactParts.some(part => part.includes(lastName) || lastName.includes(part));
-          
-          if (hasFirstName && hasLastName) {
-            console.log(`✅ Name match: "${mentionedName}" matched with "${c.name}"`);
-            return true;
-          }
-        }
-        return false;
-      });
-    }).map(c => ({
-      contact_id: c.id,
-      contact_name: c.name,
-      score: 3,
-      reasons: ['Mentioned by name in conversation'],
-      justification: `${c.name} was specifically mentioned as a potential match during the conversation.`,
-    }));
-
-    console.log('Name matches found:', nameMatches.length);
-
-    // PRE-FILTER contacts before sending to OpenAI
-    let aiMatches: any[] = [];
-    if (Object.keys(entitySummary).length > 0) {
-      const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-      if (!openaiApiKey) {
-        throw new Error('OPENAI_API_KEY not configured');
-      }
-
-      // Extract keywords from entities for pre-filtering
-      const sectors = entitySummary['sector'] || [];
-      const stages = entitySummary['stage'] || [];
-      const geos = entitySummary['geo'] || [];
-      const allKeywords = [...sectors, ...stages, ...geos].map(k => k.toLowerCase());
+      // Check thesis matches (PRIMARY CRITERIA)
+      const theses = contact.theses || [];
       
-      console.log('Pre-filter keywords:', allKeywords);
-
-      // Pre-filter: only contacts with matching thesis/profile keywords
-      const preFilteredContacts = contacts.filter(c => {
-        // Skip contacts already matched by name
-        if (nameMatches.some(nm => nm.contact_id === c.id)) return false;
+      for (const thesis of theses) {
+        const thesisSectors = thesis.sectors || [];
+        const thesisStages = thesis.stages || [];
         
-        // Check thesis sectors/stages
-        const theses = c.theses || [];
-        for (const thesis of theses) {
-          const thesisSectors = (thesis.sectors || []).map((s: string) => s.toLowerCase());
-          const thesisStages = (thesis.stages || []).map((s: string) => s.toLowerCase());
-          
-          for (const keyword of allKeywords) {
-            if (thesisSectors.some((s: string) => s.includes(keyword) || keyword.includes(s))) return true;
-            if (thesisStages.some((s: string) => s.includes(keyword) || keyword.includes(s))) return true;
-          }
-        }
-        
-        // Check contact fields
-        const searchableText = [
-          c.title || '',
-          c.company || '',
-          c.bio || '',
-          c.category || '',
-          c.location || '',
-        ].join(' ').toLowerCase();
-        
-        for (const keyword of allKeywords) {
-          if (searchableText.includes(keyword)) return true;
-        }
-        
-        // Include investors even without keyword match (they have investment potential)
-        if (c.is_investor) return true;
-        
-        return false;
-      });
-
-      // Limit to 200 contacts max for OpenAI
-      const contactsForAI = preFilteredContacts.slice(0, 200);
-      console.log(`Pre-filtered from ${contacts.length} to ${preFilteredContacts.length}, sending ${contactsForAI.length} to OpenAI`);
-
-      if (contactsForAI.length > 0) {
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('OpenAI request timed out after 20s')), 20000)
-        );
-
-        const openaiPromise = fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openaiApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: [{
-              role: 'system',
-              content: `You are a relationship matching engine for VCs and investors.
-Score contacts based on how well they match the conversation entities.
-
-SCORING:
-- 3 stars: Strong match (2+ criteria match: sector, stage, thesis, check size)
-- 2 stars: Good match (1 core criterion matches)
-- 1 star: Weak match (secondary criteria only)
-
-Return JSON array with up to 10 best matches:
-[{"contact_id": "uuid", "score": 1-3, "reasons": ["reason1"], "justification": "brief explanation"}]
-
-Only include contacts with score >= 1. Return empty array [] if no good matches.`
-            }, {
-              role: 'user',
-              content: JSON.stringify({
-                entities: entitySummary,
-                contacts: contactsForAI.map(c => ({
-                  id: c.id,
-                  name: c.name,
-                  title: c.title,
-                  company: c.company,
-                  location: c.location,
-                  bio: c.bio?.slice(0, 200),
-                  category: c.category,
-                  isInvestor: c.is_investor,
-                  theses: (c.theses || []).map((t: any) => ({
-                    sectors: t.sectors,
-                    stages: t.stages,
-                  })),
-                }))
-              })
-            }],
-            temperature: 0.3,
-            max_tokens: 2000,
-          }),
-        });
-
-        try {
-          const openaiResponse = await Promise.race([openaiPromise, timeoutPromise]) as Response;
-
-          if (!openaiResponse.ok) {
-            const errorText = await openaiResponse.text();
-            console.error('OpenAI API error:', openaiResponse.status, errorText);
-            // Don't throw - just skip AI matches
-          } else {
-            const openaiData = await openaiResponse.json();
-            
-            if (openaiData.choices?.[0]?.message?.content) {
-              let content = openaiData.choices[0].message.content;
-              content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-              
-              try {
-                aiMatches = JSON.parse(content.trim());
-                console.log('AI matches parsed:', aiMatches.length);
-                
-                aiMatches = aiMatches.map((m: any) => {
-                  const contact = contacts.find(c => c.id === m.contact_id);
-                  return { ...m, contact_name: contact?.name || 'Unknown' };
-                });
-              } catch (parseError) {
-                console.error('Failed to parse AI matches:', parseError);
-              }
+        // Sector match
+        if (sectors.length > 0 && thesisSectors.length > 0) {
+          for (const sector of sectors) {
+            if (matchesAny(sector, thesisSectors)) {
+              matchDetails.sectorMatch = true;
+              break;
             }
           }
-        } catch (aiError) {
-          console.error('AI matching error (non-fatal):', aiError);
-          // Continue with name matches only
+        }
+        
+        // Stage match
+        if (stages.length > 0 && thesisStages.length > 0) {
+          for (const stage of stages) {
+            if (matchesAny(stage, thesisStages)) {
+              matchDetails.stageMatch = true;
+              break;
+            }
+          }
+        }
+        
+        // Check size match
+        if (minCheckSize !== null && thesis.check_size_min !== null && thesis.check_size_max !== null) {
+          if (minCheckSize >= thesis.check_size_min && minCheckSize <= thesis.check_size_max) {
+            matchDetails.checkSizeMatch = true;
+          }
         }
       }
-    }
-    
-    // Merge matches
-    const allMatches = [...nameMatches];
-    const nameMatchIds = new Set(nameMatches.map(m => m.contact_id));
-    
-    for (const aiMatch of aiMatches) {
-      if (!nameMatchIds.has(aiMatch.contact_id)) {
-        allMatches.push(aiMatch);
+      
+      // Also check contact-level check size
+      if (!matchDetails.checkSizeMatch && minCheckSize !== null) {
+        if (contact.check_size_min !== null && contact.check_size_max !== null) {
+          if (minCheckSize >= contact.check_size_min && minCheckSize <= contact.check_size_max) {
+            matchDetails.checkSizeMatch = true;
+          }
+        }
+      }
+      
+      // Name match (SECONDARY but boosts score)
+      if (personNames.length > 0 && contact.name) {
+        for (const personName of personNames) {
+          const nameResult = fuzzyNameMatch(personName, contact.name);
+          if (nameResult.match && nameResult.score > matchDetails.nameMatchScore) {
+            matchDetails.nameMatch = true;
+            matchDetails.nameMatchScore = nameResult.score;
+            matchDetails.nameMatchType = nameResult.type;
+          }
+        }
+      }
+      
+      // Geo match (SECONDARY)
+      if (geos.length > 0 && contact.location) {
+        for (const geo of geos) {
+          if (matchesAny(geo, [contact.location])) {
+            matchDetails.geoMatch = true;
+            break;
+          }
+        }
+      }
+      
+      // Calculate score based on PRIMARY criteria
+      // Sector + Stage + CheckSize are primary
+      let primaryMatches = 0;
+      if (matchDetails.sectorMatch) {
+        primaryMatches++;
+        reasons.push(`Sector match: invests in ${sectors.join(', ')}`);
+      }
+      if (matchDetails.stageMatch) {
+        primaryMatches++;
+        reasons.push(`Stage match: focuses on ${stages.join(', ')}`);
+      }
+      if (matchDetails.checkSizeMatch) {
+        primaryMatches++;
+        reasons.push(`Check size match: ${checkSizes.join(', ')}`);
+      }
+      
+      // Base score from primary matches
+      if (primaryMatches >= 2) {
+        score = 2; // Good match with 2+ primary criteria
+      } else if (primaryMatches >= 1) {
+        score = 1; // Weak match with 1 primary criterion
+      }
+      
+      // Name match BOOSTS the score significantly
+      if (matchDetails.nameMatch) {
+        score += 1; // Boost by 1 for name match
+        if (matchDetails.nameMatchScore >= 0.95) {
+          reasons.unshift(`Name mentioned: "${contact.name}" (${matchDetails.nameMatchType})`);
+        } else {
+          reasons.unshift(`Similar name: "${contact.name}" (${matchDetails.nameMatchType}, ${Math.round(matchDetails.nameMatchScore * 100)}% match)`);
+        }
+      }
+      
+      // Geo match as secondary bonus
+      if (matchDetails.geoMatch) {
+        if (score > 0) score = Math.min(score + 0.5, 3);
+        reasons.push(`Location match: ${geos.join(', ')}`);
+      }
+      
+      // Cap at 3 stars
+      score = Math.min(Math.round(score), 3);
+      
+      // Only include if score >= 1
+      if (score >= 1) {
+        const justification = reasons.length > 0 
+          ? `${contact.name} matches: ${reasons.join('; ')}`
+          : `${contact.name} is a potential match based on profile.`;
+        
+        matches.push({
+          contact_id: contact.id,
+          contact_name: contact.name,
+          score,
+          reasons,
+          justification,
+          matchDetails,
+        });
+        
+        console.log(`MATCH: ${contact.name} (score: ${score})`);
+        console.log(`   Details:`, matchDetails);
       }
     }
     
-    console.log('Total matches:', allMatches.length);
+    // Sort by score (highest first), then by name match score
+    matches.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return b.matchDetails.nameMatchScore - a.matchDetails.nameMatchScore;
+    });
     
-    if (allMatches.length === 0) {
+    // Take top 20 matches
+    const topMatches = matches.slice(0, 20);
+    
+    console.log('=== MATCHING COMPLETE ===');
+    console.log('Total matches found:', matches.length);
+    console.log('Returning top:', topMatches.length);
+    topMatches.forEach((m, i) => {
+      console.log(`  ${i + 1}. ${m.contact_name} (score: ${m.score}, name: ${m.matchDetails.nameMatch ? 'YES' : 'NO'})`);
+    });
+    
+    if (topMatches.length === 0) {
+      console.log('NO MATCHES met minimum score threshold');
       return new Response(
         JSON.stringify({ matches: [] }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
-    // Upsert matches
-    const matchRecords = allMatches.map((m: any) => ({
-      conversation_id: conversationId,
-      contact_id: m.contact_id,
-      score: m.score,
-      reasons: m.reasons,
-      justification: m.justification,
-      status: 'pending',
-    }));
-    
+    // Upsert matches to database
     const insertedMatches: any[] = [];
-    for (const record of matchRecords) {
+    for (const match of topMatches) {
       const { data, error } = await supabaseService
         .from('match_suggestions')
-        .upsert(record, { 
+        .upsert({
+          conversation_id: conversationId,
+          contact_id: match.contact_id,
+          score: match.score,
+          reasons: match.reasons,
+          justification: match.justification,
+          status: 'pending',
+        }, { 
           onConflict: 'conversation_id,contact_id',
           ignoreDuplicates: false 
         })
@@ -301,22 +482,28 @@ Only include contacts with score >= 1. Return empty array [] if no good matches.
       
       if (!error && data) {
         insertedMatches.push(data);
+      } else if (error) {
+        console.error('Error upserting match:', error);
       }
     }
     
-    console.log('Upserted matches:', insertedMatches.length);
+    console.log('=== DATABASE UPSERT ===');
+    console.log('Matches saved:', insertedMatches.length);
     
     const matchesWithNames = insertedMatches.map((m: any) => ({
       ...m,
       contact_name: m.contacts?.name ?? null
     }));
     
+    console.log('=== GENERATE MATCHES END ===');
+    
     return new Response(
       JSON.stringify({ matches: matchesWithNames }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Generate matches error:', error);
+    console.error('=== GENERATE MATCHES ERROR ===');
+    console.error('Error:', error);
     return new Response(
       JSON.stringify({ error: error.message || String(error) }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
