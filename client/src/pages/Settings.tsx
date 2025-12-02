@@ -177,7 +177,7 @@ export default function Settings() {
       if (error) throw error;
       
       if (data && data.length > 0) {
-        allIds.push(...data.map(t => t.contact_id));
+        allIds.push(...data.map((t: { contact_id: string }) => t.contact_id));
         from += PAGE_SIZE;
         hasMore = data.length === PAGE_SIZE;
       } else {
@@ -494,8 +494,12 @@ export default function Settings() {
             
             {isExtracting && (
               <div className="space-y-2">
+                <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md text-sm text-amber-700 dark:text-amber-300">
+                  <strong>Do not refresh or leave this page</strong> - extraction runs in your browser
+                </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span>
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     {isPaused ? 'Paused' : 'Processing...'} {extractionProgress.processed} of {extractionProgress.total}
                   </span>
                   <span className="text-muted-foreground">
@@ -506,6 +510,9 @@ export default function Settings() {
                   value={(extractionProgress.processed / Math.max(extractionProgress.total, 1)) * 100} 
                   className="h-2"
                 />
+                <div className="text-xs text-muted-foreground">
+                  Est. remaining: ~{Math.ceil((extractionProgress.total - extractionProgress.processed) / 5 * 2 / 60)} min
+                </div>
               </div>
             )}
             
