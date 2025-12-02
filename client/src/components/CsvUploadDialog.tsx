@@ -574,7 +574,12 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
       .or('email.not.is.null,linkedin_url.not.is.null,company.not.is.null');
 
     if (!contactsToEnrich || contactsToEnrich.length === 0) {
-      setStage('complete');
+      // No enrichment needed, proceed to thesis extraction
+      if (contactIds.length > 0) {
+        await extractThesesBatch(contactIds);
+      } else {
+        setStage('complete');
+      }
       return;
     }
 
@@ -605,7 +610,6 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
-    setStage('complete');
     queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
     queryClient.invalidateQueries({ queryKey: ['/api/contacts/count'] });
 
@@ -613,6 +617,80 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
       title: "Enrichment complete!",
       description: `Enriched ${enriched} contacts. ${enrichmentFailed} could not be enriched.`,
     });
+    
+    // After enrichment, extract theses
+    await extractThesesBatch(contactIds);
+  };
+  
+  const extractThesesBatch = async (contactIds: string[]) => {
+    // Only extract thesis for contacts that have bio, title, or investor_notes
+    const { data: contactsForThesis } = await supabase
+      .from('contacts')
+      .select('id, name, bio, title, investor_notes')
+      .in('id', contactIds)
+      .or('bio.not.is.null,title.not.is.null,investor_notes.not.is.null');
+
+    if (!contactsForThesis || contactsForThesis.length === 0) {
+      setStage('complete');
+      return;
+    }
+    
+    // Filter to contacts that actually have content to analyze
+    const contactsWithContent = contactsForThesis.filter(c => 
+      (c.bio && c.bio.trim().length > 0) || 
+      (c.title && c.title.trim().length > 0) || 
+      (c.investor_notes && c.investor_notes.trim().length > 0)
+    );
+    
+    if (contactsWithContent.length === 0) {
+      setStage('complete');
+      return;
+    }
+
+    setProgress(0);
+    let thesisExtracted = 0;
+    let thesisFailed = 0;
+
+    // Extract thesis with rate limiting (max 5 concurrent to avoid overloading OpenAI)
+    const CONCURRENT_LIMIT = 5;
+    
+    try {
+      const { extractThesis } = await import('@/lib/edgeFunctions');
+      
+      for (let i = 0; i < contactsWithContent.length; i += CONCURRENT_LIMIT) {
+        const batch = contactsWithContent.slice(i, i + CONCURRENT_LIMIT);
+        
+        const thesisPromises = batch.map(async (contact) => {
+          try {
+            await extractThesis(contact.id);
+            thesisExtracted++;
+            console.log(`[Auto] Thesis extracted for: ${contact.name}`);
+          } catch (error) {
+            thesisFailed++;
+            console.log(`[Auto] Thesis extraction failed for: ${contact.name}`);
+          }
+        });
+
+        await Promise.allSettled(thesisPromises);
+
+        setProgress(((i + batch.length) / contactsWithContent.length) * 100);
+
+        // Rate limiting delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      if (thesisExtracted > 0) {
+        toast({
+          title: "Thesis extraction complete!",
+          description: `Extracted keywords from ${thesisExtracted} contacts.`,
+        });
+      }
+    } catch (error) {
+      console.log('[Auto] Thesis extraction skipped (edge function may not be deployed)');
+    }
+
+    setStage('complete');
+    queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {

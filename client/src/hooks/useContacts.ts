@@ -99,9 +99,25 @@ export function useCreateContact() {
       if (error) throw error;
       return contactFromDb(data);
     },
-    onSuccess: () => {
+    onSuccess: async (createdContact) => {
       queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
       queryClient.invalidateQueries({ queryKey: ['/api/contacts/count'] });
+      
+      // Automatically extract thesis if contact has bio, title, or notes
+      const hasBio = createdContact.bio && createdContact.bio.trim().length > 0;
+      const hasTitle = createdContact.title && createdContact.title.trim().length > 0;
+      const hasNotes = createdContact.investorNotes && createdContact.investorNotes.trim().length > 0;
+      
+      if (hasBio || hasTitle || hasNotes) {
+        try {
+          const { extractThesis } = await import('@/lib/edgeFunctions');
+          await extractThesis(createdContact.id);
+          queryClient.invalidateQueries({ queryKey: ['/api/contacts', createdContact.id, 'thesis'] });
+          console.log('[Auto] Thesis extracted for new contact:', createdContact.name);
+        } catch (error) {
+          console.log('[Auto] Thesis extraction skipped (edge function not deployed)');
+        }
+      }
     },
   });
 }
