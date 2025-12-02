@@ -550,8 +550,8 @@ export default function Settings() {
               Extract investment thesis keywords from your contacts using AI. This analyzes bio, title, and investor notes to identify sectors, stages, check sizes, and geographic focus.
             </p>
             
-            <div className="p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-md text-sm text-green-700 dark:text-green-300">
-              <strong>Resumable extraction:</strong> If interrupted, click "Continue" to pick up where you left off. Progress is saved after each batch.
+            <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-md text-sm text-blue-700 dark:text-blue-300">
+              <strong>Browser-based extraction:</strong> Keep this tab open while processing. Progress is saved to the database - if interrupted, click "Continue" to resume.
             </div>
             
             {thesisStats && (
@@ -575,34 +575,31 @@ export default function Settings() {
               </div>
             )}
             
-            {isServerExtracting && (
+            {isExtracting && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Processing batches of 25...
+                    {isPaused ? 'Paused' : 'Processing...'}
                   </span>
-                  {serverProgress && (
-                    <span className="text-muted-foreground">
-                      Last batch: {serverProgress.lastBatch} | Remaining: {serverProgress.remaining.toLocaleString()}
-                    </span>
-                  )}
+                  <span className="text-muted-foreground">
+                    {extractionProgress.processed} / {extractionProgress.total} 
+                    ({extractionProgress.succeeded} succeeded, {extractionProgress.failed} failed)
+                  </span>
                 </div>
-                {serverProgress && thesisStats && (
-                  <Progress 
-                    value={((thesisStats.eligible - serverProgress.remaining) / Math.max(thesisStats.eligible, 1)) * 100} 
-                    className="h-2"
-                  />
-                )}
+                <Progress 
+                  value={(extractionProgress.processed / Math.max(extractionProgress.total, 1)) * 100} 
+                  className="h-2"
+                />
               </div>
             )}
             
             <div className="flex flex-wrap gap-2">
-              {!isServerExtracting ? (
+              {!isExtracting ? (
                 <>
                   <Button
                     size="sm"
-                    onClick={runServerBatchExtraction}
+                    onClick={runBatchExtraction}
                     disabled={!thesisStats || thesisStats.needsExtraction === 0}
                     data-testid="button-start-extraction"
                   >
@@ -623,20 +620,30 @@ export default function Settings() {
                   </Button>
                 </>
               ) : (
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={handleStopServerExtraction}
-                  data-testid="button-stop-extraction"
-                >
-                  <Pause className="w-4 h-4 mr-2" />
-                  Pause Extraction
-                </Button>
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handlePauseResume}
+                    data-testid="button-pause-extraction"
+                  >
+                    {isPaused ? <Play className="w-4 h-4 mr-2" /> : <Pause className="w-4 h-4 mr-2" />}
+                    {isPaused ? 'Resume' : 'Pause'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={handleStop}
+                    data-testid="button-stop-extraction"
+                  >
+                    Stop
+                  </Button>
+                </>
               )}
             </div>
             
             <p className="text-xs text-muted-foreground">
-              Estimated time: ~{Math.ceil((thesisStats?.needsExtraction || 0) / 25 * 3 / 60)} minutes for {thesisStats?.needsExtraction.toLocaleString() || 0} contacts.
+              Estimated time: ~{Math.ceil((thesisStats?.needsExtraction || 0) / 5 * 2 / 60)} minutes for {thesisStats?.needsExtraction.toLocaleString() || 0} contacts (5 at a time with delays).
               Cost: ~${((thesisStats?.needsExtraction || 0) * 0.0003).toFixed(2)} (GPT-4o-mini)
             </p>
           </div>
