@@ -119,3 +119,29 @@ export async function runHunterBatch(limit: number = 1) {
   if (error) throw error;
   return data;
 }
+
+// Server-side batch thesis extraction
+export async function checkBatchExtractionStatus() {
+  const { data, error } = await supabase.functions.invoke('batch-extract-thesis', {
+    body: { action: 'check' }
+  });
+  
+  if (error) throw error;
+  return data as { eligible: number; extracted: number; pending: number; batchSize: number };
+}
+
+export async function runBatchExtraction(batchSize: number = 25) {
+  const { data, error } = await supabase.functions.invoke('batch-extract-thesis', {
+    body: { action: 'process', batchSize }
+  });
+  
+  if (error) throw error;
+  return data as { 
+    processed: number; 
+    succeeded: number; 
+    failed: number; 
+    remaining: number;
+    errors?: string[];
+    message?: string;
+  };
+}

@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
-import { extractThesis, checkHunterStatus, runHunterBatch } from "@/lib/edgeFunctions";
+import { extractThesis, checkHunterStatus, runHunterBatch, checkBatchExtractionStatus, runBatchExtraction as runBatchExtractionApi } from "@/lib/edgeFunctions";
 
 export default function Settings() {
   const { user, signOut } = useAuth();
@@ -23,6 +23,11 @@ export default function Settings() {
   const [extractionProgress, setExtractionProgress] = useState({ processed: 0, total: 0, succeeded: 0, failed: 0 });
   const pausedRef = useRef(false);
   const abortRef = useRef(false);
+  
+  // Server-side batch extraction state
+  const [isServerExtracting, setIsServerExtracting] = useState(false);
+  const [serverProgress, setServerProgress] = useState<{ lastBatch: number; remaining: number } | null>(null);
+  const serverAbortRef = useRef(false);
   
   // Hunter.io email finding state
   const [isHunterProcessing, setIsHunterProcessing] = useState(false);
@@ -335,6 +340,80 @@ export default function Settings() {
     pausedRef.current = false;
     setIsPaused(false);
   };
+  
+  // Server-side batch extraction - continues even if page is refreshed
+  const runServerBatchExtraction = useCallback(async () => {
+    setIsServerExtracting(true);
+    serverAbortRef.current = false;
+    let totalProcessed = 0;
+    let totalSucceeded = 0;
+    let totalFailed = 0;
+    
+    try {
+      toast({ 
+        title: "Starting server-side extraction", 
+        description: "Processing batches of 25 contacts..." 
+      });
+      
+      // Keep processing batches until done or stopped
+      while (!serverAbortRef.current) {
+        const result = await runBatchExtractionApi(25);
+        
+        if (result.message) {
+          // All done
+          toast({ 
+            title: "Extraction complete!", 
+            description: result.message 
+          });
+          break;
+        }
+        
+        totalProcessed += result.processed;
+        totalSucceeded += result.succeeded;
+        totalFailed += result.failed;
+        
+        setServerProgress({ 
+          lastBatch: result.succeeded, 
+          remaining: result.remaining 
+        });
+        
+        // If no more to process, we're done
+        if (result.remaining === 0) {
+          toast({ 
+            title: "Extraction complete!", 
+            description: `Processed ${totalProcessed} contacts. ${totalSucceeded} succeeded, ${totalFailed} failed.` 
+          });
+          break;
+        }
+        
+        // Small delay between batches
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      
+      if (serverAbortRef.current) {
+        toast({ 
+          title: "Extraction paused", 
+          description: `Processed ${totalProcessed} contacts so far. Click "Continue" to resume.` 
+        });
+      }
+      
+    } catch (error: any) {
+      console.error('Server extraction error:', error);
+      toast({ 
+        title: "Extraction error", 
+        description: error?.message || "Failed to process batch", 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsServerExtracting(false);
+      refetchThesisStats();
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
+    }
+  }, [toast, refetchThesisStats, queryClient]);
+  
+  const handleStopServerExtraction = () => {
+    serverAbortRef.current = true;
+  };
 
   const disconnectMutation = useMutation({
     mutationFn: async () => {
@@ -471,6 +550,10 @@ export default function Settings() {
               Extract investment thesis keywords from your contacts using AI. This analyzes bio, title, and investor notes to identify sectors, stages, check sizes, and geographic focus.
             </p>
             
+            <div className="p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-md text-sm text-green-700 dark:text-green-300">
+              <strong>Resumable extraction:</strong> If interrupted, click "Continue" to pick up where you left off. Progress is saved after each batch.
+            </div>
+            
             {thesisStats && (
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
@@ -492,75 +575,68 @@ export default function Settings() {
               </div>
             )}
             
-            {isExtracting && (
+            {isServerExtracting && (
               <div className="space-y-2">
-                <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md text-sm text-amber-700 dark:text-amber-300">
-                  <strong>Do not refresh or leave this page</strong> - extraction runs in your browser
-                </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    {isPaused ? 'Paused' : 'Processing...'} {extractionProgress.processed} of {extractionProgress.total}
+                    Processing batches of 25...
                   </span>
-                  <span className="text-muted-foreground">
-                    {extractionProgress.succeeded} succeeded, {extractionProgress.failed} failed
-                  </span>
+                  {serverProgress && (
+                    <span className="text-muted-foreground">
+                      Last batch: {serverProgress.lastBatch} | Remaining: {serverProgress.remaining.toLocaleString()}
+                    </span>
+                  )}
                 </div>
-                <Progress 
-                  value={(extractionProgress.processed / Math.max(extractionProgress.total, 1)) * 100} 
-                  className="h-2"
-                />
-                <div className="text-xs text-muted-foreground">
-                  Est. remaining: ~{Math.ceil((extractionProgress.total - extractionProgress.processed) / 5 * 2 / 60)} min
-                </div>
+                {serverProgress && thesisStats && (
+                  <Progress 
+                    value={((thesisStats.eligible - serverProgress.remaining) / Math.max(thesisStats.eligible, 1)) * 100} 
+                    className="h-2"
+                  />
+                )}
               </div>
             )}
             
-            <div className="flex gap-2">
-              {!isExtracting ? (
-                <Button
-                  size="sm"
-                  onClick={runBatchExtraction}
-                  disabled={!thesisStats || thesisStats.needsExtraction === 0}
-                  data-testid="button-start-extraction"
-                >
-                  <BrainCircuit className="w-4 h-4 mr-2" />
-                  Extract Thesis for {thesisStats?.needsExtraction.toLocaleString() || 0} Contacts
-                </Button>
-              ) : (
+            <div className="flex flex-wrap gap-2">
+              {!isServerExtracting ? (
                 <>
                   <Button
                     size="sm"
-                    variant="outline"
-                    onClick={handlePauseResume}
-                    data-testid="button-pause-extraction"
+                    onClick={runServerBatchExtraction}
+                    disabled={!thesisStats || thesisStats.needsExtraction === 0}
+                    data-testid="button-start-extraction"
                   >
-                    {isPaused ? (
-                      <>
-                        <Play className="w-4 h-4 mr-2" />
-                        Resume
-                      </>
-                    ) : (
-                      <>
-                        <Pause className="w-4 h-4 mr-2" />
-                        Pause
-                      </>
-                    )}
+                    <BrainCircuit className="w-4 h-4 mr-2" />
+                    {thesisStats?.needsExtraction === thesisStats?.eligible 
+                      ? `Extract All (${thesisStats?.needsExtraction.toLocaleString() || 0})`
+                      : `Continue (${thesisStats?.needsExtraction.toLocaleString() || 0} remaining)`
+                    }
                   </Button>
                   <Button
                     size="sm"
-                    variant="destructive"
-                    onClick={handleStop}
-                    data-testid="button-stop-extraction"
+                    variant="outline"
+                    onClick={() => refetchThesisStats()}
+                    data-testid="button-refresh-stats"
                   >
-                    Stop
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Refresh Status
                   </Button>
                 </>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={handleStopServerExtraction}
+                  data-testid="button-stop-extraction"
+                >
+                  <Pause className="w-4 h-4 mr-2" />
+                  Pause Extraction
+                </Button>
               )}
             </div>
             
             <p className="text-xs text-muted-foreground">
-              Estimated time: ~{Math.ceil((thesisStats?.needsExtraction || 0) / 5 * 2 / 60)} minutes. 
+              Estimated time: ~{Math.ceil((thesisStats?.needsExtraction || 0) / 25 * 3 / 60)} minutes for {thesisStats?.needsExtraction.toLocaleString() || 0} contacts.
               Cost: ~${((thesisStats?.needsExtraction || 0) * 0.0003).toFixed(2)} (GPT-4o-mini)
             </p>
           </div>
