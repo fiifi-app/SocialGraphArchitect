@@ -2,14 +2,15 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, Edit, DollarSign, TrendingUp, Users, Calendar, Sparkles, Mail, Linkedin, MapPin, Phone, Tag, Twitter as TwitterIcon, Info } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
+import { Building2, Edit, DollarSign, Users, Calendar, Sparkles, Mail, Linkedin, MapPin, Phone, Tag, Twitter as TwitterIcon, Info, BrainCircuit, Loader2, Target, TrendingUp, Globe } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import EnrichmentDialog from "@/components/EnrichmentDialog";
 import RoleTag from "@/components/RoleTag";
 import { formatCheckSizeRange } from "@/lib/currencyFormat";
+import { useContactThesis, useExtractThesis } from "@/hooks/useContacts";
+import { useToast } from "@/hooks/use-toast";
 
 interface ContactCardProps {
   id: string;
@@ -121,10 +122,38 @@ export default function ContactCard({
   investorNotes,
 }: ContactCardProps) {
   const [showEnrichDialog, setShowEnrichDialog] = useState(false);
+  const { toast } = useToast();
+  
+  const { data: thesis, isLoading: thesisLoading } = useContactThesis(id);
+  const extractThesisMutation = useExtractThesis();
+  
+  const handleExtractThesis = async () => {
+    try {
+      await extractThesisMutation.mutateAsync(id);
+      toast({
+        title: "Thesis extracted",
+        description: "Investment keywords have been extracted from the profile.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Extraction failed",
+        description: error.message || "Could not extract thesis keywords.",
+        variant: "destructive",
+      });
+    }
+  };
   
   const hasCompanyInfo = !!(companyAddress || companyEmployees || companyFounded || companyUrl || 
     companyLinkedin || companyTwitter || companyFacebook || companyAngellist || 
     companyCrunchbase || companyOwler || youtubeVimeo);
+  
+  const hasThesisData = thesis && (
+    thesis.sectors.length > 0 || 
+    thesis.stages.length > 0 || 
+    thesis.geos.length > 0 ||
+    thesis.checkSizes.length > 0 ||
+    thesis.personas.length > 0
+  );
   
   // Use provided contactType or auto-detect from title if not set
   const displayContactTypes = contactType && contactType.length > 0 
@@ -452,6 +481,81 @@ export default function ContactCard({
               {bio.substring(0, 140)}{bio.length > 140 ? '...' : ''}
             </div>
           )}
+          
+          {/* Thesis Keywords Section */}
+          {hasThesisData ? (
+            <div className="pt-2 space-y-2" data-testid="thesis-section">
+              {thesis.sectors.length > 0 && (
+                <div className="flex items-start gap-2">
+                  <Target className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground mt-0.5" />
+                  <div className="flex flex-wrap gap-1">
+                    {thesis.sectors.map((sector, i) => (
+                      <Badge key={i} variant="secondary" className="text-xs">
+                        {sector}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {thesis.stages.length > 0 && (
+                <div className="flex items-start gap-2">
+                  <TrendingUp className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground mt-0.5" />
+                  <div className="flex flex-wrap gap-1">
+                    {thesis.stages.map((stage, i) => (
+                      <Badge key={i} variant="outline" className="text-xs">
+                        {stage}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {thesis.geos.length > 0 && (
+                <div className="flex items-start gap-2">
+                  <Globe className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground mt-0.5" />
+                  <div className="flex flex-wrap gap-1">
+                    {thesis.geos.map((geo, i) => (
+                      <Badge key={i} variant="outline" className="text-xs">
+                        {geo}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {thesis.personas.length > 0 && (
+                <div className="flex items-start gap-2">
+                  <Tag className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground mt-0.5" />
+                  <div className="flex flex-wrap gap-1">
+                    {thesis.personas.map((keyword, i) => (
+                      <Badge key={i} variant="outline" className="text-xs bg-primary/5">
+                        {keyword}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (bio || investorNotes) && !thesisLoading ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="mt-2 text-xs"
+              onClick={handleExtractThesis}
+              disabled={extractThesisMutation.isPending}
+              data-testid="button-extract-thesis"
+            >
+              {extractThesisMutation.isPending ? (
+                <>
+                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                  Extracting...
+                </>
+              ) : (
+                <>
+                  <BrainCircuit className="w-3 h-3 mr-1" />
+                  Extract thesis keywords
+                </>
+              )}
+            </Button>
+          ) : null}
         </div>
 
         {/* Investor info - check size */}

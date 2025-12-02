@@ -144,3 +144,56 @@ export function useDeleteContact() {
     },
   });
 }
+
+export interface Thesis {
+  id: string;
+  contactId: string;
+  sectors: string[];
+  stages: string[];
+  checkSizes: string[];
+  geos: string[];
+  personas: string[];
+  intents: string[];
+  notes: string | null;
+}
+
+export function useContactThesis(contactId: string) {
+  return useQuery<Thesis | null>({
+    queryKey: ['/api/contacts', contactId, 'thesis'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('theses')
+        .select('*')
+        .eq('contact_id', contactId)
+        .maybeSingle();
+      
+      if (error) throw error;
+      if (!data) return null;
+      
+      return {
+        id: data.id,
+        contactId: data.contact_id,
+        sectors: data.sectors || [],
+        stages: data.stages || [],
+        checkSizes: data.check_sizes || [],
+        geos: data.geos || [],
+        personas: data.personas || [],
+        intents: data.intents || [],
+        notes: data.notes,
+      };
+    },
+    enabled: !!contactId,
+  });
+}
+
+export function useExtractThesis() {
+  return useMutation({
+    mutationFn: async (contactId: string) => {
+      const { extractThesis } = await import('@/lib/edgeFunctions');
+      return extractThesis(contactId);
+    },
+    onSuccess: (_, contactId) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts', contactId, 'thesis'] });
+    },
+  });
+}

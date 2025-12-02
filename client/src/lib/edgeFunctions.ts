@@ -86,3 +86,17 @@ export async function generateIntroEmail(matchSuggestionId: string, conversation
   if (error) throw error;
   return data;
 }
+
+export async function extractThesis(contactId: string) {
+  console.log('[Thesis] Extracting thesis keywords for contact:', contactId);
+  const { data, error } = await supabase.functions.invoke('extract-thesis', {
+    body: { contactId }
+  });
+  
+  if (error) {
+    console.error('Extract thesis error:', error);
+    throw error;
+  }
+  console.log('Thesis extracted successfully:', data);
+  return data;
+}
