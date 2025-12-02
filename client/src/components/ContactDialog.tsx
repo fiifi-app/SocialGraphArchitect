@@ -102,7 +102,6 @@ const contactFormSchema = z.object({
   contactType: z.array(z.enum(['LP', 'GP', 'Angel', 'FamilyOffice', 'Startup', 'PE'])).default([]),
   checkSizeMin: z.number().int().positive().optional().or(z.literal(0)),
   checkSizeMax: z.number().int().positive().optional().or(z.literal(0)),
-  investorNotes: z.string().optional(),
 }).refine(
   (data) => {
     // Validate check_size_min <= check_size_max
@@ -120,9 +119,9 @@ const contactFormSchema = z.object({
 type ContactFormData = z.infer<typeof contactFormSchema>;
 
 // Helper function to determine if any contact types indicate an investor
-// LP, GP, Angel, and FamilyOffice are all capital allocators
+// LP, GP, Angel, FamilyOffice, and PE are all capital allocators
 const hasInvestorType = (contactTypes: string[]): boolean => {
-  return contactTypes.some(type => type === 'LP' || type === 'GP' || type === 'Angel' || type === 'FamilyOffice');
+  return contactTypes.some(type => type === 'LP' || type === 'GP' || type === 'Angel' || type === 'FamilyOffice' || type === 'PE');
 };
 
 interface ContactDialogProps {
@@ -170,17 +169,22 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
       contactType: [],
       checkSizeMin: 0,
       checkSizeMax: 0,
-      investorNotes: "",
     },
   });
 
   // Update form when contact changes
   useEffect(() => {
     if (contact && open) {
-      // Use stored contactType or auto-detect from title if not set
-      const displayContactTypes = contact.contactType && contact.contactType.length > 0 
+      // Use stored contactType or auto-detect from title/legacy investor signals
+      let displayContactTypes = contact.contactType && contact.contactType.length > 0 
         ? contact.contactType 
         : detectContactTypesFromTitle(contact.title);
+      
+      // For legacy contacts with isInvestor flag or investorNotes but no contactType,
+      // default to GP to preserve investor status and notes during save
+      if (displayContactTypes.length === 0 && (contact.isInvestor || contact.investorNotes)) {
+        displayContactTypes = ['GP'] as any;
+      }
       
       form.reset({
         firstName: contact.firstName || contact.name.split(" ")[0] || "",
@@ -194,7 +198,7 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
         category: contact.category || "",
         twitter: contact.twitter || "",
         angellist: contact.angellist || "",
-        bio: contact.bio || "",
+        bio: contact.bio || contact.investorNotes || "",
         companyAddress: contact.companyAddress || "",
         companyEmployees: contact.companyEmployees || "",
         companyFounded: contact.companyFounded || "",
@@ -210,7 +214,6 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
         contactType: displayContactTypes,
         checkSizeMin: contact.checkSizeMin || 0,
         checkSizeMax: contact.checkSizeMax || 0,
-        investorNotes: contact.investorNotes || "",
       });
     } else if (!open) {
       form.reset({
@@ -241,7 +244,6 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
         contactType: [],
         checkSizeMin: 0,
         checkSizeMax: 0,
-        investorNotes: "",
       });
     }
   }, [contact, open, form]);
@@ -331,7 +333,9 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
         contactType: data.contactType || [],
         checkSizeMin: (data.checkSizeMin && data.checkSizeMin > 0) ? data.checkSizeMin : null,
         checkSizeMax: (data.checkSizeMax && data.checkSizeMax > 0) ? data.checkSizeMax : null,
-        investorNotes: data.investorNotes || null,
+        bio: data.bio || null,
+        // When investor types are selected, also populate investorNotes with bio for thesis extraction
+        investorNotes: derivedIsInvestor ? (data.bio || null) : null,
       };
       
       if (isEditMode) {
@@ -617,24 +621,29 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
                 />
               </div>
 
-              {/* About Section */}
+              {/* About/Investor Notes Section - Label changes based on contact type */}
               <FormField
                 control={form.control}
                 name="bio"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>About</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        {...field}
-                        placeholder="LinkedIn bio or additional information about this contact..."
-                        className="min-h-24"
-                        data-testid="input-contact-bio"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const isInvestorSelected = hasInvestorType(form.watch('contactType') || []);
+                  return (
+                    <FormItem>
+                      <FormLabel>{isInvestorSelected ? 'Investor Notes' : 'About'}</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          placeholder={isInvestorSelected 
+                            ? "Investment thesis, preferences, sectors, check sizes, notes..." 
+                            : "LinkedIn bio or additional information about this contact..."}
+                          className="min-h-24"
+                          data-testid="input-contact-bio"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
 
               {/* Investor Profile Section - Feature Flagged */}
@@ -730,27 +739,6 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
                             )}
                           />
                         </div>
-
-                        {/* Investor Notes */}
-                        <FormField
-                          control={form.control}
-                          name="investorNotes"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Investor Notes</FormLabel>
-                              <FormControl>
-                                <Textarea
-                                  {...field}
-                                  placeholder="Investment preferences, notes, etc."
-                                  className="resize-none"
-                                  rows={3}
-                                  data-testid="textarea-investor-notes"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
                       </>
                     )}
                   </div>
