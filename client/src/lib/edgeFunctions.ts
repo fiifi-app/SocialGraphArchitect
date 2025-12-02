@@ -100,3 +100,22 @@ export async function extractThesis(contactId: string) {
   console.log('Thesis extracted successfully:', data);
   return data;
 }
+
+// Hunter.io email finding
+export async function checkHunterStatus() {
+  const { data, error } = await supabase.functions.invoke('hunter-batch', {
+    body: { action: 'check' }
+  });
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function runHunterBatch(limit: number = 1) {
+  const { data, error } = await supabase.functions.invoke('hunter-batch', {
+    body: { action: 'process', limit }
+  });
+  
+  if (error) throw error;
+  return data;
+}

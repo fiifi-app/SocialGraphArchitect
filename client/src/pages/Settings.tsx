@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { LogOut, User, Bell, Shield, Calendar, CheckCircle2, BrainCircuit, Loader2, Play, Pause, RotateCcw } from "lucide-react";
+import { LogOut, User, Bell, Shield, Calendar, CheckCircle2, BrainCircuit, Loader2, Play, Pause, RotateCcw, Mail, Search } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
-import { extractThesis } from "@/lib/edgeFunctions";
+import { extractThesis, checkHunterStatus, runHunterBatch } from "@/lib/edgeFunctions";
 
 export default function Settings() {
   const { user, signOut } = useAuth();
@@ -23,6 +23,10 @@ export default function Settings() {
   const [extractionProgress, setExtractionProgress] = useState({ processed: 0, total: 0, succeeded: 0, failed: 0 });
   const pausedRef = useRef(false);
   const abortRef = useRef(false);
+  
+  // Hunter.io email finding state
+  const [isHunterProcessing, setIsHunterProcessing] = useState(false);
+  const [hunterResults, setHunterResults] = useState<{ processed: number; successful: number } | null>(null);
 
   // Check for Google Calendar connection success
   useEffect(() => {
@@ -55,6 +59,50 @@ export default function Settings() {
     },
     enabled: !!user,
   });
+
+  // Query Hunter.io status
+  const { data: hunterStatus, refetch: refetchHunterStatus, isLoading: isHunterLoading, error: hunterError } = useQuery({
+    queryKey: ['/hunter-status'],
+    queryFn: async () => {
+      try {
+        return await checkHunterStatus();
+      } catch (e: any) {
+        // Return null if not configured instead of throwing
+        if (e?.message?.includes('not configured')) {
+          return null;
+        }
+        throw e;
+      }
+    },
+    enabled: !!user,
+    retry: false,
+  });
+  
+  const handleRunHunter = async (limit: number = 1) => {
+    setIsHunterProcessing(true);
+    setHunterResults(null);
+    try {
+      const result = await runHunterBatch(limit);
+      setHunterResults({ 
+        processed: result.processed, 
+        successful: result.successful 
+      });
+      toast({
+        title: "Hunter.io Processing Complete",
+        description: `Found ${result.successful} emails out of ${result.processed} contacts`,
+      });
+      refetchHunterStatus();
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
+    } catch (error: any) {
+      toast({
+        title: "Hunter.io Error",
+        description: error?.message || "Failed to process contacts",
+        variant: "destructive",
+      });
+    } finally {
+      setIsHunterProcessing(false);
+    }
+  };
 
   // Query to count contacts needing thesis extraction
   const { data: thesisStats, refetch: refetchThesisStats } = useQuery({
@@ -508,6 +556,122 @@ export default function Settings() {
               Estimated time: ~{Math.ceil((thesisStats?.needsExtraction || 0) / 5 * 2 / 60)} minutes. 
               Cost: ~${((thesisStats?.needsExtraction || 0) * 0.0003).toFixed(2)} (GPT-4o-mini)
             </p>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <Mail className="w-5 h-5 text-primary" />
+            <h2 className="text-xl font-semibold">Hunter.io Email Finding</h2>
+          </div>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Find email addresses for contacts using Hunter.io. Free tier: 25 searches/month.
+              Run after thesis extraction completes for best results.
+            </p>
+            
+            {isHunterLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Checking Hunter.io status...
+              </div>
+            ) : hunterStatus ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Searches used:</span>
+                    <span className="ml-2 font-medium">
+                      {hunterStatus.account.searches.used} / {hunterStatus.account.searches.available}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Remaining:</span>
+                    <span className="ml-2 font-medium text-green-600">
+                      {hunterStatus.account.searches.available - hunterStatus.account.searches.used}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Contacts without email:</span>
+                    <span className="ml-2 font-medium text-amber-600">{hunterStatus.pending}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Verifications:</span>
+                    <span className="ml-2 font-medium">
+                      {hunterStatus.account.verifications.used} / {hunterStatus.account.verifications.available}
+                    </span>
+                  </div>
+                </div>
+                
+                {hunterResults && (
+                  <div className="p-3 bg-muted/50 rounded-md text-sm">
+                    Last run: Found {hunterResults.successful} emails from {hunterResults.processed} contacts
+                  </div>
+                )}
+                
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => handleRunHunter(1)}
+                    disabled={isHunterProcessing || hunterStatus.account.searches.available - hunterStatus.account.searches.used <= 0}
+                    data-testid="button-hunter-1"
+                  >
+                    {isHunterProcessing ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Search className="w-4 h-4 mr-2" />
+                    )}
+                    Find 1 Email
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleRunHunter(5)}
+                    disabled={isHunterProcessing || hunterStatus.account.searches.available - hunterStatus.account.searches.used < 5}
+                    data-testid="button-hunter-5"
+                  >
+                    Find 5 Emails
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleRunHunter(Math.min(hunterStatus.account.searches.available - hunterStatus.account.searches.used, hunterStatus.pending))}
+                    disabled={isHunterProcessing || hunterStatus.account.searches.available - hunterStatus.account.searches.used <= 0}
+                    data-testid="button-hunter-all"
+                  >
+                    Use All Credits ({hunterStatus.account.searches.available - hunterStatus.account.searches.used})
+                  </Button>
+                </div>
+                
+                <p className="text-xs text-muted-foreground">
+                  Tip: Run 1 contact per day to maximize free tier. Credits reset monthly.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="p-4 border border-dashed rounded-md">
+                  <p className="text-sm font-medium mb-2">Hunter.io API key not configured</p>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    To enable email finding, add your Hunter.io API key to your Supabase Edge Function secrets:
+                  </p>
+                  <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                    <li>Go to <a href="https://hunter.io/api-keys" target="_blank" rel="noopener" className="text-primary underline">hunter.io/api-keys</a> (free signup)</li>
+                    <li>Copy your API key</li>
+                    <li>In Supabase Dashboard → Settings → Edge Functions → Secrets</li>
+                    <li>Add secret: <code className="bg-muted px-1 rounded">HUNTER_API_KEY</code></li>
+                    <li>Refresh this page</li>
+                  </ol>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => refetchHunterStatus()}
+                  data-testid="button-hunter-refresh"
+                >
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Check Again
+                </Button>
+              </div>
+            )}
           </div>
         </Card>
 
