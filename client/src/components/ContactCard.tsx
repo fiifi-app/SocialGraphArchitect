@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, DollarSign, Sparkles, Mail, Linkedin, MapPin, Phone, Tag, Twitter as TwitterIcon, BrainCircuit, Loader2, Target, TrendingUp, Globe } from "lucide-react";
+import { Building2, DollarSign, Users, Sparkles, Mail, Linkedin, MapPin, Phone, Tag, Twitter as TwitterIcon, BrainCircuit, Loader2, Target, TrendingUp, Globe } from "lucide-react";
 
 const ExpandIcon = ({ className }: { className?: string }) => (
   <svg 
