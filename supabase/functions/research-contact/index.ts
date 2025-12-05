@@ -333,6 +333,52 @@ Only set found:true if you found REAL thesis information from web search. If uns
       }
     }
     
+    // Step 3: Search for company URL if contact has company name but no company_url
+    let companyUrlResult = null;
+    const companyName = bioResult?.company || contact.company;
+    
+    if (companyName && !contact.company_url) {
+      console.log('Searching for company URL for:', companyName);
+      
+      const companyQuery = `${companyName} official website homepage`;
+      
+      const systemPrompt = `Search the web to find the official website URL for this company.
+Return ONLY a valid JSON object with exactly these fields:
+{
+  "company_url": "https://example.com",
+  "found": true or false
+}
+Rules:
+- Only return the main company website domain (e.g., https://example.com), not social media or directory pages
+- Do NOT include LinkedIn, Twitter, Crunchbase, or other third-party URLs
+- The URL should be the company's actual corporate/business website
+- Only set found:true if you found a legitimate company website. If unsure, set found:false.`;
+
+      const webSearchResult = await searchWithWebSearch(openaiApiKey, companyQuery, systemPrompt);
+      
+      if (webSearchResult) {
+        try {
+          const jsonMatch = webSearchResult.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            companyUrlResult = JSON.parse(jsonMatch[0]);
+            console.log('Company URL search result:', companyUrlResult);
+          }
+        } catch (e) {
+          console.error('Failed to parse company URL response:', e);
+        }
+      }
+      
+      // Add company_url to updates if found
+      if (companyUrlResult?.found && companyUrlResult?.company_url) {
+        // Validate it looks like a real URL
+        const url = companyUrlResult.company_url;
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+          updates.company_url = url;
+          console.log('Found company URL:', url);
+        }
+      }
+    }
+    
     // Apply updates if we found anything
     const hasUpdates = Object.keys(updates).length > 1; // More than just updated_at
     
@@ -359,6 +405,7 @@ Only set found:true if you found REAL thesis information from web search. If uns
         fields: Object.keys(updates).filter(k => k !== 'updated_at'),
         bioFound: bioResult?.found || false,
         thesisFound: thesisResult?.found || false,
+        companyUrlFound: companyUrlResult?.found || false,
         detectedTypes: updates.contact_type || null,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
