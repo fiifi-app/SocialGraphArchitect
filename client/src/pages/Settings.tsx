@@ -405,7 +405,7 @@ export default function Settings() {
     return allContacts;
   };
   
-  // Unified pipeline: Batch contact enrichment + thesis extraction
+  // Unified pipeline: Process each batch of 3 through all steps (enrichment + thesis extraction) before saving and moving to next batch
   const runContactIntelligencePipeline = useCallback(async () => {
     setIsPipelineRunning(true);
     setIsPipelinePaused(false);
@@ -413,10 +413,8 @@ export default function Settings() {
     abortRef.current = false;
     
     try {
-      toast({ title: "Starting Contact Intelligence Pipeline", description: "Step 1: AI Research..." });
-      setPipelineStage('enrichment');
+      toast({ title: "Starting Contact Intelligence Pipeline", description: "Processing contacts in batches..." });
       
-      // STEP 1: Enrich contacts
       const allContacts = await fetchAllContactsForEnrichment();
       
       if (!allContacts || allContacts.length === 0) {
@@ -425,20 +423,28 @@ export default function Settings() {
         return;
       }
       
-      const enrichTotal = allContacts.length;
-      setEnrichProgress({ processed: 0, total: enrichTotal, succeeded: 0, failed: 0 });
+      const totalContacts = allContacts.length;
+      let totalEnrichSucceeded = 0, totalEnrichFailed = 0;
+      let totalThesisSucceeded = 0, totalThesisFailed = 0;
       
-      let enrichSucceeded = 0, enrichFailed = 0, enrichProcessed = 0;
-      const ENRICH_BATCH_SIZE = 3;
-      const ENRICH_DELAY = 3000;
+      const BATCH_SIZE = 3;
+      const BATCH_DELAY = 3000;
       
-      for (let i = 0; i < allContacts.length; i += ENRICH_BATCH_SIZE) {
+      // Process each batch through BOTH enrichment and thesis extraction before moving to next batch
+      for (let i = 0; i < allContacts.length; i += BATCH_SIZE) {
         if (abortRef.current) break;
         while (pausedRef.current && !abortRef.current) await new Promise(resolve => setTimeout(resolve, 500));
         if (abortRef.current) break;
         
-        const batch = allContacts.slice(i, i + ENRICH_BATCH_SIZE);
-        const results = await Promise.allSettled(
+        const batch = allContacts.slice(i, i + BATCH_SIZE);
+        const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+        const totalBatches = Math.ceil(allContacts.length / BATCH_SIZE);
+        
+        // STEP 1: Enrich this batch
+        setPipelineStage('enrichment');
+        toast({ title: `Batch ${batchNumber}/${totalBatches}: Enriching contacts...` });
+        
+        const enrichResults = await Promise.allSettled(
           batch.map(async (contact) => {
             try {
               const result = await researchContact(contact.id);
@@ -450,83 +456,86 @@ export default function Settings() {
           })
         );
         
-        results.forEach((result) => {
-          enrichProcessed++;
-          if (result.status === 'fulfilled' && result.value.success) enrichSucceeded++;
-          else enrichFailed++;
+        let batchEnrichSucceeded = 0, batchEnrichFailed = 0;
+        enrichResults.forEach((result) => {
+          if (result.status === 'fulfilled' && result.value.success) batchEnrichSucceeded++;
+          else batchEnrichFailed++;
         });
         
-        setEnrichProgress({ processed: enrichProcessed, total: enrichTotal, succeeded: enrichSucceeded, failed: enrichFailed });
+        totalEnrichSucceeded += batchEnrichSucceeded;
+        totalEnrichFailed += batchEnrichFailed;
         
-        if (i + ENRICH_BATCH_SIZE < allContacts.length && !abortRef.current) {
-          await new Promise(resolve => setTimeout(resolve, ENRICH_DELAY));
-        }
-      }
-      
-      if (abortRef.current) {
-        setIsPipelineRunning(false);
-        toast({ title: "Pipeline stopped", description: "Contact enrichment interrupted" });
-        return;
-      }
-      
-      // STEP 2: Extract thesis from all contacts
-      toast({ title: "Step 2: Thesis Extraction", description: "Running AI thesis extraction..." });
-      setPipelineStage('extraction');
-      refetchEnrichStats();
-      
-      const contactsForThesis = allContacts.filter(c => 
-        (c.bio && c.bio.trim().length > 0) || 
-        (c.title && c.title.trim().length > 0) || 
-        (c.investor_notes && c.investor_notes.trim().length > 0)
-      );
-      
-      const thesisTotal = contactsForThesis.length;
-      setExtractionProgress({ processed: 0, total: thesisTotal, succeeded: 0, failed: 0 });
-      
-      let thesisSucceeded = 0, thesisFailed = 0, thesisProcessed = 0;
-      const THESIS_BATCH_SIZE = 5;
-      const THESIS_DELAY = 2000;
-      
-      for (let i = 0; i < contactsForThesis.length; i += THESIS_BATCH_SIZE) {
-        if (abortRef.current) break;
-        while (pausedRef.current && !abortRef.current) await new Promise(resolve => setTimeout(resolve, 500));
-        if (abortRef.current) break;
+        setEnrichProgress({ 
+          processed: i + batch.length, 
+          total: totalContacts, 
+          succeeded: totalEnrichSucceeded, 
+          failed: totalEnrichFailed 
+        });
         
-        const batch = contactsForThesis.slice(i, i + THESIS_BATCH_SIZE);
-        const results = await Promise.allSettled(
-          batch.map(async (contact) => {
-            try {
-              await extractThesis(contact.id);
-              return { success: true, name: contact.name };
-            } catch (error) {
-              console.error(`Failed to extract thesis for ${contact.name}:`, error);
-              return { success: false, name: contact.name };
-            }
-          })
+        // STEP 2: Extract thesis for this batch
+        setPipelineStage('extraction');
+        toast({ title: `Batch ${batchNumber}/${totalBatches}: Extracting thesis...` });
+        
+        const contactsForThesis = batch.filter(c => 
+          (c.bio && c.bio.trim().length > 0) || 
+          (c.title && c.title.trim().length > 0) || 
+          (c.investor_notes && c.investor_notes.trim().length > 0)
         );
         
-        results.forEach((result) => {
-          thesisProcessed++;
-          if (result.status === 'fulfilled' && result.value.success) thesisSucceeded++;
-          else thesisFailed++;
+        if (contactsForThesis.length > 0) {
+          const thesisResults = await Promise.allSettled(
+            contactsForThesis.map(async (contact) => {
+              try {
+                await extractThesis(contact.id);
+                return { success: true, name: contact.name };
+              } catch (error) {
+                console.error(`Failed to extract thesis for ${contact.name}:`, error);
+                return { success: false, name: contact.name };
+              }
+            })
+          );
+          
+          let batchThesisSucceeded = 0, batchThesisFailed = 0;
+          thesisResults.forEach((result) => {
+            if (result.status === 'fulfilled' && result.value.success) batchThesisSucceeded++;
+            else batchThesisFailed++;
+          });
+          
+          totalThesisSucceeded += batchThesisSucceeded;
+          totalThesisFailed += batchThesisFailed;
+        }
+        
+        setExtractionProgress({ 
+          processed: i + batch.length, 
+          total: totalContacts, 
+          succeeded: totalThesisSucceeded, 
+          failed: totalThesisFailed 
         });
         
-        setExtractionProgress({ processed: thesisProcessed, total: thesisTotal, succeeded: thesisSucceeded, failed: thesisFailed });
+        // Invalidate queries after each batch to persist changes immediately
+        queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
+        refetchEnrichStats();
+        refetchThesisStats();
         
-        if (i + THESIS_BATCH_SIZE < contactsForThesis.length && !abortRef.current) {
-          await new Promise(resolve => setTimeout(resolve, THESIS_DELAY));
+        // Delay before next batch
+        if (i + BATCH_SIZE < allContacts.length && !abortRef.current) {
+          await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
         }
       }
       
       setIsPipelineRunning(false);
-      refetchEnrichStats();
-      refetchThesisStats();
-      queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
       
-      toast({ 
-        title: "Contact Intelligence Pipeline Complete!", 
-        description: `Enriched ${enrichSucceeded}/${enrichTotal} contacts. Extracted thesis for ${thesisSucceeded}/${thesisTotal}.` 
-      });
+      if (abortRef.current) {
+        toast({ 
+          title: "Pipeline stopped", 
+          description: `Processed up to batch. Enriched: ${totalEnrichSucceeded}/${totalContacts}. Thesis: ${totalThesisSucceeded}/${totalContacts}.` 
+        });
+      } else {
+        toast({ 
+          title: "Contact Intelligence Pipeline Complete!", 
+          description: `Enriched ${totalEnrichSucceeded}/${totalContacts} contacts. Extracted thesis for ${totalThesisSucceeded}/${totalContacts}.` 
+        });
+      }
       
     } catch (error) {
       console.error('Pipeline error:', error);
