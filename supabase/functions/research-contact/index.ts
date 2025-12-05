@@ -192,26 +192,33 @@ Deno.serve(async (req) => {
     let bioResult = null;
     let thesisResult = null;
     
-    // Step 1: Research person's bio using web search if missing bio or title
-    if (!contact.bio || !contact.title || contact.bio?.length < 50) {
-      console.log('Researching bio for:', contact.name);
+    // Step 1: Research person's bio, title, and company URL via web search
+    const needsBioOrTitle = !contact.bio || !contact.title || contact.bio?.length < 50;
+    const needsCompanyUrl = contact.company && !contact.company_url;
+    
+    if (needsBioOrTitle || needsCompanyUrl) {
+      console.log('Researching bio/company for:', contact.name);
       
       const searchQuery = [
         contact.name,
         contact.company,
         contact.company_url ? `site:${contact.company_url}` : '',
-        'professional bio background'
+        'professional bio background company website'
       ].filter(Boolean).join(' ');
       
-      const systemPrompt = `Search the web for professional information about this person. 
+      const systemPrompt = `Search the web for professional information about this person and their company.
 Return ONLY a valid JSON object with exactly these fields:
 {
   "title": "Their current job title/role",
   "bio": "A 2-3 sentence professional bio based on real web search results",
   "company": "Their current company name",
+  "company_url": "The official company website URL (e.g., https://example.com) - NOT LinkedIn/Twitter/Crunchbase",
   "found": true or false
 }
-Only set found:true if you found REAL information from web search. If unsure, set found:false.`;
+Rules:
+- For company_url, only return the main company website domain, not social media or directory pages
+- Do NOT use LinkedIn, Twitter, Crunchbase, or other third-party URLs for company_url
+- Only set found:true if you found REAL information from web search. If unsure, set found:false.`;
 
       const webSearchResult = await searchWithWebSearch(openaiApiKey, searchQuery, systemPrompt);
       
@@ -221,7 +228,7 @@ Only set found:true if you found REAL information from web search. If unsure, se
           const jsonMatch = webSearchResult.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
             bioResult = JSON.parse(jsonMatch[0]);
-            console.log('Bio research result:', bioResult);
+            console.log('Bio/company research result:', bioResult);
           }
         } catch (e) {
           console.error('Failed to parse bio response:', e);
@@ -282,6 +289,14 @@ Only set found:true if you found REAL thesis information from web search. If uns
       if (bioResult.company && !contact.company) {
         updates.company = bioResult.company;
       }
+      // Add company_url if found and contact doesn't have one
+      if (bioResult.company_url && !contact.company_url) {
+        const url = bioResult.company_url;
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+          updates.company_url = url;
+          console.log('Found company URL:', url);
+        }
+      }
     }
     
     // Auto-detect contact types from title and bio
@@ -333,52 +348,6 @@ Only set found:true if you found REAL thesis information from web search. If uns
       }
     }
     
-    // Step 3: Search for company URL if contact has company name but no company_url
-    let companyUrlResult = null;
-    const companyName = bioResult?.company || contact.company;
-    
-    if (companyName && !contact.company_url) {
-      console.log('Searching for company URL for:', companyName);
-      
-      const companyQuery = `${companyName} official website homepage`;
-      
-      const systemPrompt = `Search the web to find the official website URL for this company.
-Return ONLY a valid JSON object with exactly these fields:
-{
-  "company_url": "https://example.com",
-  "found": true or false
-}
-Rules:
-- Only return the main company website domain (e.g., https://example.com), not social media or directory pages
-- Do NOT include LinkedIn, Twitter, Crunchbase, or other third-party URLs
-- The URL should be the company's actual corporate/business website
-- Only set found:true if you found a legitimate company website. If unsure, set found:false.`;
-
-      const webSearchResult = await searchWithWebSearch(openaiApiKey, companyQuery, systemPrompt);
-      
-      if (webSearchResult) {
-        try {
-          const jsonMatch = webSearchResult.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            companyUrlResult = JSON.parse(jsonMatch[0]);
-            console.log('Company URL search result:', companyUrlResult);
-          }
-        } catch (e) {
-          console.error('Failed to parse company URL response:', e);
-        }
-      }
-      
-      // Add company_url to updates if found
-      if (companyUrlResult?.found && companyUrlResult?.company_url) {
-        // Validate it looks like a real URL
-        const url = companyUrlResult.company_url;
-        if (url.startsWith('http://') || url.startsWith('https://')) {
-          updates.company_url = url;
-          console.log('Found company URL:', url);
-        }
-      }
-    }
-    
     // Apply updates if we found anything
     const hasUpdates = Object.keys(updates).length > 1; // More than just updated_at
     
@@ -405,7 +374,7 @@ Rules:
         fields: Object.keys(updates).filter(k => k !== 'updated_at'),
         bioFound: bioResult?.found || false,
         thesisFound: thesisResult?.found || false,
-        companyUrlFound: companyUrlResult?.found || false,
+        companyUrlFound: !!updates.company_url,
         detectedTypes: updates.contact_type || null,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
