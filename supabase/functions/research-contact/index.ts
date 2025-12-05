@@ -165,7 +165,7 @@ Deno.serve(async (req) => {
     }
 
     console.log('Contact:', contact.name);
-    console.log('Website:', contact.website);
+    console.log('Company URL:', contact.company_url);
     console.log('Company:', contact.company);
     
     // Check if we have enough data to research
@@ -199,7 +199,7 @@ Deno.serve(async (req) => {
       const searchQuery = [
         contact.name,
         contact.company,
-        contact.website ? `site:${contact.website}` : '',
+        contact.company_url ? `site:${contact.company_url}` : '',
         'professional bio background'
       ].filter(Boolean).join(' ');
       
@@ -236,7 +236,7 @@ Only set found:true if you found REAL information from web search. If unsure, se
       const thesisQuery = [
         contact.name,
         contact.company,
-        contact.website ? `site:${contact.website}` : '',
+        contact.company_url ? `site:${contact.company_url}` : '',
         'investment thesis focus areas portfolio stages check size'
       ].filter(Boolean).join(' ');
       
