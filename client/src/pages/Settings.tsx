@@ -168,7 +168,7 @@ export default function Settings() {
       const { count: enrichedCount } = await supabase
         .from('contacts')
         .select('*', { count: 'exact', head: true })
-        .or('bio.neq.,investor_notes.neq.');
+        .or('bio.not.is.null,investor_notes.not.is.null');
       
       return {
         total: totalContacts || 0,
