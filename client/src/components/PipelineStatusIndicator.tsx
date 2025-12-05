@@ -66,7 +66,7 @@ export default function PipelineStatusIndicator() {
         
         <div className="flex justify-between text-xs">
           <span className="text-muted-foreground">
-            Enriched: <span className="text-foreground">{enrichProgress.succeeded}</span>
+            Scanned: <span className="text-foreground">{enrichProgress.processed}/{enrichProgress.total}</span>
           </span>
           <span className="text-muted-foreground">
             Thesis: <span className="text-foreground">{extractionProgress.succeeded}</span>

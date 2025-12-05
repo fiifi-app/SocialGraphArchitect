@@ -125,17 +125,21 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
           batch.map(async (contact) => {
             try {
               const result = await researchContact(contact.id);
-              return { success: result.success && result.updated, name: contact.name };
+              return { 
+                processed: result.success, 
+                updated: result.success && result.updated, 
+                name: contact.name 
+              };
             } catch (error) {
               console.error(`Failed to research ${contact.name}:`, error);
-              return { success: false, name: contact.name };
+              return { processed: false, updated: false, name: contact.name };
             }
           })
         );
         
         let batchEnrichSucceeded = 0, batchEnrichFailed = 0;
         enrichResults.forEach((result) => {
-          if (result.status === 'fulfilled' && result.value.success) batchEnrichSucceeded++;
+          if (result.status === 'fulfilled' && result.value.processed) batchEnrichSucceeded++;
           else batchEnrichFailed++;
         });
         
