@@ -30,14 +30,27 @@ export default function SwipeableRecordingCard({
   const [isDeleting, setIsDeleting] = useState(false);
   const constraintsRef = useRef(null);
   const x = useMotionValue(0);
+  const MAX_DRAG = 400; // Full width swipe allowed
   
-  const deleteButtonOpacity = useTransform(x, [-100, -50, 0], [1, 0.5, 0]);
-  const deleteButtonScale = useTransform(x, [-100, -50, 0], [1, 0.8, 0.5]);
+  // Delete button smoothly appears and grows as you drag
+  const deleteButtonOpacity = useTransform(x, [0, -80, -200], [0, 0.4, 1]);
+  const deleteButtonScale = useTransform(x, [0, -80, -200], [0.3, 0.7, 1]);
   
   const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    if (info.offset.x < -80) {
-      x.set(-80);
+    const deleteThreshold = -MAX_DRAG * 0.6; // Delete when dragged 60% across
+    
+    if (info.offset.x < deleteThreshold) {
+      // User dragged far enough - delete!
+      setIsDeleting(true);
+      x.set(-MAX_DRAG);
+      onDelete();
+    } else if (info.velocity.x < -500) {
+      // Or if flicked quickly to the left
+      setIsDeleting(true);
+      x.set(-MAX_DRAG);
+      onDelete();
     } else {
+      // Snap back to start
       x.set(0);
     }
   };
@@ -45,7 +58,7 @@ export default function SwipeableRecordingCard({
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsDeleting(true);
-    x.set(0);
+    x.set(-MAX_DRAG);
     onDelete();
   };
 
@@ -82,8 +95,8 @@ export default function SwipeableRecordingCard({
       
       <motion.div
         drag="x"
-        dragConstraints={{ left: -80, right: 0 }}
-        dragElastic={0.1}
+        dragConstraints={{ left: -MAX_DRAG, right: 0 }}
+        dragElastic={0.08}
         onDragEnd={handleDragEnd}
         style={{ x }}
         className="relative z-10"
