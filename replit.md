@@ -17,12 +17,14 @@ Or manually via Supabase Dashboard → Edge Functions → Create → paste code 
 
 ## Recent Changes
 - **Auto-Enrich Contact Bios (NEW):** AI-powered research pipeline on Settings page:
-  - Step 1: Researches each contact using OpenAI to find bio, title, and background info
+  - Step 1: Researches each contact using OpenAI with web_search tool for real external data
   - Step 2: For investor contacts (GP, Angel, Family Office, PE), also searches for investment thesis info
-  - Step 3: Automatically runs thesis extraction on ALL contacts after enrichment completes
+  - Step 3: Auto-detects contact types (LP, GP, Angel, Family Office, Startup, PE) from title/bio and sets tags
+  - Step 4: Automatically sets is_investor=true when investor-type tags are detected
+  - Step 5: Automatically runs thesis extraction on ALL contacts after enrichment completes
   - Browser-based batch processing with pause/resume/stop controls
   - Processes 3 contacts at a time with 3-second delays for rate limiting
-  - Edge Function: `research-contact` handles AI research per contact
+  - Edge Function: `research-contact` handles AI research + auto-tagging per contact
 - **Automatic Thesis Extraction:** AI-powered thesis extraction now runs automatically when:
   - A new contact is created (if they have bio, title, or investor notes)
   - Contacts are imported via CSV (batch processing after enrichment completes)

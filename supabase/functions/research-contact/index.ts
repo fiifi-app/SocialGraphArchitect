@@ -5,6 +5,66 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Contact type detection patterns
+const CONTACT_TYPE_PATTERNS: Record<string, RegExp[]> = {
+  'GP': [
+    /\bgeneral partner\b/i,
+    /\bmanaging partner\b/i,
+    /\bventure partner\b/i,
+    /\bpartner at .*(capital|ventures|partners|vc)\b/i,
+    /\b(vc|venture capital)\s*(partner|gp)\b/i,
+  ],
+  'LP': [
+    /\blimited partner\b/i,
+    /\blp\b.*\b(fund|investor|allocation)\b/i,
+    /\binstitutional investor\b/i,
+    /\bendowment\b/i,
+    /\bpension fund\b/i,
+  ],
+  'Angel': [
+    /\bangel investor\b/i,
+    /\bangel\b.*\binvest/i,
+    /\bindividual investor\b/i,
+    /\bsuper angel\b/i,
+  ],
+  'Family Office': [
+    /\bfamily office\b/i,
+    /\bsingle family office\b/i,
+    /\bmulti.?family office\b/i,
+    /\bprivate wealth\b/i,
+  ],
+  'Startup': [
+    /\bfounder\b/i,
+    /\bco-?founder\b/i,
+    /\bceo\b.*\b(startup|early.?stage)\b/i,
+    /\bstartup founder\b/i,
+    /\bentrepreneur\b/i,
+  ],
+  'PE': [
+    /\bprivate equity\b/i,
+    /\bpe fund\b/i,
+    /\bgrowth equity\b/i,
+    /\bbuyout\b/i,
+  ],
+};
+
+// Detect contact type from title and bio text
+function detectContactTypes(title: string | null, bio: string | null, existingTypes: string[] | null): string[] {
+  const combinedText = `${title || ''} ${bio || ''}`.toLowerCase();
+  const detectedTypes = new Set<string>(existingTypes || []);
+  
+  for (const [type, patterns] of Object.entries(CONTACT_TYPE_PATTERNS)) {
+    for (const pattern of patterns) {
+      if (pattern.test(combinedText)) {
+        detectedTypes.add(type);
+        break;
+      }
+    }
+  }
+  
+  return Array.from(detectedTypes);
+}
+
 // Use OpenAI Responses API with web_search tool for real data
 async function searchWithWebSearch(openaiApiKey: string, query: string, systemPrompt: string): Promise<any> {
   // Use the Responses API with proper message structure
@@ -223,6 +283,28 @@ Only set found:true if you found REAL thesis information from web search. If uns
       }
     }
     
+    // Auto-detect contact types from title and bio
+    const newTitle = updates.title || contact.title;
+    const newBio = updates.bio || contact.bio;
+    const detectedTypes = detectContactTypes(newTitle, newBio, contact.contact_type);
+    
+    // Update contact_type if new types were detected
+    if (detectedTypes.length > 0) {
+      const existingTypes = contact.contact_type || [];
+      const hasNewTypes = detectedTypes.some(t => !existingTypes.includes(t));
+      
+      if (hasNewTypes) {
+        updates.contact_type = detectedTypes;
+        console.log('Auto-detected contact types:', detectedTypes);
+        
+        // Also set is_investor if any investor type is detected
+        const investorTypes = ['GP', 'LP', 'Angel', 'Family Office', 'PE'];
+        if (detectedTypes.some(t => investorTypes.includes(t)) && !contact.is_investor) {
+          updates.is_investor = true;
+        }
+      }
+    }
+    
     if (thesisResult?.found && thesisResult.thesis_summary) {
       // Build investor notes from thesis research
       const noteParts = [thesisResult.thesis_summary];
@@ -276,6 +358,7 @@ Only set found:true if you found REAL thesis information from web search. If uns
         fields: Object.keys(updates).filter(k => k !== 'updated_at'),
         bioFound: bioResult?.found || false,
         thesisFound: thesisResult?.found || false,
+        detectedTypes: updates.contact_type || null,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
