@@ -912,7 +912,6 @@ export default function Settings() {
                       <span className="text-muted-foreground">
                         {enrichProgress.processed} / {enrichProgress.total}
                       </span>
-                    </span>
                     </div>
                     <Progress value={(enrichProgress.processed / Math.max(enrichProgress.total, 1)) * 100} className="h-2" />
                   </div>
