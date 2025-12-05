@@ -322,10 +322,10 @@ export default function ContactCard({
             </div>
           )}
           
-          {/* 11. Bio (first 140 characters, no heading) */}
+          {/* 11. Bio (full text, no heading) */}
           {bio && bio.trim() && (
             <div className="text-sm text-muted-foreground pt-1" data-testid="text-bio">
-              {bio.substring(0, 140)}{bio.length > 140 ? '...' : ''}
+              {bio}
             </div>
           )}
           

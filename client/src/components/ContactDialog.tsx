@@ -636,7 +636,7 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
                           placeholder={isInvestorSelected 
                             ? "Investment thesis, preferences, sectors, check sizes, notes..." 
                             : "LinkedIn bio or additional information about this contact..."}
-                          className="min-h-24"
+                          className="min-h-32 resize-none"
                           data-testid="input-contact-bio"
                         />
                       </FormControl>
