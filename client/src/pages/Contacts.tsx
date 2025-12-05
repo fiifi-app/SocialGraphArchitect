@@ -54,21 +54,21 @@ export default function Contacts() {
   }, [filteredContacts, currentPage]);
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-8 overflow-x-hidden">
+      <div className="mb-6 md:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-semibold">Contacts</h1>
+            <h1 className="text-2xl md:text-3xl font-semibold">Contacts</h1>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-2 sm:gap-3">
             <Button 
               variant="outline" 
               size="sm"
               onClick={() => setShowCsvUploadDialog(true)}
               data-testid="button-import-csv"
             >
-              <Upload className="w-4 h-4 mr-2" />
-              Import CSV
+              <Upload className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Import CSV</span>
             </Button>
             <Button 
               size="sm"
@@ -78,8 +78,8 @@ export default function Contacts() {
               }}
               data-testid="button-add-contact"
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Contact
+              <Plus className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Add Contact</span>
             </Button>
           </div>
         </div>
