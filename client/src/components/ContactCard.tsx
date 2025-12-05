@@ -2,7 +2,18 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, Edit, DollarSign, Users, Calendar, Sparkles, Mail, Linkedin, MapPin, Phone, Tag, Twitter as TwitterIcon, Info, BrainCircuit, Loader2, Target, TrendingUp, Globe } from "lucide-react";
+import { Building2, DollarSign, Users, Calendar, Sparkles, Mail, Linkedin, MapPin, Phone, Tag, Twitter as TwitterIcon, Info, BrainCircuit, Loader2, Target, TrendingUp, Globe } from "lucide-react";
+
+const ExpandIcon = ({ className }: { className?: string }) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    viewBox="0 -960 960 960" 
+    fill="currentColor"
+    className={className}
+  >
+    <path d="M200-200v-240h80v160h160v80H200Zm480-320v-160H520v-80h240v240h-80Z"/>
+  </svg>
+);
 import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -338,8 +349,9 @@ export default function ContactCard({
             variant="ghost"
             onClick={onEdit}
             data-testid="button-edit-contact"
+            title="Expand contact details"
           >
-            <Edit className="w-4 h-4" />
+            <ExpandIcon className="w-4 h-4" />
           </Button>
         </div>
         
