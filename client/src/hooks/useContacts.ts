@@ -54,7 +54,8 @@ export function useContactsCount() {
 
       const { count, error } = await supabase
         .from('contacts')
-        .select('*', { count: 'exact', head: true });
+        .select('*', { count: 'exact', head: true })
+        .eq('owned_by_profile', user.id);
       
       if (error) throw error;
       return count || 0;
