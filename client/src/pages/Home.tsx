@@ -152,7 +152,7 @@ export default function HomeNew() {
     <>
       <div className="pb-24">
         {/* Coming Up Section */}
-        <div className="p-8 border-b">
+        <div className="p-4 md:p-6 lg:p-8 border-b">
           <div className="flex items-center gap-2 mb-4">
             <Calendar className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold">Coming Up</h2>
@@ -202,7 +202,7 @@ export default function HomeNew() {
         </div>
 
         {/* Conversation History */}
-        <div className="p-8">
+        <div className="p-4 md:p-6 lg:p-8">
           <h2 className="text-lg font-semibold mb-6">Recordings</h2>
 
           {conversationsLoading ? (

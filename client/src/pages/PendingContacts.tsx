@@ -103,14 +103,14 @@ export default function PendingContacts() {
 
   if (isLoading) {
     return (
-      <div className="p-8">
+      <div className="p-4 md:p-6 lg:p-8">
         <div className="text-center">Loading pending contacts...</div>
       </div>
     );
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 md:p-6 lg:p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-semibold mb-2">Pending Contacts</h1>
         <p className="text-muted-foreground">
