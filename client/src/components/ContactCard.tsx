@@ -246,6 +246,23 @@ export default function ContactCard({
             </div>
           )}
           
+          {/* 4b. Company Website */}
+          {companyUrl && (
+            <div className="flex items-center gap-2 text-sm">
+              <Globe className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+              <a
+                href={companyUrl.startsWith('http') ? companyUrl : `https://${companyUrl}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="truncate text-primary hover:underline"
+                data-testid="link-company-url"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {companyUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+              </a>
+            </div>
+          )}
+          
           {/* 5. LinkedIn */}
           {linkedinUrl && (
             <div className="flex items-center gap-2 text-sm">
