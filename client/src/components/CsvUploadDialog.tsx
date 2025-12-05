@@ -209,7 +209,7 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
     // Fetch all existing contacts for this user to check for duplicates
     const { data: existingContacts, error: fetchError } = await supabase
       .from('contacts')
-      .select('id, name, email, company, title, linkedin_url')
+      .select('id, name, email, company, title, linkedin_url, location, phone, bio, company_url, company_address, company_employees, company_founded, company_linkedin, company_twitter')
       .eq('owned_by_profile', user.id);
 
     if (fetchError) {
@@ -303,6 +303,15 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
         if (csvContact.title && !existingDuplicate.title) updateData.title = csvContact.title;
         if (csvContact.company && !existingDuplicate.company) updateData.company = csvContact.company;
         if (csvContact.linkedinUrl && !existingDuplicate.linkedin_url) updateData.linkedin_url = csvContact.linkedinUrl;
+        if (csvContact.location && !existingDuplicate.location) updateData.location = csvContact.location;
+        if (csvContact.phone && !existingDuplicate.phone) updateData.phone = csvContact.phone;
+        if (csvContact.bio && !existingDuplicate.bio) updateData.bio = csvContact.bio;
+        if (csvContact.companyUrl && !existingDuplicate.company_url) updateData.company_url = csvContact.companyUrl;
+        if (csvContact.companyAddress && !existingDuplicate.company_address) updateData.company_address = csvContact.companyAddress;
+        if (csvContact.companyEmployees && !existingDuplicate.company_employees) updateData.company_employees = csvContact.companyEmployees;
+        if (csvContact.companyFounded && !existingDuplicate.company_founded) updateData.company_founded = csvContact.companyFounded;
+        if (csvContact.companyLinkedin && !existingDuplicate.company_linkedin) updateData.company_linkedin = csvContact.companyLinkedin;
+        if (csvContact.companyTwitter && !existingDuplicate.company_twitter) updateData.company_twitter = csvContact.companyTwitter;
 
         // Only queue update if there are fields to merge
         if (Object.keys(updateData).length > 0) {
