@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePipeline } from "@/contexts/PipelineContext";
 import { LogOut, User, Bell, Shield, Calendar, CheckCircle2, BrainCircuit, Loader2, Play, Pause, RotateCcw, Mail, Search } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
@@ -18,12 +19,24 @@ export default function Settings() {
   const queryClient = useQueryClient();
   const [location] = useLocation();
   
-  // Unified contact intelligence pipeline state (combines enrichment + thesis extraction)
-  const [isPipelineRunning, setIsPipelineRunning] = useState(false);
-  const [isPipelinePaused, setIsPipelinePaused] = useState(false);
-  const [pipelineStage, setPipelineStage] = useState<'enrichment' | 'extraction'>('enrichment');
-  const [enrichProgress, setEnrichProgress] = useState({ processed: 0, total: 0, succeeded: 0, failed: 0 });
-  const [extractionProgress, setExtractionProgress] = useState({ processed: 0, total: 0, succeeded: 0, failed: 0 });
+  // Use pipeline context for background processing
+  const {
+    isPipelineRunning,
+    isPipelinePaused,
+    pipelineStage,
+    enrichProgress,
+    extractionProgress,
+    currentBatch,
+    totalBatches,
+    startPipeline,
+    pauseResumePipeline,
+    stopPipeline,
+  } = usePipeline();
+  
+  // Legacy state for standalone thesis extraction (separate from pipeline)
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [legacyExtractionProgress, setLegacyExtractionProgress] = useState({ processed: 0, total: 0, succeeded: 0, failed: 0 });
   const pausedRef = useRef(false);
   const abortRef = useRef(false);
   
@@ -259,7 +272,7 @@ export default function Settings() {
       );
       
       const total = contactsToProcess.length;
-      setExtractionProgress({ processed: 0, total, succeeded: 0, failed: 0 });
+      setLegacyExtractionProgress({ processed: 0, total, succeeded: 0, failed: 0 });
       
       if (total === 0) {
         toast({ title: "All contacts already have thesis data" });
@@ -325,7 +338,7 @@ export default function Settings() {
           }
         });
         
-        setExtractionProgress({ 
+        setLegacyExtractionProgress({ 
           processed, 
           total, 
           succeeded, 
@@ -405,144 +418,6 @@ export default function Settings() {
     return allContacts;
   };
   
-  // Unified pipeline: Process each batch of 3 through all steps (enrichment + thesis extraction) before saving and moving to next batch
-  const runContactIntelligencePipeline = useCallback(async () => {
-    setIsPipelineRunning(true);
-    setIsPipelinePaused(false);
-    pausedRef.current = false;
-    abortRef.current = false;
-    
-    try {
-      toast({ title: "Starting Contact Intelligence Pipeline", description: "Processing contacts in batches..." });
-      
-      const allContacts = await fetchAllContactsForEnrichment();
-      
-      if (!allContacts || allContacts.length === 0) {
-        toast({ title: "No contacts found", variant: "destructive" });
-        setIsPipelineRunning(false);
-        return;
-      }
-      
-      const totalContacts = allContacts.length;
-      let totalEnrichSucceeded = 0, totalEnrichFailed = 0;
-      let totalThesisSucceeded = 0, totalThesisFailed = 0;
-      
-      const BATCH_SIZE = 3;
-      const BATCH_DELAY = 3000;
-      
-      // Process each batch through BOTH enrichment and thesis extraction before moving to next batch
-      for (let i = 0; i < allContacts.length; i += BATCH_SIZE) {
-        if (abortRef.current) break;
-        while (pausedRef.current && !abortRef.current) await new Promise(resolve => setTimeout(resolve, 500));
-        if (abortRef.current) break;
-        
-        const batch = allContacts.slice(i, i + BATCH_SIZE);
-        const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
-        const totalBatches = Math.ceil(allContacts.length / BATCH_SIZE);
-        
-        // STEP 1: Enrich this batch
-        setPipelineStage('enrichment');
-        toast({ title: `Batch ${batchNumber}/${totalBatches}: Enriching contacts...` });
-        
-        const enrichResults = await Promise.allSettled(
-          batch.map(async (contact) => {
-            try {
-              const result = await researchContact(contact.id);
-              return { success: result.success && result.updated, name: contact.name };
-            } catch (error) {
-              console.error(`Failed to research ${contact.name}:`, error);
-              return { success: false, name: contact.name };
-            }
-          })
-        );
-        
-        let batchEnrichSucceeded = 0, batchEnrichFailed = 0;
-        enrichResults.forEach((result) => {
-          if (result.status === 'fulfilled' && result.value.success) batchEnrichSucceeded++;
-          else batchEnrichFailed++;
-        });
-        
-        totalEnrichSucceeded += batchEnrichSucceeded;
-        totalEnrichFailed += batchEnrichFailed;
-        
-        setEnrichProgress({ 
-          processed: i + batch.length, 
-          total: totalContacts, 
-          succeeded: totalEnrichSucceeded, 
-          failed: totalEnrichFailed 
-        });
-        
-        // STEP 2: Extract thesis for this batch
-        setPipelineStage('extraction');
-        toast({ title: `Batch ${batchNumber}/${totalBatches}: Extracting thesis...` });
-        
-        const contactsForThesis = batch.filter(c => 
-          (c.bio && c.bio.trim().length > 0) || 
-          (c.title && c.title.trim().length > 0) || 
-          (c.investor_notes && c.investor_notes.trim().length > 0)
-        );
-        
-        if (contactsForThesis.length > 0) {
-          const thesisResults = await Promise.allSettled(
-            contactsForThesis.map(async (contact) => {
-              try {
-                await extractThesis(contact.id);
-                return { success: true, name: contact.name };
-              } catch (error) {
-                console.error(`Failed to extract thesis for ${contact.name}:`, error);
-                return { success: false, name: contact.name };
-              }
-            })
-          );
-          
-          let batchThesisSucceeded = 0, batchThesisFailed = 0;
-          thesisResults.forEach((result) => {
-            if (result.status === 'fulfilled' && result.value.success) batchThesisSucceeded++;
-            else batchThesisFailed++;
-          });
-          
-          totalThesisSucceeded += batchThesisSucceeded;
-          totalThesisFailed += batchThesisFailed;
-        }
-        
-        setExtractionProgress({ 
-          processed: i + batch.length, 
-          total: totalContacts, 
-          succeeded: totalThesisSucceeded, 
-          failed: totalThesisFailed 
-        });
-        
-        // Invalidate queries after each batch to persist changes immediately
-        queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
-        refetchEnrichStats();
-        refetchThesisStats();
-        
-        // Delay before next batch
-        if (i + BATCH_SIZE < allContacts.length && !abortRef.current) {
-          await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
-        }
-      }
-      
-      setIsPipelineRunning(false);
-      
-      if (abortRef.current) {
-        toast({ 
-          title: "Pipeline stopped", 
-          description: `Processed up to batch. Enriched: ${totalEnrichSucceeded}/${totalContacts}. Thesis: ${totalThesisSucceeded}/${totalContacts}.` 
-        });
-      } else {
-        toast({ 
-          title: "Contact Intelligence Pipeline Complete!", 
-          description: `Enriched ${totalEnrichSucceeded}/${totalContacts} contacts. Extracted thesis for ${totalThesisSucceeded}/${totalContacts}.` 
-        });
-      }
-      
-    } catch (error) {
-      console.error('Pipeline error:', error);
-      toast({ title: "Pipeline error", description: String(error), variant: "destructive" });
-      setIsPipelineRunning(false);
-    }
-  }, [toast, refetchEnrichStats, refetchThesisStats, queryClient]);
   
   // Run thesis extraction on ALL contacts (not just ones missing thesis)
   const runBatchThesisExtractionAll = useCallback(async () => {
@@ -565,7 +440,7 @@ export default function Settings() {
       );
       
       const total = contactsToProcess.length;
-      setExtractionProgress({ processed: 0, total, succeeded: 0, failed: 0 });
+      setLegacyExtractionProgress({ processed: 0, total, succeeded: 0, failed: 0 });
       
       if (total === 0) {
         toast({ title: "No contacts with data to extract thesis from" });
@@ -625,7 +500,7 @@ export default function Settings() {
           }
         });
         
-        setExtractionProgress({ 
+        setLegacyExtractionProgress({ 
           processed, 
           total, 
           succeeded, 
@@ -664,16 +539,6 @@ export default function Settings() {
     }
   }, [toast, refetchThesisStats, queryClient]);
   
-  const handlePipelinePauseResume = () => {
-    pausedRef.current = !pausedRef.current;
-    setIsPipelinePaused(pausedRef.current);
-  };
-  
-  const handlePipelineStop = () => {
-    abortRef.current = true;
-    pausedRef.current = false;
-    setIsPipelinePaused(false);
-  };
   
   // Server-side batch extraction - continues even if page is refreshed
   const runServerBatchExtraction = useCallback(async () => {
@@ -911,12 +776,15 @@ export default function Settings() {
             
             {isPipelineRunning && (
               <div className="space-y-3">
+                <div className="text-sm text-muted-foreground">
+                  Batch {currentBatch}/{totalBatches} - Processing in background (you can navigate away)
+                </div>
                 {pipelineStage === 'enrichment' && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
                       <span className="flex items-center gap-2">
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        {isPipelinePaused ? 'Paused' : 'Step 1: AI Research...'}
+                        {isPipelinePaused ? 'Paused' : 'Enriching contacts...'}
                       </span>
                       <span className="text-muted-foreground">
                         {enrichProgress.processed} / {enrichProgress.total}
@@ -931,7 +799,7 @@ export default function Settings() {
                     <div className="flex items-center justify-between text-sm">
                       <span className="flex items-center gap-2">
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        {isPipelinePaused ? 'Paused' : 'Step 2: Thesis Extraction...'}
+                        {isPipelinePaused ? 'Paused' : 'Extracting thesis...'}
                       </span>
                       <span className="text-muted-foreground">
                         {extractionProgress.processed} / {extractionProgress.total}
@@ -948,7 +816,7 @@ export default function Settings() {
                 <>
                   <Button
                     size="sm"
-                    onClick={runContactIntelligencePipeline}
+                    onClick={startPipeline}
                     disabled={!enrichStats || enrichStats.withName === 0}
                     data-testid="button-start-pipeline"
                   >
@@ -970,7 +838,7 @@ export default function Settings() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={handlePipelinePauseResume}
+                    onClick={pauseResumePipeline}
                     data-testid="button-pause-pipeline"
                   >
                     {isPipelinePaused ? <Play className="w-4 h-4 mr-2" /> : <Pause className="w-4 h-4 mr-2" />}
@@ -979,7 +847,7 @@ export default function Settings() {
                   <Button
                     size="sm"
                     variant="destructive"
-                    onClick={handlePipelineStop}
+                    onClick={stopPipeline}
                     data-testid="button-stop-pipeline"
                   >
                     Stop

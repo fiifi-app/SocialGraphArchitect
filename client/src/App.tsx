@@ -7,6 +7,8 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import ThemeToggle from "@/components/ThemeToggle";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { PipelineProvider } from "@/contexts/PipelineContext";
+import PipelineStatusIndicator from "@/components/PipelineStatusIndicator";
 import { useMeetingNotifications } from "@/hooks/useMeetingNotifications";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
@@ -89,20 +91,23 @@ function AuthenticatedApp() {
   };
 
   return (
-    <SidebarProvider style={style as React.CSSProperties}>
-      <div className="flex h-screen w-full overflow-hidden">
-        <AppSidebar />
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <header className="flex items-center justify-between p-2 md:p-4 border-b border-border flex-shrink-0">
-            <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <ThemeToggle />
-          </header>
-          <main className="flex-1 overflow-auto">
-            <Router />
-          </main>
+    <PipelineProvider>
+      <SidebarProvider style={style as React.CSSProperties}>
+        <div className="flex h-screen w-full overflow-hidden">
+          <AppSidebar />
+          <div className="flex flex-col flex-1 overflow-hidden">
+            <header className="flex items-center justify-between p-2 md:p-4 border-b border-border flex-shrink-0">
+              <SidebarTrigger data-testid="button-sidebar-toggle" />
+              <ThemeToggle />
+            </header>
+            <main className="flex-1 overflow-auto">
+              <Router />
+            </main>
+          </div>
         </div>
-      </div>
-    </SidebarProvider>
+      </SidebarProvider>
+      <PipelineStatusIndicator />
+    </PipelineProvider>
   );
 }
 
