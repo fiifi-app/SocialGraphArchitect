@@ -2,7 +2,9 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, DollarSign, Users, Sparkles, Mail, Linkedin, MapPin, Phone, Tag, Twitter as TwitterIcon, BrainCircuit, Loader2, Target, TrendingUp, Globe } from "lucide-react";
+import { Building2, DollarSign, Users, Calendar, Sparkles, Mail, Linkedin, MapPin, Phone, Tag, Twitter as TwitterIcon, Info, BrainCircuit, Loader2, Target, TrendingUp, Globe } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const ExpandIcon = ({ className }: { className?: string }) => (
   <svg 
@@ -152,6 +154,10 @@ export default function ContactCard({
     }
   };
   
+  const hasCompanyInfo = !!(companyAddress || companyEmployees || companyFounded || companyUrl || 
+    companyLinkedin || companyTwitter || companyFacebook || companyAngellist || 
+    companyCrunchbase || companyOwler || youtubeVimeo);
+  
   const hasThesisData = thesis && (
     thesis.sectors.length > 0 || 
     thesis.stages.length > 0 || 
@@ -170,15 +176,174 @@ export default function ContactCard({
       <div className="space-y-3">
         {/* Icons at the top, right-aligned */}
         <div className="flex items-center justify-end gap-1">
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setShowEnrichDialog(true)}
-              data-testid="button-enrich-contact"
-              title="Enrich contact data"
-            >
-              <Sparkles className="w-4 h-4" />
-            </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                data-testid="button-more-info"
+                title="View company information"
+              >
+                <Info className="w-4 h-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-0" align="end" sideOffset={5}>
+              <div className="p-4 border-b">
+                <h4 className="font-semibold text-sm">Company Information</h4>
+              </div>
+              <ScrollArea className="max-h-96">
+                <div className="p-4 space-y-3 text-sm min-h-0">
+                  {!hasCompanyInfo ? (
+                    <div className="text-sm text-muted-foreground text-center py-8">
+                      No company information available
+                    </div>
+                  ) : (
+                    <>
+                    {companyAddress && (
+                      <div className="flex items-start gap-2">
+                        <MapPin className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                        <div>
+                          <div className="text-xs text-muted-foreground">Company Address</div>
+                          <div>{companyAddress}</div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {companyEmployees && (
+                      <div className="flex items-start gap-2">
+                        <Users className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                        <div>
+                          <div className="text-xs text-muted-foreground"># of Employees</div>
+                          <div>{companyEmployees}</div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {companyFounded && (
+                      <div className="flex items-start gap-2">
+                        <Calendar className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                        <div>
+                          <div className="text-xs text-muted-foreground">Founded</div>
+                          <div>{companyFounded}</div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {companyUrl && (
+                      <div className="flex items-start gap-2">
+                        <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                        <div>
+                          <div className="text-xs text-muted-foreground">Company Website</div>
+                          <a href={companyUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
+                            {companyUrl}
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {companyLinkedin && (
+                      <div className="flex items-start gap-2">
+                        <Linkedin className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                        <div>
+                          <div className="text-xs text-muted-foreground">Company LinkedIn</div>
+                          <a href={companyLinkedin} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                            LinkedIn Profile
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {companyTwitter && (
+                      <div className="flex items-start gap-2">
+                        <TwitterIcon className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                        <div>
+                          <div className="text-xs text-muted-foreground">Company Twitter</div>
+                          <a
+                            href={companyTwitter.startsWith('http') ? companyTwitter : `https://twitter.com/${companyTwitter.replace('@', '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline"
+                          >
+                            {companyTwitter}
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {companyFacebook && (
+                      <div className="flex items-start gap-2">
+                        <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                        <div>
+                          <div className="text-xs text-muted-foreground">Company Facebook</div>
+                          <a href={companyFacebook} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                            Facebook Page
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {companyAngellist && (
+                      <div className="flex items-start gap-2">
+                        <Users className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                        <div>
+                          <div className="text-xs text-muted-foreground">Company AngelList</div>
+                          <a href={companyAngellist} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                            AngelList Profile
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {companyCrunchbase && (
+                      <div className="flex items-start gap-2">
+                        <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                        <div>
+                          <div className="text-xs text-muted-foreground">Company Crunchbase</div>
+                          <a href={companyCrunchbase} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                            Crunchbase Profile
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {companyOwler && (
+                      <div className="flex items-start gap-2">
+                        <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                        <div>
+                          <div className="text-xs text-muted-foreground">Company Owler</div>
+                          <a href={companyOwler} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                            Owler Profile
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {youtubeVimeo && (
+                      <div className="flex items-start gap-2">
+                        <Building2 className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
+                        <div>
+                          <div className="text-xs text-muted-foreground">YouTube/Vimeo</div>
+                          <a href={youtubeVimeo} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                            Video Channel
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                  )}
+                </div>
+              </ScrollArea>
+            </PopoverContent>
+          </Popover>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => setShowEnrichDialog(true)}
+            data-testid="button-enrich-contact"
+            title="Enrich contact data"
+          >
+            <Sparkles className="w-4 h-4" />
+          </Button>
           <Button
             size="icon"
             variant="ghost"
