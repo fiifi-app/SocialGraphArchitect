@@ -393,7 +393,7 @@ export default function Settings() {
       const { data, error } = await supabase
         .from('contacts')
         .select('id, name, company, company_url, email, title, bio, investor_notes, contact_type, is_investor')
-        .not('name', 'is', null)
+        .neq('name', null)
         .neq('name', '')
         .range(from, from + PAGE_SIZE - 1);
       
