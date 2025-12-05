@@ -195,12 +195,15 @@ export default function History() {
             <tbody>
               {conversations.map((conversation) => {
                 const stats = matchStats[conversation.id] || { introsOffered: 0, introsMade: 0 };
+                const endTime = conversation.durationSeconds 
+                  ? new Date(conversation.recordedAt.getTime() + conversation.durationSeconds * 1000)
+                  : conversation.recordedAt;
                 return (
                   <ConversationHistoryRow
                     key={conversation.id}
                     id={conversation.id}
                     startedAt={conversation.recordedAt.toISOString()}
-                    endedAt={conversation.recordedAt.toISOString()}
+                    endedAt={endTime.toISOString()}
                     participants={[]}
                     introsOffered={stats.introsOffered}
                     introsMade={stats.introsMade}
