@@ -661,12 +661,12 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
                           <FormLabel>Contact Type (select all that apply)</FormLabel>
                           <div className="grid grid-cols-3 gap-2">
                             {[
-                              { value: 'LP', label: 'LP' },
-                              { value: 'GP', label: 'GP' },
                               { value: 'Angel', label: 'Angel' },
+                              { value: 'GP', label: 'GP' },
+                              { value: 'LP', label: 'LP' },
                               { value: 'FamilyOffice', label: 'Family Office' },
-                              { value: 'Startup', label: 'Startup' },
                               { value: 'PE', label: 'PE' },
+                              { value: 'Startup', label: 'Startup' },
                             ].map((type) => {
                               const isSelected = field.value?.includes(type.value as any);
                               return (

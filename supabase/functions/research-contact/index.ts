@@ -45,6 +45,7 @@ const CONTACT_TYPE_PATTERNS: Record<string, RegExp[]> = {
     /\bpe fund\b/i,
     /\bgrowth equity\b/i,
     /\bbuyout\b/i,
+    /\bturnaround\b/i,
   ],
 };
 
