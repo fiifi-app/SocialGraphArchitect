@@ -136,7 +136,7 @@ export default function History() {
                 <UserPlus className="w-5 h-5 text-chart-3" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-muted-foreground mb-1">New Contacts Added</p>
+                <p className="text-sm text-muted-foreground mb-1">Total Contacts</p>
                 <p className="text-2xl font-semibold mb-2" data-testid="text-new-contacts">
                   {contactsLoading ? "..." : stats.newContacts.total.toLocaleString()}
                 </p>
