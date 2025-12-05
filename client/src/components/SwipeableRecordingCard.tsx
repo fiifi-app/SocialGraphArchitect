@@ -77,10 +77,9 @@ export default function SwipeableRecordingCard({
       data-testid={`swipeable-card-${conversation.id}`}
     >
       <motion.div
-        className="absolute right-0 top-0 bottom-0 flex items-center justify-center bg-destructive px-6"
+        className="absolute inset-0 flex items-center justify-end bg-destructive px-6"
         style={{ 
           opacity: deleteButtonOpacity,
-          scale: deleteButtonScale,
         }}
       >
         <button
