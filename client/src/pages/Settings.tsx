@@ -18,9 +18,11 @@ export default function Settings() {
   const queryClient = useQueryClient();
   const [location] = useLocation();
   
-  // Batch thesis extraction state
-  const [isExtracting, setIsExtracting] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
+  // Unified contact intelligence pipeline state (combines enrichment + thesis extraction)
+  const [isPipelineRunning, setIsPipelineRunning] = useState(false);
+  const [isPipelinePaused, setIsPipelinePaused] = useState(false);
+  const [pipelineStage, setPipelineStage] = useState<'enrichment' | 'extraction'>('enrichment');
+  const [enrichProgress, setEnrichProgress] = useState({ processed: 0, total: 0, succeeded: 0, failed: 0 });
   const [extractionProgress, setExtractionProgress] = useState({ processed: 0, total: 0, succeeded: 0, failed: 0 });
   const pausedRef = useRef(false);
   const abortRef = useRef(false);
@@ -33,14 +35,6 @@ export default function Settings() {
   // Hunter.io email finding state
   const [isHunterProcessing, setIsHunterProcessing] = useState(false);
   const [hunterResults, setHunterResults] = useState<{ processed: number; successful: number } | null>(null);
-  
-  // Auto-enrich contact bios state
-  const [isEnriching, setIsEnriching] = useState(false);
-  const [isEnrichPaused, setIsEnrichPaused] = useState(false);
-  const [enrichProgress, setEnrichProgress] = useState({ processed: 0, total: 0, succeeded: 0, failed: 0 });
-  const enrichPausedRef = useRef(false);
-  const enrichAbortRef = useRef(false);
-  const [runThesisAfterEnrich, setRunThesisAfterEnrich] = useState(true);
 
   // Check for Google Calendar connection success
   useEffect(() => {
@@ -411,75 +405,44 @@ export default function Settings() {
     return allContacts;
   };
   
-  // Batch contact enrichment function - researches all contacts using AI
-  const runBatchEnrichment = useCallback(async () => {
-    setIsEnriching(true);
-    setIsEnrichPaused(false);
-    enrichPausedRef.current = false;
-    enrichAbortRef.current = false;
+  // Unified pipeline: Batch contact enrichment + thesis extraction
+  const runContactIntelligencePipeline = useCallback(async () => {
+    setIsPipelineRunning(true);
+    setIsPipelinePaused(false);
+    pausedRef.current = false;
+    abortRef.current = false;
     
     try {
-      toast({ title: "Loading contacts...", description: "Fetching all contacts for AI research" });
+      toast({ title: "Starting Contact Intelligence Pipeline", description: "Step 1: AI Research..." });
+      setPipelineStage('enrichment');
       
-      // Fetch all contacts with names
+      // STEP 1: Enrich contacts
       const allContacts = await fetchAllContactsForEnrichment();
       
       if (!allContacts || allContacts.length === 0) {
         toast({ title: "No contacts found", variant: "destructive" });
-        setIsEnriching(false);
+        setIsPipelineRunning(false);
         return;
       }
       
-      const total = allContacts.length;
-      setEnrichProgress({ processed: 0, total, succeeded: 0, failed: 0 });
+      const enrichTotal = allContacts.length;
+      setEnrichProgress({ processed: 0, total: enrichTotal, succeeded: 0, failed: 0 });
       
-      toast({ 
-        title: "Starting AI research", 
-        description: `Processing ${total.toLocaleString()} contacts...` 
-      });
+      let enrichSucceeded = 0, enrichFailed = 0, enrichProcessed = 0;
+      const ENRICH_BATCH_SIZE = 3;
+      const ENRICH_DELAY = 3000;
       
-      let succeeded = 0;
-      let failed = 0;
-      let processed = 0;
-      
-      // Process in batches of 3 with delays (slower for AI web research)
-      const BATCH_SIZE = 3;
-      const DELAY_BETWEEN_BATCHES = 3000; // 3 seconds between batches
-      
-      let wasStopped = false;
-      
-      for (let i = 0; i < allContacts.length; i += BATCH_SIZE) {
-        // Check if aborted before starting batch
-        if (enrichAbortRef.current) {
-          wasStopped = true;
-          break;
-        }
+      for (let i = 0; i < allContacts.length; i += ENRICH_BATCH_SIZE) {
+        if (abortRef.current) break;
+        while (pausedRef.current && !abortRef.current) await new Promise(resolve => setTimeout(resolve, 500));
+        if (abortRef.current) break;
         
-        // Wait while paused
-        while (enrichPausedRef.current && !enrichAbortRef.current) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-        
-        // Check again after resume
-        if (enrichAbortRef.current) {
-          wasStopped = true;
-          break;
-        }
-        
-        const batch = allContacts.slice(i, i + BATCH_SIZE);
-        
-        // Process batch in parallel
+        const batch = allContacts.slice(i, i + ENRICH_BATCH_SIZE);
         const results = await Promise.allSettled(
           batch.map(async (contact) => {
             try {
               const result = await researchContact(contact.id);
-              // Only count as success if we actually updated the contact
-              return { 
-                success: result.success && result.updated, 
-                name: contact.name,
-                bioFound: result.bioFound,
-                thesisFound: result.thesisFound
-              };
+              return { success: result.success && result.updated, name: contact.name };
             } catch (error) {
               console.error(`Failed to research ${contact.name}:`, error);
               return { success: false, name: contact.name };
@@ -487,68 +450,90 @@ export default function Settings() {
           })
         );
         
-        // Count results
         results.forEach((result) => {
-          processed++;
-          if (result.status === 'fulfilled' && result.value.success) {
-            succeeded++;
-          } else {
-            failed++;
-          }
+          enrichProcessed++;
+          if (result.status === 'fulfilled' && result.value.success) enrichSucceeded++;
+          else enrichFailed++;
         });
         
-        setEnrichProgress({ 
-          processed, 
-          total, 
-          succeeded, 
-          failed 
-        });
+        setEnrichProgress({ processed: enrichProcessed, total: enrichTotal, succeeded: enrichSucceeded, failed: enrichFailed });
         
-        // Rate limiting delay
-        if (i + BATCH_SIZE < allContacts.length && !enrichAbortRef.current) {
-          await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES));
+        if (i + ENRICH_BATCH_SIZE < allContacts.length && !abortRef.current) {
+          await new Promise(resolve => setTimeout(resolve, ENRICH_DELAY));
         }
       }
       
-      setIsEnriching(false);
+      if (abortRef.current) {
+        setIsPipelineRunning(false);
+        toast({ title: "Pipeline stopped", description: "Contact enrichment interrupted" });
+        return;
+      }
+      
+      // STEP 2: Extract thesis from all contacts
+      toast({ title: "Step 2: Thesis Extraction", description: "Running AI thesis extraction..." });
+      setPipelineStage('extraction');
+      refetchEnrichStats();
+      
+      const contactsForThesis = allContacts.filter(c => 
+        (c.bio && c.bio.trim().length > 0) || 
+        (c.title && c.title.trim().length > 0) || 
+        (c.investor_notes && c.investor_notes.trim().length > 0)
+      );
+      
+      const thesisTotal = contactsForThesis.length;
+      setExtractionProgress({ processed: 0, total: thesisTotal, succeeded: 0, failed: 0 });
+      
+      let thesisSucceeded = 0, thesisFailed = 0, thesisProcessed = 0;
+      const THESIS_BATCH_SIZE = 5;
+      const THESIS_DELAY = 2000;
+      
+      for (let i = 0; i < contactsForThesis.length; i += THESIS_BATCH_SIZE) {
+        if (abortRef.current) break;
+        while (pausedRef.current && !abortRef.current) await new Promise(resolve => setTimeout(resolve, 500));
+        if (abortRef.current) break;
+        
+        const batch = contactsForThesis.slice(i, i + THESIS_BATCH_SIZE);
+        const results = await Promise.allSettled(
+          batch.map(async (contact) => {
+            try {
+              await extractThesis(contact.id);
+              return { success: true, name: contact.name };
+            } catch (error) {
+              console.error(`Failed to extract thesis for ${contact.name}:`, error);
+              return { success: false, name: contact.name };
+            }
+          })
+        );
+        
+        results.forEach((result) => {
+          thesisProcessed++;
+          if (result.status === 'fulfilled' && result.value.success) thesisSucceeded++;
+          else thesisFailed++;
+        });
+        
+        setExtractionProgress({ processed: thesisProcessed, total: thesisTotal, succeeded: thesisSucceeded, failed: thesisFailed });
+        
+        if (i + THESIS_BATCH_SIZE < contactsForThesis.length && !abortRef.current) {
+          await new Promise(resolve => setTimeout(resolve, THESIS_DELAY));
+        }
+      }
+      
+      setIsPipelineRunning(false);
       refetchEnrichStats();
       refetchThesisStats();
       queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
       
-      if (wasStopped) {
-        toast({ 
-          title: "Enrichment stopped", 
-          description: `Processed ${processed} of ${total}. ${succeeded} succeeded, ${failed} failed.` 
-        });
-      } else {
-        toast({ 
-          title: "AI research complete!", 
-          description: `Enriched ${succeeded} contacts. ${failed} failed.` 
-        });
-        
-        // Automatically run thesis extraction on ALL contacts after enrichment
-        if (runThesisAfterEnrich) {
-          toast({ 
-            title: "Starting thesis extraction...", 
-            description: "Running AI thesis extraction on all contacts" 
-          });
-          // Small delay then start thesis extraction
-          setTimeout(() => {
-            runBatchThesisExtractionAll();
-          }, 2000);
-        }
-      }
+      toast({ 
+        title: "Contact Intelligence Pipeline Complete!", 
+        description: `Enriched ${enrichSucceeded}/${enrichTotal} contacts. Extracted thesis for ${thesisSucceeded}/${thesisTotal}.` 
+      });
       
     } catch (error) {
-      console.error('Batch enrichment error:', error);
-      toast({ 
-        title: "Enrichment error", 
-        description: String(error), 
-        variant: "destructive" 
-      });
-      setIsEnriching(false);
+      console.error('Pipeline error:', error);
+      toast({ title: "Pipeline error", description: String(error), variant: "destructive" });
+      setIsPipelineRunning(false);
     }
-  }, [toast, refetchEnrichStats, refetchThesisStats, queryClient, runThesisAfterEnrich]);
+  }, [toast, refetchEnrichStats, refetchThesisStats, queryClient]);
   
   // Run thesis extraction on ALL contacts (not just ones missing thesis)
   const runBatchThesisExtractionAll = useCallback(async () => {
@@ -670,15 +655,15 @@ export default function Settings() {
     }
   }, [toast, refetchThesisStats, queryClient]);
   
-  const handleEnrichPauseResume = () => {
-    enrichPausedRef.current = !enrichPausedRef.current;
-    setIsEnrichPaused(enrichPausedRef.current);
+  const handlePipelinePauseResume = () => {
+    pausedRef.current = !pausedRef.current;
+    setIsPipelinePaused(pausedRef.current);
   };
   
-  const handleEnrichStop = () => {
-    enrichAbortRef.current = true;
-    enrichPausedRef.current = false;
-    setIsEnrichPaused(false);
+  const handlePipelineStop = () => {
+    abortRef.current = true;
+    pausedRef.current = false;
+    setIsPipelinePaused(false);
   };
   
   // Server-side batch extraction - continues even if page is refreshed
@@ -882,75 +867,91 @@ export default function Settings() {
 
         <Card className="p-6">
           <div className="flex items-center gap-3 mb-4">
-            <Globe className="w-5 h-5 text-primary" />
-            <h2 className="text-xl font-semibold">Auto-Enrich Contact Bios</h2>
+            <BrainCircuit className="w-5 h-5 text-primary" />
+            <h2 className="text-xl font-semibold">Contact Intelligence Pipeline</h2>
           </div>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Research contacts using AI to auto-fill bio, title, and investor notes. For investor contacts, also searches for investment thesis information from their fund websites.
+              Run a complete AI analysis on all contacts: Step 1) AI researches bio/title and investor info, Step 2) Extracts investment thesis keywords. This combines enrichment and thesis extraction into one workflow.
             </p>
             
-            <div className="p-3 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-md text-sm text-purple-700 dark:text-purple-300">
-              <strong>Pipeline:</strong> 1) AI researches each contact's bio/title 2) For investors, searches fund thesis 3) Automatically runs thesis extraction on all contacts
+            <div className="p-3 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-md text-sm text-indigo-700 dark:text-indigo-300">
+              <strong>Unified Pipeline:</strong> {pipelineStage === 'enrichment' ? '📝 Step 1: AI Research' : '🧠 Step 2: Thesis Extraction'}
             </div>
             
-            {enrichStats && (
+            {enrichStats && thesisStats && (
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground">Total contacts:</span>
                   <span className="ml-2 font-medium">{enrichStats.total.toLocaleString()}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">With name:</span>
-                  <span className="ml-2 font-medium">{enrichStats.withName.toLocaleString()}</span>
+                  <span className="text-muted-foreground">Need enrichment:</span>
+                  <span className="ml-2 font-medium text-amber-600">{enrichStats.needsEnrichment.toLocaleString()}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Already enriched:</span>
+                  <span className="text-muted-foreground">Enriched:</span>
                   <span className="ml-2 font-medium text-green-600">{enrichStats.enriched.toLocaleString()}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Needs enrichment:</span>
-                  <span className="ml-2 font-medium text-amber-600">{enrichStats.needsEnrichment.toLocaleString()}</span>
+                  <span className="text-muted-foreground">With thesis:</span>
+                  <span className="ml-2 font-medium text-green-600">{thesisStats.withThesis.toLocaleString()}</span>
                 </div>
               </div>
             )}
             
-            {isEnriching && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    {isEnrichPaused ? 'Paused' : 'Researching...'}
-                  </span>
-                  <span className="text-muted-foreground">
-                    {enrichProgress.processed} / {enrichProgress.total} 
-                    ({enrichProgress.succeeded} succeeded, {enrichProgress.failed} failed)
-                  </span>
-                </div>
-                <Progress 
-                  value={(enrichProgress.processed / Math.max(enrichProgress.total, 1)) * 100} 
-                  className="h-2"
-                />
+            {isPipelineRunning && (
+              <div className="space-y-3">
+                {pipelineStage === 'enrichment' && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        {isPipelinePaused ? 'Paused' : 'Step 1: AI Research...'}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {enrichProgress.processed} / {enrichProgress.total}
+                      </span>
+                    </span>
+                    </div>
+                    <Progress value={(enrichProgress.processed / Math.max(enrichProgress.total, 1)) * 100} className="h-2" />
+                  </div>
+                )}
+                
+                {pipelineStage === 'extraction' && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        {isPipelinePaused ? 'Paused' : 'Step 2: Thesis Extraction...'}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {extractionProgress.processed} / {extractionProgress.total}
+                      </span>
+                    </div>
+                    <Progress value={(extractionProgress.processed / Math.max(extractionProgress.total, 1)) * 100} className="h-2" />
+                  </div>
+                )}
               </div>
             )}
             
             <div className="flex flex-wrap gap-2">
-              {!isEnriching ? (
+              {!isPipelineRunning ? (
                 <>
                   <Button
                     size="sm"
-                    onClick={runBatchEnrichment}
-                    disabled={!enrichStats || enrichStats.withName === 0 || isExtracting}
-                    data-testid="button-start-enrichment"
+                    onClick={runContactIntelligencePipeline}
+                    disabled={!enrichStats || enrichStats.withName === 0}
+                    data-testid="button-start-pipeline"
                   >
-                    <Globe className="w-4 h-4 mr-2" />
-                    Start AI Research ({enrichStats?.withName.toLocaleString() || 0} contacts)
+                    <BrainCircuit className="w-4 h-4 mr-2" />
+                    Start Pipeline ({enrichStats?.withName.toLocaleString() || 0} contacts)
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => refetchEnrichStats()}
-                    data-testid="button-refresh-enrich-stats"
+                    onClick={() => { refetchEnrichStats(); refetchThesisStats(); }}
+                    data-testid="button-refresh-pipeline-stats"
                   >
                     <RotateCcw className="w-4 h-4 mr-2" />
                     Refresh
@@ -961,132 +962,23 @@ export default function Settings() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={handleEnrichPauseResume}
-                    data-testid="button-pause-enrichment"
+                    onClick={handlePipelinePauseResume}
+                    data-testid="button-pause-pipeline"
                   >
-                    {isEnrichPaused ? <Play className="w-4 h-4 mr-2" /> : <Pause className="w-4 h-4 mr-2" />}
-                    {isEnrichPaused ? 'Resume' : 'Pause'}
+                    {isPipelinePaused ? <Play className="w-4 h-4 mr-2" /> : <Pause className="w-4 h-4 mr-2" />}
+                    {isPipelinePaused ? 'Resume' : 'Pause'}
                   </Button>
                   <Button
                     size="sm"
                     variant="destructive"
-                    onClick={handleEnrichStop}
-                    data-testid="button-stop-enrichment"
+                    onClick={handlePipelineStop}
+                    data-testid="button-stop-pipeline"
                   >
                     Stop
                   </Button>
                 </>
               )}
             </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <BrainCircuit className="w-5 h-5 text-primary" />
-            <h2 className="text-xl font-semibold">AI Thesis Extraction</h2>
-          </div>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Extract investment thesis keywords from your contacts using AI. This analyzes bio, title, and investor notes to identify sectors, stages, check sizes, and geographic focus.
-            </p>
-            
-            <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-md text-sm text-blue-700 dark:text-blue-300">
-              <strong>Browser-based extraction:</strong> Keep this tab open while processing. Progress is saved to the database - if interrupted, click "Continue" to resume.
-            </div>
-            
-            {thesisStats && (
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Total contacts:</span>
-                  <span className="ml-2 font-medium">{thesisStats.total.toLocaleString()}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">With thesis data:</span>
-                  <span className="ml-2 font-medium text-green-600">{thesisStats.withThesis.toLocaleString()}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Eligible for extraction:</span>
-                  <span className="ml-2 font-medium">{thesisStats.eligible.toLocaleString()}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Pending extraction:</span>
-                  <span className="ml-2 font-medium text-amber-600">{thesisStats.needsExtraction.toLocaleString()}</span>
-                </div>
-              </div>
-            )}
-            
-            {isExtracting && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    {isPaused ? 'Paused' : 'Processing...'}
-                  </span>
-                  <span className="text-muted-foreground">
-                    {extractionProgress.processed} / {extractionProgress.total} 
-                    ({extractionProgress.succeeded} succeeded, {extractionProgress.failed} failed)
-                  </span>
-                </div>
-                <Progress 
-                  value={(extractionProgress.processed / Math.max(extractionProgress.total, 1)) * 100} 
-                  className="h-2"
-                />
-              </div>
-            )}
-            
-            <div className="flex flex-wrap gap-2">
-              {!isExtracting ? (
-                <>
-                  <Button
-                    size="sm"
-                    onClick={runBatchExtraction}
-                    disabled={!thesisStats || thesisStats.needsExtraction === 0}
-                    data-testid="button-start-extraction"
-                  >
-                    <BrainCircuit className="w-4 h-4 mr-2" />
-                    {thesisStats?.needsExtraction === thesisStats?.eligible 
-                      ? `Extract All (${thesisStats?.needsExtraction.toLocaleString() || 0})`
-                      : `Continue (${thesisStats?.needsExtraction.toLocaleString() || 0} remaining)`
-                    }
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => refetchThesisStats()}
-                    data-testid="button-refresh-stats"
-                  >
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Refresh Status
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handlePauseResume}
-                    data-testid="button-pause-extraction"
-                  >
-                    {isPaused ? <Play className="w-4 h-4 mr-2" /> : <Pause className="w-4 h-4 mr-2" />}
-                    {isPaused ? 'Resume' : 'Pause'}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={handleStop}
-                    data-testid="button-stop-extraction"
-                  >
-                    Stop
-                  </Button>
-                </>
-              )}
-            </div>
-            
-            <p className="text-xs text-muted-foreground">
-              Estimated time: ~{Math.ceil((thesisStats?.needsExtraction || 0) / 5 * 2 / 60)} minutes for {thesisStats?.needsExtraction.toLocaleString() || 0} contacts (5 at a time with delays).
-              Cost: ~${((thesisStats?.needsExtraction || 0) * 0.0003).toFixed(2)} (GPT-4o-mini)
-            </p>
           </div>
         </Card>
 
