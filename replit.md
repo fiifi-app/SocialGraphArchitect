@@ -3,16 +3,26 @@
 ## Overview
 The Social Graph Connector is a web-based application designed for VCs and investors. Its primary purpose is to help users identify valuable introductions from their conversations by automatically matching discussion topics against their network's investment theses. Key capabilities include recording conversations with live transcription, extracting investment entities (sectors, stages, check sizes, geos, personas, intents), matching these against a contact/thesis database with explainable scoring, and generating double opt-in introduction emails using AI. The project aims to provide multi-user support with secure authentication and a clean, professional user interface.
 
-## REMINDER: Deploy Edge Function (when at laptop)
-Deploy the `batch-extract-thesis` Edge Function to Supabase for faster server-side thesis extraction:
+## REMINDER: Deploy Edge Functions (when at laptop)
+Deploy the Edge Functions to Supabase:
 ```bash
 # From your laptop with Supabase CLI installed:
+supabase functions deploy research-contact --project-ref YOUR_PROJECT_REF
 supabase functions deploy batch-extract-thesis --project-ref YOUR_PROJECT_REF
 supabase secrets set OPENAI_API_KEY=your_key --project-ref YOUR_PROJECT_REF
 ```
-Or manually via Supabase Dashboard → Edge Functions → Create → paste code from `supabase/functions/batch-extract-thesis/index.ts`
+Or manually via Supabase Dashboard → Edge Functions → Create → paste code from:
+- `supabase/functions/research-contact/index.ts` (AI bio/thesis research)
+- `supabase/functions/batch-extract-thesis/index.ts` (batch thesis extraction)
 
 ## Recent Changes
+- **Auto-Enrich Contact Bios (NEW):** AI-powered research pipeline on Settings page:
+  - Step 1: Researches each contact using OpenAI to find bio, title, and background info
+  - Step 2: For investor contacts (GP, Angel, Family Office, PE), also searches for investment thesis info
+  - Step 3: Automatically runs thesis extraction on ALL contacts after enrichment completes
+  - Browser-based batch processing with pause/resume/stop controls
+  - Processes 3 contacts at a time with 3-second delays for rate limiting
+  - Edge Function: `research-contact` handles AI research per contact
 - **Automatic Thesis Extraction:** AI-powered thesis extraction now runs automatically when:
   - A new contact is created (if they have bio, title, or investor notes)
   - Contacts are imported via CSV (batch processing after enrichment completes)

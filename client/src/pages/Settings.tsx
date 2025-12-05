@@ -9,7 +9,8 @@ import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
-import { extractThesis, checkHunterStatus, runHunterBatch, checkBatchExtractionStatus, runBatchExtraction as runBatchExtractionApi } from "@/lib/edgeFunctions";
+import { extractThesis, researchContact, checkHunterStatus, runHunterBatch, checkBatchExtractionStatus, runBatchExtraction as runBatchExtractionApi } from "@/lib/edgeFunctions";
+import { Globe } from "lucide-react";
 
 export default function Settings() {
   const { user, signOut } = useAuth();
@@ -32,6 +33,14 @@ export default function Settings() {
   // Hunter.io email finding state
   const [isHunterProcessing, setIsHunterProcessing] = useState(false);
   const [hunterResults, setHunterResults] = useState<{ processed: number; successful: number } | null>(null);
+  
+  // Auto-enrich contact bios state
+  const [isEnriching, setIsEnriching] = useState(false);
+  const [isEnrichPaused, setIsEnrichPaused] = useState(false);
+  const [enrichProgress, setEnrichProgress] = useState({ processed: 0, total: 0, succeeded: 0, failed: 0 });
+  const enrichPausedRef = useRef(false);
+  const enrichAbortRef = useRef(false);
+  const [runThesisAfterEnrich, setRunThesisAfterEnrich] = useState(true);
 
   // Check for Google Calendar connection success
   useEffect(() => {
@@ -134,6 +143,38 @@ export default function Settings() {
         eligible: eligibleCount || 0,
         withThesis: withThesisCount || 0,
         needsExtraction: (eligibleCount || 0) - (withThesisCount || 0),
+      };
+    },
+    enabled: !!user,
+  });
+  
+  // Query to count contacts needing bio enrichment (have name but missing bio/title/investor_notes)
+  const { data: enrichStats, refetch: refetchEnrichStats } = useQuery({
+    queryKey: ['/enrich-stats'],
+    queryFn: async () => {
+      // Total contacts
+      const { count: totalContacts } = await supabase
+        .from('contacts')
+        .select('*', { count: 'exact', head: true });
+      
+      // Contacts with name (eligible for research)
+      const { count: withName } = await supabase
+        .from('contacts')
+        .select('*', { count: 'exact', head: true })
+        .not('name', 'is', null)
+        .neq('name', '');
+      
+      // Contacts already enriched (have bio or investor_notes with content)
+      const { count: enrichedCount } = await supabase
+        .from('contacts')
+        .select('*', { count: 'exact', head: true })
+        .or('bio.neq.,investor_notes.neq.');
+      
+      return {
+        total: totalContacts || 0,
+        withName: withName || 0,
+        enriched: enrichedCount || 0,
+        needsEnrichment: (withName || 0) - (enrichedCount || 0),
       };
     },
     enabled: !!user,
@@ -341,6 +382,305 @@ export default function Settings() {
     setIsPaused(false);
   };
   
+  // Fetch all contacts for enrichment (ALL contacts with names)
+  const fetchAllContactsForEnrichment = async () => {
+    const allContacts: any[] = [];
+    const PAGE_SIZE = 1000;
+    let from = 0;
+    let hasMore = true;
+    
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('id, name, company, website, email, title, bio, investor_notes, contact_type, is_investor')
+        .not('name', 'is', null)
+        .neq('name', '')
+        .range(from, from + PAGE_SIZE - 1);
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        allContacts.push(...data);
+        from += PAGE_SIZE;
+        hasMore = data.length === PAGE_SIZE;
+      } else {
+        hasMore = false;
+      }
+    }
+    
+    return allContacts;
+  };
+  
+  // Batch contact enrichment function - researches all contacts using AI
+  const runBatchEnrichment = useCallback(async () => {
+    setIsEnriching(true);
+    setIsEnrichPaused(false);
+    enrichPausedRef.current = false;
+    enrichAbortRef.current = false;
+    
+    try {
+      toast({ title: "Loading contacts...", description: "Fetching all contacts for AI research" });
+      
+      // Fetch all contacts with names
+      const allContacts = await fetchAllContactsForEnrichment();
+      
+      if (!allContacts || allContacts.length === 0) {
+        toast({ title: "No contacts found", variant: "destructive" });
+        setIsEnriching(false);
+        return;
+      }
+      
+      const total = allContacts.length;
+      setEnrichProgress({ processed: 0, total, succeeded: 0, failed: 0 });
+      
+      toast({ 
+        title: "Starting AI research", 
+        description: `Processing ${total.toLocaleString()} contacts...` 
+      });
+      
+      let succeeded = 0;
+      let failed = 0;
+      let processed = 0;
+      
+      // Process in batches of 3 with delays (slower for AI web research)
+      const BATCH_SIZE = 3;
+      const DELAY_BETWEEN_BATCHES = 3000; // 3 seconds between batches
+      
+      let wasStopped = false;
+      
+      for (let i = 0; i < allContacts.length; i += BATCH_SIZE) {
+        // Check if aborted before starting batch
+        if (enrichAbortRef.current) {
+          wasStopped = true;
+          break;
+        }
+        
+        // Wait while paused
+        while (enrichPausedRef.current && !enrichAbortRef.current) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
+        // Check again after resume
+        if (enrichAbortRef.current) {
+          wasStopped = true;
+          break;
+        }
+        
+        const batch = allContacts.slice(i, i + BATCH_SIZE);
+        
+        // Process batch in parallel
+        const results = await Promise.allSettled(
+          batch.map(async (contact) => {
+            try {
+              const result = await researchContact(contact.id);
+              // Only count as success if we actually updated the contact
+              return { 
+                success: result.success && result.updated, 
+                name: contact.name,
+                bioFound: result.bioFound,
+                thesisFound: result.thesisFound
+              };
+            } catch (error) {
+              console.error(`Failed to research ${contact.name}:`, error);
+              return { success: false, name: contact.name };
+            }
+          })
+        );
+        
+        // Count results
+        results.forEach((result) => {
+          processed++;
+          if (result.status === 'fulfilled' && result.value.success) {
+            succeeded++;
+          } else {
+            failed++;
+          }
+        });
+        
+        setEnrichProgress({ 
+          processed, 
+          total, 
+          succeeded, 
+          failed 
+        });
+        
+        // Rate limiting delay
+        if (i + BATCH_SIZE < allContacts.length && !enrichAbortRef.current) {
+          await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES));
+        }
+      }
+      
+      setIsEnriching(false);
+      refetchEnrichStats();
+      refetchThesisStats();
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
+      
+      if (wasStopped) {
+        toast({ 
+          title: "Enrichment stopped", 
+          description: `Processed ${processed} of ${total}. ${succeeded} succeeded, ${failed} failed.` 
+        });
+      } else {
+        toast({ 
+          title: "AI research complete!", 
+          description: `Enriched ${succeeded} contacts. ${failed} failed.` 
+        });
+        
+        // Automatically run thesis extraction on ALL contacts after enrichment
+        if (runThesisAfterEnrich) {
+          toast({ 
+            title: "Starting thesis extraction...", 
+            description: "Running AI thesis extraction on all contacts" 
+          });
+          // Small delay then start thesis extraction
+          setTimeout(() => {
+            runBatchThesisExtractionAll();
+          }, 2000);
+        }
+      }
+      
+    } catch (error) {
+      console.error('Batch enrichment error:', error);
+      toast({ 
+        title: "Enrichment error", 
+        description: String(error), 
+        variant: "destructive" 
+      });
+      setIsEnriching(false);
+    }
+  }, [toast, refetchEnrichStats, refetchThesisStats, queryClient, runThesisAfterEnrich]);
+  
+  // Run thesis extraction on ALL contacts (not just ones missing thesis)
+  const runBatchThesisExtractionAll = useCallback(async () => {
+    setIsExtracting(true);
+    setIsPaused(false);
+    pausedRef.current = false;
+    abortRef.current = false;
+    
+    try {
+      toast({ title: "Loading all contacts...", description: "Fetching all contacts for thesis extraction" });
+      
+      // Fetch ALL contacts with any text content
+      const allContacts = await fetchAllContactsForEnrichment();
+      
+      // Filter to only contacts with some text to analyze
+      const contactsToProcess = allContacts.filter(c => 
+        (c.bio && c.bio.trim().length > 0) || 
+        (c.title && c.title.trim().length > 0) || 
+        (c.investor_notes && c.investor_notes.trim().length > 0)
+      );
+      
+      const total = contactsToProcess.length;
+      setExtractionProgress({ processed: 0, total, succeeded: 0, failed: 0 });
+      
+      if (total === 0) {
+        toast({ title: "No contacts with data to extract thesis from" });
+        setIsExtracting(false);
+        return;
+      }
+      
+      toast({ 
+        title: "Starting thesis extraction on ALL contacts", 
+        description: `Processing ${total.toLocaleString()} contacts...` 
+      });
+      
+      let succeeded = 0;
+      let failed = 0;
+      let processed = 0;
+      
+      const BATCH_SIZE = 5;
+      const DELAY_BETWEEN_BATCHES = 2000;
+      
+      let wasStopped = false;
+      
+      for (let i = 0; i < contactsToProcess.length; i += BATCH_SIZE) {
+        if (abortRef.current) {
+          wasStopped = true;
+          break;
+        }
+        
+        while (pausedRef.current && !abortRef.current) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
+        if (abortRef.current) {
+          wasStopped = true;
+          break;
+        }
+        
+        const batch = contactsToProcess.slice(i, i + BATCH_SIZE);
+        
+        const results = await Promise.allSettled(
+          batch.map(async (contact) => {
+            try {
+              await extractThesis(contact.id);
+              return { success: true, name: contact.name };
+            } catch (error) {
+              console.error(`Failed to extract thesis for ${contact.name}:`, error);
+              return { success: false, name: contact.name };
+            }
+          })
+        );
+        
+        results.forEach((result) => {
+          processed++;
+          if (result.status === 'fulfilled' && result.value.success) {
+            succeeded++;
+          } else {
+            failed++;
+          }
+        });
+        
+        setExtractionProgress({ 
+          processed, 
+          total, 
+          succeeded, 
+          failed 
+        });
+        
+        if (i + BATCH_SIZE < contactsToProcess.length && !abortRef.current) {
+          await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES));
+        }
+      }
+      
+      setIsExtracting(false);
+      refetchThesisStats();
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
+      
+      if (wasStopped) {
+        toast({ 
+          title: "Extraction stopped", 
+          description: `Processed ${processed} of ${total}. ${succeeded} succeeded, ${failed} failed.` 
+        });
+      } else {
+        toast({ 
+          title: "Thesis extraction complete!", 
+          description: `Extracted ${succeeded} theses from ALL contacts. ${failed} failed.` 
+        });
+      }
+      
+    } catch (error) {
+      console.error('Batch extraction error:', error);
+      toast({ 
+        title: "Extraction error", 
+        description: String(error), 
+        variant: "destructive" 
+      });
+      setIsExtracting(false);
+    }
+  }, [toast, refetchThesisStats, queryClient]);
+  
+  const handleEnrichPauseResume = () => {
+    enrichPausedRef.current = !enrichPausedRef.current;
+    setIsEnrichPaused(enrichPausedRef.current);
+  };
+  
+  const handleEnrichStop = () => {
+    enrichAbortRef.current = true;
+    enrichPausedRef.current = false;
+    setIsEnrichPaused(false);
+  };
+  
   // Server-side batch extraction - continues even if page is refreshed
   const runServerBatchExtraction = useCallback(async () => {
     setIsServerExtracting(true);
@@ -538,6 +878,107 @@ export default function Settings() {
               </Button>
             </div>
           )}
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <Globe className="w-5 h-5 text-primary" />
+            <h2 className="text-xl font-semibold">Auto-Enrich Contact Bios</h2>
+          </div>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Research contacts using AI to auto-fill bio, title, and investor notes. For investor contacts, also searches for investment thesis information from their fund websites.
+            </p>
+            
+            <div className="p-3 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-md text-sm text-purple-700 dark:text-purple-300">
+              <strong>Pipeline:</strong> 1) AI researches each contact's bio/title 2) For investors, searches fund thesis 3) Automatically runs thesis extraction on all contacts
+            </div>
+            
+            {enrichStats && (
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Total contacts:</span>
+                  <span className="ml-2 font-medium">{enrichStats.total.toLocaleString()}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">With name:</span>
+                  <span className="ml-2 font-medium">{enrichStats.withName.toLocaleString()}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Already enriched:</span>
+                  <span className="ml-2 font-medium text-green-600">{enrichStats.enriched.toLocaleString()}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Needs enrichment:</span>
+                  <span className="ml-2 font-medium text-amber-600">{enrichStats.needsEnrichment.toLocaleString()}</span>
+                </div>
+              </div>
+            )}
+            
+            {isEnriching && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {isEnrichPaused ? 'Paused' : 'Researching...'}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {enrichProgress.processed} / {enrichProgress.total} 
+                    ({enrichProgress.succeeded} succeeded, {enrichProgress.failed} failed)
+                  </span>
+                </div>
+                <Progress 
+                  value={(enrichProgress.processed / Math.max(enrichProgress.total, 1)) * 100} 
+                  className="h-2"
+                />
+              </div>
+            )}
+            
+            <div className="flex flex-wrap gap-2">
+              {!isEnriching ? (
+                <>
+                  <Button
+                    size="sm"
+                    onClick={runBatchEnrichment}
+                    disabled={!enrichStats || enrichStats.withName === 0 || isExtracting}
+                    data-testid="button-start-enrichment"
+                  >
+                    <Globe className="w-4 h-4 mr-2" />
+                    Start AI Research ({enrichStats?.withName.toLocaleString() || 0} contacts)
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => refetchEnrichStats()}
+                    data-testid="button-refresh-enrich-stats"
+                  >
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Refresh
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleEnrichPauseResume}
+                    data-testid="button-pause-enrichment"
+                  >
+                    {isEnrichPaused ? <Play className="w-4 h-4 mr-2" /> : <Pause className="w-4 h-4 mr-2" />}
+                    {isEnrichPaused ? 'Resume' : 'Pause'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={handleEnrichStop}
+                    data-testid="button-stop-enrichment"
+                  >
+                    Stop
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
         </Card>
 
         <Card className="p-6">

@@ -120,6 +120,27 @@ export async function runHunterBatch(limit: number = 1) {
   return data;
 }
 
+// Research contact bio using AI web search
+export async function researchContact(contactId: string) {
+  console.log('[Research] Researching contact:', contactId);
+  const { data, error } = await supabase.functions.invoke('research-contact', {
+    body: { contactId }
+  });
+  
+  if (error) {
+    console.error('Research contact error:', error);
+    throw error;
+  }
+  console.log('Research completed:', data);
+  return data as {
+    success: boolean;
+    updated: boolean;
+    fields: string[];
+    bioFound: boolean;
+    thesisFound: boolean;
+  };
+}
+
 // Server-side batch thesis extraction
 export async function checkBatchExtractionStatus() {
   const { data, error } = await supabase.functions.invoke('batch-extract-thesis', {
