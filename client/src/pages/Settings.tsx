@@ -29,8 +29,10 @@ export default function Settings() {
     currentBatch,
     totalBatches,
     startPipeline,
+    resumePipeline,
     pauseResumePipeline,
     stopPipeline,
+    hasInterruptedPipeline,
   } = usePipeline();
   
   // Legacy state for standalone thesis extraction (separate from pipeline)
@@ -814,14 +816,26 @@ export default function Settings() {
             <div className="flex flex-wrap gap-2">
               {!isPipelineRunning ? (
                 <>
+                  {hasInterruptedPipeline && (
+                    <Button
+                      size="sm"
+                      variant="default"
+                      onClick={resumePipeline}
+                      data-testid="button-resume-pipeline"
+                    >
+                      <Play className="w-4 h-4 mr-2" />
+                      Resume ({enrichProgress.total - enrichProgress.processed} remaining)
+                    </Button>
+                  )}
                   <Button
                     size="sm"
+                    variant={hasInterruptedPipeline ? "outline" : "default"}
                     onClick={startPipeline}
                     disabled={!enrichStats || enrichStats.withName === 0}
                     data-testid="button-start-pipeline"
                   >
                     <BrainCircuit className="w-4 h-4 mr-2" />
-                    Start Pipeline ({enrichStats?.withName.toLocaleString() || 0} contacts)
+                    {hasInterruptedPipeline ? 'Start Fresh' : `Start Pipeline (${enrichStats?.withName.toLocaleString() || 0} contacts)`}
                   </Button>
                   <Button
                     size="sm"
