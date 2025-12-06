@@ -327,41 +327,51 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
     abortRef.current = false;
     
     try {
-      const remainingIds = savedState.contactIds.filter(id => !savedState.processedIds.includes(id));
+      const processedSet = new Set(savedState.processedIds);
+      const remainingCount = savedState.contactIds.length - savedState.processedIds.length;
+      
       toast({ 
         title: "Resuming Pipeline", 
-        description: `Continuing with ${remainingIds.length} remaining contacts...` 
+        description: `Continuing with ${remainingCount} remaining contacts...` 
       });
       
-      const { data: remainingContacts, error } = await supabase
-        .from('contacts')
-        .select('id, name, company, company_url, email, title, bio, investor_notes, contact_type, is_investor')
-        .in('id', remainingIds) as { data: any[] | null; error: any };
-      
-      if (error) throw error;
-      if (!remainingContacts || remainingContacts.length === 0) {
-        toast({ title: "No remaining contacts found", variant: "destructive" });
+      const allContacts = await fetchAllContactsForEnrichment();
+      if (!allContacts || allContacts.length === 0) {
+        toast({ title: "No contacts found", variant: "destructive" });
         setIsPipelineRunning(false);
         savePipelineState(null);
         setHasInterruptedPipeline(false);
         return;
       }
       
+      const remainingContacts = allContacts.filter(c => !processedSet.has(c.id));
+      
+      if (remainingContacts.length === 0) {
+        toast({ title: "All contacts already processed", description: "Pipeline complete!" });
+        setIsPipelineRunning(false);
+        savePipelineState(null);
+        setHasInterruptedPipeline(false);
+        return;
+      }
+      
+      const totalContacts = savedState.processedIds.length + remainingContacts.length;
+      
       setEnrichProgress({
         processed: savedState.processedIds.length,
-        total: savedState.totalContacts,
+        total: totalContacts,
         succeeded: savedState.enrichSucceeded,
         failed: savedState.enrichFailed
       });
       setExtractionProgress({
         processed: savedState.processedIds.length,
-        total: savedState.totalContacts,
+        total: totalContacts,
         succeeded: savedState.thesisSucceeded,
         failed: savedState.thesisFailed
       });
       
       const resumeState: PipelineState = {
         ...savedState,
+        totalContacts,
         contactIds: [...savedState.processedIds, ...remainingContacts.map(c => c.id)]
       };
       
