@@ -766,12 +766,20 @@ export default function Settings() {
                   <span className="ml-2 font-medium text-amber-600">{enrichStats.needsEnrichment.toLocaleString()}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Enriched:</span>
-                  <span className="ml-2 font-medium text-green-600">{enrichStats.enriched.toLocaleString()}</span>
+                  <span className="text-muted-foreground">Scanned:</span>
+                  <span className="ml-2 font-medium text-green-600">
+                    {isPipelineRunning || hasInterruptedPipeline 
+                      ? `${enrichProgress.processed}/${enrichProgress.total}` 
+                      : enrichStats.enriched.toLocaleString()}
+                  </span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">With thesis:</span>
-                  <span className="ml-2 font-medium text-green-600">{thesisStats.withThesis.toLocaleString()}</span>
+                  <span className="ml-2 font-medium text-green-600">
+                    {isPipelineRunning || hasInterruptedPipeline
+                      ? extractionProgress.succeeded
+                      : thesisStats.withThesis.toLocaleString()}
+                  </span>
                 </div>
               </div>
             )}
