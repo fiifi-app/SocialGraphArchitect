@@ -49,13 +49,7 @@ interface ParsedContact {
   errors: string[];
 }
 
-type UploadStage = 'upload' | 'parsing' | 'preview' | 'importing' | 'enriching' | 'complete';
-
-interface DuplicateAnalysis {
-  existingDuplicates: Array<{ csvContact: ParsedContact; existingContact: any; matchType: 'email' | 'name_company' }>;
-  csvDuplicates: Array<{ contacts: ParsedContact[]; matchType: 'email' | 'name_company' }>;
-  newContacts: ParsedContact[];
-}
+type UploadStage = 'upload' | 'parsing' | 'importing' | 'enriching' | 'complete';
 
 export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogProps) {
   const [file, setFile] = useState<File | null>(null);
@@ -70,8 +64,6 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
     failed: 0,
     enrichmentFailed: 0,
   });
-  const [duplicateAnalysis, setDuplicateAnalysis] = useState<DuplicateAnalysis | null>(null);
-  const [skipDuplicates, setSkipDuplicates] = useState(false);
   const { toast } = useToast();
 
   const validateEmail = (email: string): boolean => {
@@ -200,113 +192,6 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
     });
   }, []);
 
-  const analyzeDuplicates = async (parsedContacts: ParsedContact[]) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      toast({
-        title: "Authentication error",
-        description: "Please log in to import contacts",
-        variant: "destructive",
-      });
-      setStage('upload');
-      return;
-    }
-
-    const { data: existingContacts, error: fetchError } = await supabase
-      .from('contacts')
-      .select('id, name, email, company, title')
-      .eq('owned_by_profile', user.id);
-
-    if (fetchError) {
-      console.error('Error fetching existing contacts:', fetchError);
-      toast({
-        title: "Error checking duplicates",
-        description: "Could not check for duplicate contacts",
-        variant: "destructive",
-      });
-      setStage('upload');
-      return;
-    }
-
-    const existingByEmail = new Map<string, any>();
-    const existingByNameCompany = new Map<string, any>();
-    
-    existingContacts?.forEach(contact => {
-      if (contact.email) {
-        existingByEmail.set(contact.email.toLowerCase().trim(), contact);
-      }
-      if (contact.name && contact.company) {
-        const key = `${contact.name.toLowerCase().trim()}|${contact.company.toLowerCase().trim()}`;
-        existingByNameCompany.set(key, contact);
-      }
-    });
-
-    const existingDuplicates: DuplicateAnalysis['existingDuplicates'] = [];
-    const csvEmailGroups = new Map<string, ParsedContact[]>();
-    const csvNameCompanyGroups = new Map<string, ParsedContact[]>();
-    const newContacts: ParsedContact[] = [];
-
-    for (const csvContact of parsedContacts) {
-      let foundDuplicate = false;
-
-      if (csvContact.email) {
-        const emailKey = csvContact.email.toLowerCase().trim();
-        const existing = existingByEmail.get(emailKey);
-        if (existing) {
-          existingDuplicates.push({ csvContact, existingContact: existing, matchType: 'email' });
-          foundDuplicate = true;
-        }
-      }
-
-      if (!foundDuplicate && csvContact.name && csvContact.company) {
-        const key = `${csvContact.name.toLowerCase().trim()}|${csvContact.company.toLowerCase().trim()}`;
-        const existing = existingByNameCompany.get(key);
-        if (existing) {
-          existingDuplicates.push({ csvContact, existingContact: existing, matchType: 'name_company' });
-          foundDuplicate = true;
-        }
-      }
-
-      if (!foundDuplicate) {
-        if (csvContact.email) {
-          const emailKey = csvContact.email.toLowerCase().trim();
-          const group = csvEmailGroups.get(emailKey) || [];
-          group.push(csvContact);
-          csvEmailGroups.set(emailKey, group);
-        }
-        if (csvContact.name && csvContact.company) {
-          const key = `${csvContact.name.toLowerCase().trim()}|${csvContact.company.toLowerCase().trim()}`;
-          const group = csvNameCompanyGroups.get(key) || [];
-          group.push(csvContact);
-          csvNameCompanyGroups.set(key, group);
-        }
-        newContacts.push(csvContact);
-      }
-    }
-
-    const csvDuplicates: DuplicateAnalysis['csvDuplicates'] = [];
-    
-    csvEmailGroups.forEach((contacts, email) => {
-      if (contacts.length > 1) {
-        csvDuplicates.push({ contacts, matchType: 'email' });
-      }
-    });
-
-    csvNameCompanyGroups.forEach((contacts, key) => {
-      if (contacts.length > 1) {
-        const alreadyReported = csvDuplicates.some(d => 
-          d.contacts.some(c => contacts.includes(c))
-        );
-        if (!alreadyReported) {
-          csvDuplicates.push({ contacts, matchType: 'name_company' });
-        }
-      }
-    });
-
-    setDuplicateAnalysis({ existingDuplicates, csvDuplicates, newContacts });
-    setStage('preview');
-  };
-
   const importContacts = async (contactsToImport: ParsedContact[]) => {
     setStage('importing');
     setProgress(0);
@@ -325,7 +210,7 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
     const { data: existingContacts, error: fetchError } = await supabase
       .from('contacts')
       .select('id, name, email, company, title, linkedin_url, location, phone, bio, company_url, company_address, company_employees, company_founded, company_linkedin, company_twitter')
-      .eq('owned_by_profile', user.id);
+      .eq('owned_by_profile', user.id) as { data: any[] | null; error: any };
 
     if (fetchError) {
       console.error('Error fetching existing contacts:', fetchError);
@@ -337,16 +222,16 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
       return;
     }
 
-    // Build lookup maps for existing contacts
+    // Build lookup maps for existing contacts (normalize with trim + lowercase)
     const existingByEmail = new Map<string, any>();
     const existingByNameCompany = new Map<string, any>();
     
     existingContacts?.forEach(contact => {
       if (contact.email) {
-        existingByEmail.set(contact.email.toLowerCase(), contact);
+        existingByEmail.set(contact.email.trim().toLowerCase(), contact);
       }
       if (contact.name && contact.company) {
-        const key = `${contact.name.toLowerCase()}|${contact.company.toLowerCase()}`;
+        const key = `${contact.name.trim().toLowerCase()}|${contact.company.trim().toLowerCase()}`;
         existingByNameCompany.set(key, contact);
       }
     });
@@ -363,19 +248,18 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
     const warnings: string[] = [];
     const toUpdate: Array<{ id: string; data: any }> = [];
 
-    // Helper to update pending lookup maps
+    // Helper to update pending lookup maps (normalize with trim + lowercase)
     const updatePendingMaps = (contact: any) => {
       if (contact.email) {
-        pendingByEmail.set(contact.email.toLowerCase(), contact);
+        pendingByEmail.set(contact.email.trim().toLowerCase(), contact);
       }
       if (contact.name && contact.company) {
-        const key = `${contact.name.toLowerCase()}|${contact.company.toLowerCase()}`;
+        const key = `${contact.name.trim().toLowerCase()}|${contact.company.trim().toLowerCase()}`;
         pendingByNameCompany.set(key, contact);
       }
       // Always index by name for fallback matching
-      // Use Set to ensure no duplicate references
       if (contact.name) {
-        const nameKey = contact.name.toLowerCase();
+        const nameKey = contact.name.trim().toLowerCase();
         const existingArray = pendingByName.get(nameKey) || [];
         const existingSet = new Set(existingArray);
         existingSet.add(contact);
@@ -398,15 +282,15 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
         warnings.push(`${csvContact.name}: ${csvContact.errors.join(', ')}`);
       }
 
-      // Check for duplicate in EXISTING contacts first
+      // Check for duplicate in EXISTING contacts first (normalize with trim + lowercase)
       let existingDuplicate = null;
       
       if (csvContact.email) {
-        existingDuplicate = existingByEmail.get(csvContact.email.toLowerCase());
+        existingDuplicate = existingByEmail.get(csvContact.email.trim().toLowerCase());
       }
       
       if (!existingDuplicate && csvContact.company) {
-        const key = `${csvContact.name.toLowerCase()}|${csvContact.company.toLowerCase()}`;
+        const key = `${csvContact.name.trim().toLowerCase()}|${csvContact.company.trim().toLowerCase()}`;
         existingDuplicate = existingByNameCompany.get(key);
       }
 
@@ -436,23 +320,23 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
         merged++;
         insertedContactIds.push(existingDuplicate.id);
       } else {
-        // Check for duplicate in PENDING new contacts (same CSV)
+        // Check for duplicate in PENDING new contacts (same CSV) - normalize with trim + lowercase
         let pendingDuplicate = null;
         
         // 1. Try exact email match (highest confidence)
         if (csvContact.email) {
-          pendingDuplicate = pendingByEmail.get(csvContact.email.toLowerCase());
+          pendingDuplicate = pendingByEmail.get(csvContact.email.trim().toLowerCase());
         }
         
         // 2. Try exact name+company match
         if (!pendingDuplicate && csvContact.company) {
-          const key = `${csvContact.name.toLowerCase()}|${csvContact.company.toLowerCase()}`;
+          const key = `${csvContact.name.trim().toLowerCase()}|${csvContact.company.trim().toLowerCase()}`;
           pendingDuplicate = pendingByNameCompany.get(key);
         }
         
         // 3. Fallback: Try name-only match (ONLY for complementary partial data)
         if (!pendingDuplicate && csvContact.name) {
-          const nameMatches = pendingByName.get(csvContact.name.toLowerCase()) || [];
+          const nameMatches = pendingByName.get(csvContact.name.trim().toLowerCase()) || [];
           // Only merge if:
           // - Exactly one match by name
           // - The existing contact is missing key fields (partial data)
@@ -602,14 +486,14 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
       try {
         const { data, error } = await supabase
           .from('contacts')
-          .insert(batch)
-          .select('id');
+          .insert(batch as any)
+          .select('id') as { data: any[] | null; error: any };
 
         if (error) throw error;
         
         if (data) {
-          insertedContactIds.push(...data.map(c => c.id));
-          createdCount += data.length;  // Increment only on success
+          insertedContactIds.push(...data.map((c: any) => c.id));
+          createdCount += data.length;
         }
       } catch (error: any) {
         console.error('Batch insert error:', error);
@@ -636,8 +520,8 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
       try {
         // Supabase doesn't support batch updates, so we do them in parallel
         await Promise.all(
-          batch.map(({ id, data }) =>
-            supabase.from('contacts').update(data).eq('id', id)
+          batch.map(({ id, data }: { id: string; data: any }) =>
+            supabase.from('contacts').update(data as any).eq('id', id)
           )
         );
       } catch (error: any) {
@@ -695,7 +579,7 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
       .from('contacts')
       .select('id, email, name, company, linkedin_url')
       .in('id', contactIds)
-      .or('email.not.is.null,linkedin_url.not.is.null,company.not.is.null');
+      .or('email.not.is.null,linkedin_url.not.is.null,company.not.is.null') as { data: any[] | null };
 
     if (!contactsToEnrich || contactsToEnrich.length === 0) {
       // No enrichment needed, proceed to thesis extraction
@@ -752,7 +636,7 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
       .from('contacts')
       .select('id, name, bio, title, investor_notes')
       .in('id', contactIds)
-      .or('bio.not.is.null,title.not.is.null,investor_notes.not.is.null');
+      .or('bio.not.is.null,title.not.is.null,investor_notes.not.is.null') as { data: any[] | null };
 
     if (!contactsForThesis || contactsForThesis.length === 0) {
       setStage('complete');
