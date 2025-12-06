@@ -49,7 +49,13 @@ interface ParsedContact {
   errors: string[];
 }
 
-type UploadStage = 'upload' | 'parsing' | 'importing' | 'enriching' | 'complete';
+type UploadStage = 'upload' | 'parsing' | 'preview' | 'importing' | 'enriching' | 'complete';
+
+interface DuplicateAnalysis {
+  existingDuplicates: Array<{ csvContact: ParsedContact; existingContact: any; matchType: 'email' | 'name_company' }>;
+  csvDuplicates: Array<{ contacts: ParsedContact[]; matchType: 'email' | 'name_company' }>;
+  newContacts: ParsedContact[];
+}
 
 export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogProps) {
   const [file, setFile] = useState<File | null>(null);
@@ -64,6 +70,8 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
     failed: 0,
     enrichmentFailed: 0,
   });
+  const [duplicateAnalysis, setDuplicateAnalysis] = useState<DuplicateAnalysis | null>(null);
+  const [skipDuplicates, setSkipDuplicates] = useState(false);
   const { toast } = useToast();
 
   const validateEmail = (email: string): boolean => {
@@ -175,10 +183,10 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
         
         toast({
           title: "CSV parsed successfully!",
-          description: `Found ${parsed.length} contacts. ${parsed.filter(c => c.errors.length > 0).length} have validation warnings.`,
+          description: `Found ${parsed.length} contacts. Starting import...`,
         });
 
-        // Auto-start import
+        // Auto-start import (duplicates are handled during import)
         await importContacts(parsed);
       },
       error: (error) => {
@@ -191,6 +199,113 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
       },
     });
   }, []);
+
+  const analyzeDuplicates = async (parsedContacts: ParsedContact[]) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast({
+        title: "Authentication error",
+        description: "Please log in to import contacts",
+        variant: "destructive",
+      });
+      setStage('upload');
+      return;
+    }
+
+    const { data: existingContacts, error: fetchError } = await supabase
+      .from('contacts')
+      .select('id, name, email, company, title')
+      .eq('owned_by_profile', user.id);
+
+    if (fetchError) {
+      console.error('Error fetching existing contacts:', fetchError);
+      toast({
+        title: "Error checking duplicates",
+        description: "Could not check for duplicate contacts",
+        variant: "destructive",
+      });
+      setStage('upload');
+      return;
+    }
+
+    const existingByEmail = new Map<string, any>();
+    const existingByNameCompany = new Map<string, any>();
+    
+    existingContacts?.forEach(contact => {
+      if (contact.email) {
+        existingByEmail.set(contact.email.toLowerCase().trim(), contact);
+      }
+      if (contact.name && contact.company) {
+        const key = `${contact.name.toLowerCase().trim()}|${contact.company.toLowerCase().trim()}`;
+        existingByNameCompany.set(key, contact);
+      }
+    });
+
+    const existingDuplicates: DuplicateAnalysis['existingDuplicates'] = [];
+    const csvEmailGroups = new Map<string, ParsedContact[]>();
+    const csvNameCompanyGroups = new Map<string, ParsedContact[]>();
+    const newContacts: ParsedContact[] = [];
+
+    for (const csvContact of parsedContacts) {
+      let foundDuplicate = false;
+
+      if (csvContact.email) {
+        const emailKey = csvContact.email.toLowerCase().trim();
+        const existing = existingByEmail.get(emailKey);
+        if (existing) {
+          existingDuplicates.push({ csvContact, existingContact: existing, matchType: 'email' });
+          foundDuplicate = true;
+        }
+      }
+
+      if (!foundDuplicate && csvContact.name && csvContact.company) {
+        const key = `${csvContact.name.toLowerCase().trim()}|${csvContact.company.toLowerCase().trim()}`;
+        const existing = existingByNameCompany.get(key);
+        if (existing) {
+          existingDuplicates.push({ csvContact, existingContact: existing, matchType: 'name_company' });
+          foundDuplicate = true;
+        }
+      }
+
+      if (!foundDuplicate) {
+        if (csvContact.email) {
+          const emailKey = csvContact.email.toLowerCase().trim();
+          const group = csvEmailGroups.get(emailKey) || [];
+          group.push(csvContact);
+          csvEmailGroups.set(emailKey, group);
+        }
+        if (csvContact.name && csvContact.company) {
+          const key = `${csvContact.name.toLowerCase().trim()}|${csvContact.company.toLowerCase().trim()}`;
+          const group = csvNameCompanyGroups.get(key) || [];
+          group.push(csvContact);
+          csvNameCompanyGroups.set(key, group);
+        }
+        newContacts.push(csvContact);
+      }
+    }
+
+    const csvDuplicates: DuplicateAnalysis['csvDuplicates'] = [];
+    
+    csvEmailGroups.forEach((contacts, email) => {
+      if (contacts.length > 1) {
+        csvDuplicates.push({ contacts, matchType: 'email' });
+      }
+    });
+
+    csvNameCompanyGroups.forEach((contacts, key) => {
+      if (contacts.length > 1) {
+        const alreadyReported = csvDuplicates.some(d => 
+          d.contacts.some(c => contacts.includes(c))
+        );
+        if (!alreadyReported) {
+          csvDuplicates.push({ contacts, matchType: 'name_company' });
+        }
+      }
+    });
+
+    setDuplicateAnalysis({ existingDuplicates, csvDuplicates, newContacts });
+    setStage('preview');
+  };
 
   const importContacts = async (contactsToImport: ParsedContact[]) => {
     setStage('importing');
