@@ -4,8 +4,12 @@ import { queryClient } from '@/lib/queryClient';
 import { conversationFromDb, conversationToDb, segmentFromDb, segmentToDb } from '@/lib/supabaseHelpers';
 import type { Conversation, InsertConversation, ConversationSegment, InsertConversationSegment } from '@shared/schema';
 
+export interface ConversationWithParticipants extends Conversation {
+  participantNames: string[];
+}
+
 export function useConversations() {
-  return useQuery<Conversation[]>({
+  return useQuery<ConversationWithParticipants[]>({
     queryKey: ['/api/conversations'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -16,11 +20,31 @@ export function useConversations() {
 
       const { data, error } = await supabase
         .from('conversations')
-        .select('*')
-        .order('recorded_at', { ascending: false});
+        .select(`
+          *,
+          conversation_participants (
+            contact_id,
+            contacts (
+              name
+            )
+          )
+        `)
+        .order('recorded_at', { ascending: false });
       
       if (error) throw error;
-      return (data || []).map(conversationFromDb);
+      
+      return (data || []).map((row: any) => {
+        // Extract participant names before calling conversationFromDb
+        const participantNames = (row.conversation_participants || [])
+          .map((p: any) => p.contacts?.name)
+          .filter((name: string | null) => name != null);
+        
+        const conversation = conversationFromDb(row);
+        return {
+          ...conversation,
+          participantNames,
+        };
+      });
     },
   });
 }
@@ -114,7 +138,7 @@ export function useUpdateConversation() {
       
       const { data, error } = await supabase
         .from('conversations')
-        .update(dbUpdates)
+        .update(dbUpdates as any)
         .eq('id', id)
         .select()
         .single();

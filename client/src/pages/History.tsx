@@ -3,8 +3,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import ConversationHistoryRow from "@/components/ConversationHistoryRow";
-import { Search, Download, MessageSquare, TrendingUp, UserPlus } from "lucide-react";
+import { Search, Download, MessageSquare, TrendingUp, UserPlus, Eye, Trash2 } from "lucide-react";
 import { useConversations } from "@/hooks/useConversations";
 import { useIntroductionStats } from "@/hooks/useIntroductions";
 import { useContacts } from "@/hooks/useContacts";
@@ -181,40 +182,123 @@ export default function History() {
           No conversations yet. Start recording to see your history here.
         </div>
       ) : (
-        <div className="bg-card rounded-lg border border-card-border overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-muted/50 border-b border-border sticky top-0">
-              <tr>
-                <th className="py-3 px-4 text-left text-sm font-semibold">Date</th>
-                <th className="py-3 px-4 text-left text-sm font-semibold">Participants</th>
-                <th className="py-3 px-4 text-left text-sm font-semibold">Duration</th>
-                <th className="py-3 px-4 text-left text-sm font-semibold">Intros</th>
-                <th className="py-3 px-4 text-right text-sm font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {conversations.map((conversation) => {
-                const stats = matchStats[conversation.id] || { introsOffered: 0, introsMade: 0 };
-                const endTime = conversation.durationSeconds 
-                  ? new Date(conversation.recordedAt.getTime() + conversation.durationSeconds * 1000)
-                  : conversation.recordedAt;
-                return (
-                  <ConversationHistoryRow
-                    key={conversation.id}
-                    id={conversation.id}
-                    startedAt={conversation.recordedAt.toISOString()}
-                    endedAt={endTime.toISOString()}
-                    participants={[]}
-                    introsOffered={stats.introsOffered}
-                    introsMade={stats.introsMade}
-                    onView={() => setLocation(`/conversation/${conversation.id}`)}
-                    onDelete={() => console.log('Delete', conversation.id)}
-                  />
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <>
+          {/* Desktop table view */}
+          <div className="hidden md:block bg-card rounded-lg border border-card-border overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-muted/50 border-b border-border sticky top-0">
+                <tr>
+                  <th className="py-3 px-4 text-left text-sm font-semibold">Date</th>
+                  <th className="py-3 px-4 text-left text-sm font-semibold">Participants</th>
+                  <th className="py-3 px-4 text-left text-sm font-semibold">Duration</th>
+                  <th className="py-3 px-4 text-left text-sm font-semibold">Intros</th>
+                  <th className="py-3 px-4 text-right text-sm font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {conversations.map((conversation) => {
+                  const stats = matchStats[conversation.id] || { introsOffered: 0, introsMade: 0 };
+                  const endTime = conversation.durationSeconds 
+                    ? new Date(conversation.recordedAt.getTime() + conversation.durationSeconds * 1000)
+                    : conversation.recordedAt;
+                  return (
+                    <ConversationHistoryRow
+                      key={conversation.id}
+                      id={conversation.id}
+                      startedAt={conversation.recordedAt.toISOString()}
+                      endedAt={endTime.toISOString()}
+                      participants={conversation.participantNames || []}
+                      introsOffered={stats.introsOffered}
+                      introsMade={stats.introsMade}
+                      onView={() => setLocation(`/conversation/${conversation.id}`)}
+                      onDelete={() => console.log('Delete', conversation.id)}
+                    />
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile card view */}
+          <div className="md:hidden space-y-3">
+            {conversations.map((conversation) => {
+              const stats = matchStats[conversation.id] || { introsOffered: 0, introsMade: 0 };
+              const durationMinutes = conversation.durationSeconds 
+                ? Math.round(conversation.durationSeconds / 60)
+                : 0;
+              return (
+                <Card 
+                  key={conversation.id} 
+                  className="p-4"
+                  data-testid={`conversation-card-${conversation.id}`}
+                >
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="font-mono text-sm" data-testid="text-date">
+                          {conversation.recordedAt.toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {conversation.recordedAt.toLocaleTimeString('en-US', {
+                            hour: 'numeric',
+                            minute: '2-digit',
+                          })}
+                          {durationMinutes > 0 && ` · ${durationMinutes} min`}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={() => setLocation(`/conversation/${conversation.id}`)}
+                          data-testid="button-view-conversation"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={() => console.log('Delete', conversation.id)}
+                          data-testid="button-delete-conversation"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {(conversation.participantNames?.length > 0) && (
+                      <div className="flex flex-wrap gap-1">
+                        {conversation.participantNames.slice(0, 3).map((name, idx) => (
+                          <Badge key={idx} variant="outline" className="text-xs">
+                            {name}
+                          </Badge>
+                        ))}
+                        {conversation.participantNames.length > 3 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{conversation.participantNames.length - 3}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex gap-4 text-sm">
+                      <span className={stats.introsOffered > 0 ? "text-blue-500 dark:text-blue-400" : "text-muted-foreground"}>
+                        {stats.introsOffered} offered
+                      </span>
+                      <span className={stats.introsMade > 0 ? "text-green-500 dark:text-green-400" : "text-muted-foreground"}>
+                        {stats.introsMade} made
+                      </span>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );
