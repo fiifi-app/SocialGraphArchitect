@@ -24,6 +24,33 @@ function fuzzyNameMatch(mentionedName: string, contactName: string): { match: bo
   const mentionedParts = mentioned.split(/\s+/).filter(p => p.length > 1);
   const contactParts = contact.split(/\s+/).filter(p => p.length > 1);
   
+  // Handle single-word names (first name only match)
+  if (mentionedParts.length === 1 && contactParts.length >= 1) {
+    const singleName = mentionedParts[0];
+    const contactFirst = contactParts[0];
+    
+    // Exact first name match
+    if (singleName === contactFirst) {
+      return { match: true, score: 0.7, type: 'first-only' };
+    }
+    
+    // Nickname match for first name
+    const nicknames: Record<string, string[]> = {
+      'matt': ['matthew', 'mat'],
+      'matthew': ['matt', 'mat'],
+      'rob': ['robert', 'bob', 'bobby'],
+      'robert': ['rob', 'bob', 'bobby'],
+      'mike': ['michael', 'mick'],
+      'michael': ['mike', 'mick'],
+    };
+    
+    if (nicknames[singleName]?.includes(contactFirst) || nicknames[contactFirst]?.includes(singleName)) {
+      return { match: true, score: 0.65, type: 'first-nickname' };
+    }
+    
+    return { match: false, score: 0, type: 'none' };
+  }
+  
   if (mentionedParts.length < 2 || contactParts.length < 1) {
     return { match: false, score: 0, type: 'none' };
   }
@@ -351,13 +378,23 @@ Deno.serve(async (req) => {
       }
       
       // Name match (SECONDARY but boosts score)
-      if (personNames.length > 0 && contact.name) {
+      // Check both the 'name' field and constructed 'first_name last_name'
+      const namesToCheck: string[] = [];
+      if (contact.name) namesToCheck.push(contact.name);
+      if (contact.first_name && contact.last_name) {
+        namesToCheck.push(`${contact.first_name} ${contact.last_name}`);
+      }
+      
+      if (personNames.length > 0 && namesToCheck.length > 0) {
         for (const personName of personNames) {
-          const nameResult = fuzzyNameMatch(personName, contact.name);
-          if (nameResult.match && nameResult.score > matchDetails.nameMatchScore) {
-            matchDetails.nameMatch = true;
-            matchDetails.nameMatchScore = nameResult.score;
-            matchDetails.nameMatchType = nameResult.type;
+          for (const contactNameToCheck of namesToCheck) {
+            const nameResult = fuzzyNameMatch(personName, contactNameToCheck);
+            if (nameResult.match && nameResult.score > matchDetails.nameMatchScore) {
+              matchDetails.nameMatch = true;
+              matchDetails.nameMatchScore = nameResult.score;
+              matchDetails.nameMatchType = nameResult.type;
+              console.log(`  Name match found: "${personName}" ~ "${contactNameToCheck}" (${nameResult.type}, ${Math.round(nameResult.score * 100)}%)`);
+            }
           }
         }
       }
