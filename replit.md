@@ -9,11 +9,13 @@ Deploy the Edge Functions to Supabase:
 # From your laptop with Supabase CLI installed:
 supabase functions deploy research-contact --project-ref YOUR_PROJECT_REF
 supabase functions deploy batch-extract-thesis --project-ref YOUR_PROJECT_REF
+supabase functions deploy generate-matches --project-ref YOUR_PROJECT_REF
 supabase secrets set OPENAI_API_KEY=your_key --project-ref YOUR_PROJECT_REF
 ```
 Or manually via Supabase Dashboard → Edge Functions → Create → paste code from:
 - `supabase/functions/research-contact/index.ts` (AI bio/thesis research)
 - `supabase/functions/batch-extract-thesis/index.ts` (batch thesis extraction)
+- `supabase/functions/generate-matches/index.ts` (contact matching with nickname support)
 
 ## Recent Changes
 - **Auto-Enrich Contact Bios (NEW):** AI-powered research pipeline on Settings page:
