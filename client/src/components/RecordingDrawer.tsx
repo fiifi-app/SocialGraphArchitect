@@ -48,6 +48,7 @@ interface Suggestion {
   score: 1 | 2 | 3;
   reasons: string[];
   matchId?: string;
+  aiExplanation?: string | null;
 }
 
 interface RecordingDrawerProps {
@@ -318,6 +319,7 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
             score: (match.score || 1) as 1 | 2 | 3,
             reasons: match.reasons || [],
             matchId: match.id,
+            aiExplanation: match.ai_explanation || null,
           };
           
           setSuggestions((prev) => {
@@ -506,6 +508,7 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
                         score={suggestion.score}
                         reasons={suggestion.reasons}
                         matchId={suggestion.matchId}
+                        aiExplanation={suggestion.aiExplanation}
                         onMakeIntro={() => console.log('Make Intro', suggestion.contact.name)}
                         onMaybe={() => handleFeedback(suggestion.matchId, suggestion.contact.name, 'thumbs_down')}
                         onDismiss={() => handleFeedback(suggestion.matchId, suggestion.contact.name, 'thumbs_down')}

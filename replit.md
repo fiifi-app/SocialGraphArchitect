@@ -10,15 +10,43 @@ Deploy the Edge Functions to Supabase:
 supabase functions deploy research-contact --project-ref YOUR_PROJECT_REF
 supabase functions deploy batch-extract-thesis --project-ref YOUR_PROJECT_REF
 supabase functions deploy generate-matches --project-ref YOUR_PROJECT_REF
+supabase functions deploy embed-contact --project-ref YOUR_PROJECT_REF
+supabase functions deploy extract-entities --project-ref YOUR_PROJECT_REF
+supabase functions deploy generate-intro-email --project-ref YOUR_PROJECT_REF
 supabase secrets set OPENAI_API_KEY=your_key --project-ref YOUR_PROJECT_REF
 ```
 Or manually via Supabase Dashboard → Edge Functions → Create → paste code from:
 - `supabase/functions/research-contact/index.ts` (AI bio/thesis research)
 - `supabase/functions/batch-extract-thesis/index.ts` (batch thesis extraction)
-- `supabase/functions/generate-matches/index.ts` (contact matching with nickname support)
+- `supabase/functions/generate-matches/index.ts` (weighted scoring + AI explanations)
+- `supabase/functions/embed-contact/index.ts` (OpenAI embeddings for contacts)
+- `supabase/functions/extract-entities/index.ts` (rich entity extraction with matching_intent)
+- `supabase/functions/generate-intro-email/index.ts` (context-aware intro emails)
+
+**Run SQL Migration:**
+Execute `supabase/migrations/20241208_matching_upgrade.sql` in Supabase SQL Editor to enable:
+- pgvector extension for semantic similarity
+- contact_aliases table for fuzzy name matching  
+- match_feedback table for quality tracking
+- ai_explanation column in match_suggestions
+- relationship_strength column in contacts
 
 ## Recent Changes
-- **Auto-Enrich Contact Bios (NEW):** AI-powered research pipeline on Settings page:
+- **Advanced Matching System (NEW):** Upgraded matching with weighted scoring and AI explanations:
+  - Weighted scoring formula: 50% semantic similarity + 20% tag overlap + 10% role match + 10% geo match + 10% relationship strength
+  - AI-generated "why this intro is perfect" explanations for top 2-3 star matches using GPT-4o-mini
+  - Relationship strength display (heart icon with percentage) on match cards
+  - Thumbs up/down feedback buttons for match quality tracking
+  - Match feedback stored in match_feedback table for future ML training
+  - SQL migration adds pgvector extension, contact_aliases table, match_feedback table
+  - Fuzzy name matching with nicknames (Matt↔Matthew, Rob↔Robert, etc.) and Levenshtein distance
+  - Edge Functions: generate-matches (weighted scoring), embed-contact (OpenAI embeddings)
+- **Enhanced Intro Email Generation (NEW):** Context-aware double opt-in emails:
+  - Fetches rich conversation context (goals_and_needs, domains_and_topics, matching_intent)
+  - Includes contact bio, investor notes, and check size in email prompts
+  - Uses AI explanation from match for more personalized introductions
+  - Robust null handling for JSONB fields
+- **Auto-Enrich Contact Bios:** AI-powered research pipeline on Settings page:
   - Step 1: Researches each contact using OpenAI with web_search tool for real external data
   - Step 2: For investor contacts (GP, Angel, Family Office, PE), also searches for investment thesis info
   - Step 3: Auto-detects contact types (LP, GP, Angel, Family Office, Startup, PE) from title/bio and sets tags

@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import OpenAI from 'https://esm.sh/openai@4';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -266,13 +267,13 @@ Deno.serve(async (req) => {
     
     console.log('Rich context available:', !!conversationContext?.matching_intent);
     
-    // Get contacts with theses and relationship_strength
+    // Get contacts with theses and relationship_strength (bio for AI explanations)
     const { data: contacts } = await supabaseService
       .from('contacts')
       .select(`
         id, name, first_name, last_name, title, company, location, bio,
         category, contact_type, check_size_min, check_size_max, is_investor,
-        relationship_strength, bio_embedding, thesis_embedding,
+        relationship_strength, bio_embedding, thesis_embedding, investor_notes,
         theses (id, sectors, stages, check_size_min, check_size_max, geos)
       `)
       .eq('owned_by_profile', user.id);
@@ -364,6 +365,7 @@ Deno.serve(async (req) => {
       rawScore: number; // 0-1 normalized score
       reasons: string[];
       justification: string;
+      ai_explanation?: string;
       matchDetails: {
         semanticScore: number;
         tagOverlapScore: number;
@@ -373,6 +375,11 @@ Deno.serve(async (req) => {
         nameMatch: boolean;
         nameMatchScore: number;
         nameMatchType: string;
+      };
+      contactInfo?: {
+        title: string | null;
+        company: string | null;
+        bio: string | null;
       };
     }
     
@@ -526,6 +533,11 @@ Deno.serve(async (req) => {
           reasons,
           justification,
           matchDetails,
+          contactInfo: {
+            title: contact.title,
+            company: contact.company,
+            bio: contact.bio,
+          },
         });
         
         console.log(`MATCH: ${contact.name} (${starScore}★, raw: ${rawScore.toFixed(3)})`);
@@ -556,24 +568,86 @@ Deno.serve(async (req) => {
       );
     }
     
+    // Generate AI explanations for top 5 matches (3-star and 2-star only)
+    const openaiKey = Deno.env.get('OPENAI_API_KEY');
+    if (openaiKey) {
+      const openai = new OpenAI({ apiKey: openaiKey });
+      const matchesToExplain = topMatches.filter(m => m.score >= 2).slice(0, 5);
+      
+      console.log('=== GENERATING AI EXPLANATIONS ===');
+      console.log('Generating explanations for:', matchesToExplain.length, 'matches');
+      
+      // Get transcript summary for context
+      const { data: segments } = await supabaseService
+        .from('conversation_segments')
+        .select('text')
+        .eq('conversation_id', conversationId)
+        .order('timestamp_ms', { ascending: true })
+        .limit(20);
+      
+      const transcriptSummary = segments?.map(s => s.text).join(' ').slice(0, 1000) || '';
+      
+      for (const match of matchesToExplain) {
+        try {
+          const prompt = `You are an expert connector who helps facilitate warm introductions between professionals. 
+
+Given this conversation context and a potential connection, write a brief, compelling 1-2 sentence explanation of why this introduction would be valuable for both parties.
+
+CONVERSATION CONTEXT:
+${transcriptSummary ? `Recent discussion: "${transcriptSummary.slice(0, 500)}..."` : 'General business meeting'}
+Topics discussed: ${conversationTags.slice(0, 10).join(', ') || 'various business topics'}
+${conversationContext?.goals_and_needs?.fundraising ? `Fundraising: Looking for ${conversationContext.goals_and_needs.fundraising.investor_types?.join(', ') || 'investors'}` : ''}
+${hiringRoles.length > 0 ? `Hiring: Looking for ${hiringRoles.join(', ')}` : ''}
+
+POTENTIAL CONNECTION:
+Name: ${match.contact_name}
+${match.contactInfo?.title ? `Role: ${match.contactInfo.title}` : ''}
+${match.contactInfo?.company ? `Company: ${match.contactInfo.company}` : ''}
+${match.contactInfo?.bio ? `About: ${match.contactInfo.bio.slice(0, 200)}` : ''}
+Match reasons: ${match.reasons.join(', ')}
+
+Write a warm, professional explanation (1-2 sentences) of why connecting these parties would be mutually beneficial. Focus on specific value, not generic statements. Do not use phrases like "perfect fit" or "ideal match".`;
+
+          const response = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [{ role: 'user', content: prompt }],
+            max_tokens: 100,
+            temperature: 0.7,
+          });
+          
+          match.ai_explanation = response.choices[0]?.message?.content?.trim() || null;
+          console.log(`AI explanation for ${match.contact_name}:`, match.ai_explanation?.slice(0, 50) + '...');
+        } catch (aiError) {
+          console.error(`Failed to generate AI explanation for ${match.contact_name}:`, aiError);
+        }
+      }
+    }
+    
     // Upsert matches to database
     const insertedMatches: any[] = [];
     for (const match of topMatches) {
+      const upsertData: any = {
+        conversation_id: conversationId,
+        contact_id: match.contact_id,
+        score: match.score,
+        reasons: match.reasons,
+        justification: match.justification,
+        status: 'pending',
+      };
+      
+      // Add AI explanation if available
+      if (match.ai_explanation) {
+        upsertData.ai_explanation = match.ai_explanation;
+      }
+      
       const { data, error } = await supabaseService
         .from('match_suggestions')
-        .upsert({
-          conversation_id: conversationId,
-          contact_id: match.contact_id,
-          score: match.score,
-          reasons: match.reasons,
-          justification: match.justification,
-          status: 'pending',
-        }, { 
+        .upsert(upsertData, { 
           onConflict: 'conversation_id,contact_id',
           ignoreDuplicates: false 
         })
         .select(`
-          id, conversation_id, contact_id, score, reasons, justification, status, created_at,
+          id, conversation_id, contact_id, score, reasons, justification, ai_explanation, status, created_at,
           contacts:contact_id ( name )
         `)
         .single();

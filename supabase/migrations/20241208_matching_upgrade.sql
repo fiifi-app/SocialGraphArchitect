@@ -104,6 +104,12 @@ ADD COLUMN IF NOT EXISTS relationship_strength INTEGER DEFAULT 50;
 
 COMMENT ON COLUMN contacts.relationship_strength IS 'Relationship strength 0-100 for scoring matches';
 
+-- Add ai_explanation column to match_suggestions for AI-generated intro explanations
+ALTER TABLE match_suggestions
+ADD COLUMN IF NOT EXISTS ai_explanation TEXT;
+
+COMMENT ON COLUMN match_suggestions.ai_explanation IS 'AI-generated explanation of why this introduction is valuable';
+
 -- ============================================================================
 -- HELPER FUNCTIONS
 -- ============================================================================

@@ -35,7 +35,11 @@ serve(async (req) => {
           name,
           email,
           company,
-          title
+          title,
+          bio,
+          investor_notes,
+          check_size_min,
+          check_size_max
         )
       `)
       .eq('id', matchSuggestionId)
@@ -71,7 +75,7 @@ serve(async (req) => {
         .eq('conversation_id', conversationId),
       supabase
         .from('conversations')
-        .select('title, duration_seconds')
+        .select('title, duration_seconds, target_person, matching_intent, goals_and_needs, domains_and_topics')
         .eq('id', conversationId)
         .single()
     ]);
@@ -100,21 +104,85 @@ serve(async (req) => {
     
     console.log('✅ Entities:', Object.keys(entityMap).length, 'Participants:', participantsList.length);
     
+    // Safely parse JSONB fields - they may be strings or objects
+    const parseJsonField = (field: any): any => {
+      if (!field) return {};
+      if (typeof field === 'string') {
+        try { return JSON.parse(field); } catch { return {}; }
+      }
+      return typeof field === 'object' ? field : {};
+    };
+    
+    // Extract rich context from conversation with safe parsing
+    const goalsAndNeeds = parseJsonField(conversation?.goals_and_needs);
+    const domainsAndTopics = parseJsonField(conversation?.domains_and_topics);
+    const matchingIntent = parseJsonField(conversation?.matching_intent);
+    
+    // Build context string for the prompt with null guards
+    let contextString = '';
+    if (goalsAndNeeds?.fundraising && typeof goalsAndNeeds.fundraising === 'object') {
+      const investorTypes = Array.isArray(goalsAndNeeds.fundraising.investor_types) 
+        ? goalsAndNeeds.fundraising.investor_types.join(', ') 
+        : 'investors';
+      contextString += `\nFUNDRAISING CONTEXT: Looking for ${investorTypes}.`;
+      if (goalsAndNeeds.fundraising.raise_amount) {
+        contextString += ` Target: ${goalsAndNeeds.fundraising.raise_amount}.`;
+      }
+    }
+    if (goalsAndNeeds?.hiring && Array.isArray(goalsAndNeeds.hiring?.roles_needed) && goalsAndNeeds.hiring.roles_needed.length > 0) {
+      contextString += `\nHIRING CONTEXT: Looking for ${goalsAndNeeds.hiring.roles_needed.join(', ')}.`;
+    }
+    if (Array.isArray(domainsAndTopics?.sector_keywords) && domainsAndTopics.sector_keywords.length > 0) {
+      contextString += `\nSECTORS: ${domainsAndTopics.sector_keywords.slice(0, 5).join(', ')}.`;
+    }
+    if (Array.isArray(domainsAndTopics?.technology_keywords) && domainsAndTopics.technology_keywords.length > 0) {
+      contextString += `\nTECHNOLOGY: ${domainsAndTopics.technology_keywords.slice(0, 5).join(', ')}.`;
+    }
+    
     const apiKey = Deno.env.get('OPENAI_API_KEY');
     if (!apiKey) {
       console.error('❌ OPENAI_API_KEY not configured');
       throw new Error('OpenAI API key not configured');
     }
     
-    const userPrompt = `Contact: ${JSON.stringify(match.contact)}
-Match Reasons: ${match.reasons?.join(', ')}
-Justification: ${match.justification}
+    // Build rich contact context with null guards
+    const safeSlice = (str: any, len: number): string | null => {
+      if (typeof str === 'string') return str.slice(0, len);
+      return null;
+    };
+    
+    const contactContext = {
+      name: match.contact?.name || 'Contact',
+      title: match.contact?.title || null,
+      company: match.contact?.company || null,
+      bio: safeSlice(match.contact?.bio, 200),
+      investorNotes: safeSlice(match.contact?.investor_notes, 200),
+      checkSize: (match.contact?.check_size_min && match.contact?.check_size_max) 
+        ? `$${(Number(match.contact.check_size_min) / 1000000).toFixed(1)}M - $${(Number(match.contact.check_size_max) / 1000000).toFixed(1)}M` 
+        : null,
+    };
+    
+    const userPrompt = `CONVERSATION SUMMARY:
+${transcriptSnippets.join('\n').slice(0, 500)}
+${contextString}
+
+CONTACT TO INTRODUCE:
+Name: ${contactContext.name}
+${contactContext.title ? `Role: ${contactContext.title}` : ''}
+${contactContext.company ? `Company: ${contactContext.company}` : ''}
+${contactContext.bio ? `About: ${contactContext.bio}` : ''}
+${contactContext.investorNotes ? `Investment Focus: ${contactContext.investorNotes}` : ''}
+${contactContext.checkSize ? `Check Size: ${contactContext.checkSize}` : ''}
+
+MATCH DETAILS:
+Reasons: ${match.reasons?.join(', ')}
+${match.ai_explanation ? `Why This Matters: ${match.ai_explanation}` : ''}
 
 Generate a professional double opt-in introduction email. Return ONLY valid JSON with exactly these two fields:
 {"subject": "...", "body": "..."}
 
-Subject: Under 50 chars, specific to their focus
-Body: 3-4 sentences, direct tone, what's in it for THEM`;
+Subject: Under 50 chars, specific to their focus area or expertise
+Body: 3-4 sentences. Start by referencing the conversation topic. Explain the specific mutual benefit. End with a clear ask.`;
     
     console.log('📤 Sending request to OpenAI...');
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
