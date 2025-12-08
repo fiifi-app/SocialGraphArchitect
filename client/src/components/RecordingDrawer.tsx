@@ -29,7 +29,7 @@ import {
   generateMatches,
   processParticipants,
 } from "@/lib/edgeFunctions";
-import { supabase } from "@/lib/supabase";
+import { supabase, getSession } from "@/lib/supabase";
 
 interface TranscriptEntry {
   t: string;
@@ -43,9 +43,11 @@ interface Suggestion {
     email: string | null;
     company: string | null;
     title: string | null;
+    relationshipStrength?: number | null;
   };
   score: 1 | 2 | 3;
   reasons: string[];
+  matchId?: string;
 }
 
 interface RecordingDrawerProps {
@@ -283,10 +285,10 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
           const match = payload.new as any;
           if (!match || !match.contact_id) return;
           
-          // Fetch the contact details for this match
+          // Fetch the contact details for this match including relationship_strength
           const { data: contactData, error } = await supabase
             .from('contacts')
-            .select('name, email, company, title')
+            .select('name, email, company, title, relationship_strength')
             .eq('id', match.contact_id)
             .single();
           
@@ -302,6 +304,7 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
             email: string | null;
             company: string | null;
             title: string | null;
+            relationship_strength: number | null;
           };
           
           const newSuggestion = {
@@ -310,9 +313,11 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
               email: contact.email,
               company: contact.company,
               title: contact.title,
+              relationshipStrength: contact.relationship_strength,
             },
             score: (match.score || 1) as 1 | 2 | 3,
             reasons: match.reasons || [],
+            matchId: match.id,
           };
           
           setSuggestions((prev) => {
@@ -389,6 +394,43 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
 
   const isRecording = audioState.isRecording;
 
+  const handleFeedback = async (matchId: string | undefined, contactName: string, action: 'thumbs_up' | 'thumbs_down' | 'saved' | 'intro_sent') => {
+    if (!matchId || !conversationId) return;
+    
+    try {
+      const session = await getSession();
+      if (!session?.user?.id) return;
+      
+      // Log feedback to match_feedback table
+      const { error } = await supabase
+        .from('match_feedback')
+        .insert({
+          suggestion_id: matchId,
+          profile_id: session.user.id,
+          feedback: action,
+        });
+      
+      if (error) {
+        console.error('Failed to log feedback:', error);
+        return;
+      }
+      
+      toast({
+        title: action === 'thumbs_up' ? 'Thanks for the feedback!' : 'Match dismissed',
+        description: action === 'thumbs_up' 
+          ? `We'll show more matches like ${contactName}` 
+          : `We'll adjust future suggestions accordingly`,
+      });
+      
+      // Remove from suggestions if thumbs down
+      if (action === 'thumbs_down') {
+        setSuggestions(prev => prev.filter(s => s.matchId !== matchId));
+      }
+    } catch (error) {
+      console.error('Error logging feedback:', error);
+    }
+  };
+
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className={isRecording ? "h-screen" : "h-[60vh] md:h-[50vh]"}>
@@ -459,13 +501,16 @@ export default function RecordingDrawer({ open, onOpenChange, eventId }: Recordi
                   {suggestions.length > 0 ? (
                     suggestions.map((suggestion, idx) => (
                       <SuggestionCard 
-                        key={idx} 
+                        key={suggestion.matchId || idx} 
                         contact={suggestion.contact}
                         score={suggestion.score}
                         reasons={suggestion.reasons}
+                        matchId={suggestion.matchId}
                         onMakeIntro={() => console.log('Make Intro', suggestion.contact.name)}
-                        onMaybe={() => console.log('Maybe', suggestion.contact.name)}
-                        onDismiss={() => console.log('Dismiss', suggestion.contact.name)}
+                        onMaybe={() => handleFeedback(suggestion.matchId, suggestion.contact.name, 'thumbs_down')}
+                        onDismiss={() => handleFeedback(suggestion.matchId, suggestion.contact.name, 'thumbs_down')}
+                        onThumbsUp={() => handleFeedback(suggestion.matchId, suggestion.contact.name, 'thumbs_up')}
+                        onThumbsDown={() => handleFeedback(suggestion.matchId, suggestion.contact.name, 'thumbs_down')}
                       />
                     ))
                   ) : (

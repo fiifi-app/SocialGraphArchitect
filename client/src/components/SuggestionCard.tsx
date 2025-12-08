@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Mail, X, Clock, Building2, Briefcase, Star, Check } from "lucide-react";
+import { Mail, X, Clock, Building2, Briefcase, Star, Check, ThumbsUp, ThumbsDown, Heart } from "lucide-react";
 
 interface ContactDetails {
   name: string;
@@ -15,6 +15,7 @@ interface ContactDetails {
   checkSizeMax?: number | null;
   investorNotes?: string | null;
   contactType?: string[] | null;
+  relationshipStrength?: number | null; // 0-100 scale
 }
 
 interface SuggestionCardProps {
@@ -25,8 +26,11 @@ interface SuggestionCardProps {
   onMakeIntro: () => void;
   onMaybe: () => void;
   onDismiss: () => void;
+  onThumbsUp?: () => void;
+  onThumbsDown?: () => void;
   isPending?: boolean;
   matchId?: string;
+  aiExplanation?: string | null;
 }
 
 export default function SuggestionCard({
@@ -37,8 +41,11 @@ export default function SuggestionCard({
   onMakeIntro,
   onMaybe,
   onDismiss,
+  onThumbsUp,
+  onThumbsDown,
   isPending = false,
   matchId,
+  aiExplanation,
 }: SuggestionCardProps) {
   const scoreColors = {
     1: "bg-muted text-muted-foreground",
@@ -99,13 +106,21 @@ export default function SuggestionCard({
             </div>
           )}
         </div>
-        <Badge className="bg-transparent border-0 p-0" data-testid="badge-score">
-          <div className="flex items-center gap-0.5">
-            {Array.from({ length: score }).map((_, idx) => (
-              <Star key={idx} className="w-4 h-4 fill-yellow-500 text-yellow-500" />
-            ))}
-          </div>
-        </Badge>
+        <div className="flex flex-col items-end gap-1">
+          <Badge className="bg-transparent border-0 p-0" data-testid="badge-score">
+            <div className="flex items-center gap-0.5">
+              {Array.from({ length: score }).map((_, idx) => (
+                <Star key={idx} className="w-4 h-4 fill-yellow-500 text-yellow-500" />
+              ))}
+            </div>
+          </Badge>
+          {contact.relationshipStrength != null && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground" data-testid="relationship-strength">
+              <Heart className={`w-3 h-3 ${contact.relationshipStrength >= 70 ? 'fill-rose-400 text-rose-400' : contact.relationshipStrength >= 40 ? 'fill-rose-200 text-rose-300' : 'text-muted-foreground'}`} />
+              <span>{contact.relationshipStrength}%</span>
+            </div>
+          )}
+        </div>
       </div>
       
       {(contact.company || contact.title || contact.location || contact.checkSizeMin) && <Separator />}
@@ -143,9 +158,38 @@ export default function SuggestionCard({
             ))}
           </div>
         )}
+        
+        {aiExplanation && (
+          <div className="mt-2 p-2 bg-primary/5 rounded-lg border border-primary/10 text-sm italic text-foreground" data-testid="ai-explanation">
+            "{aiExplanation}"
+          </div>
+        )}
       </div>
+      
       {status === 'pending' && (
-        <div className="flex gap-2 pt-2">
+        <div className="flex items-center gap-2 pt-2">
+          {onThumbsUp && onThumbsDown && (
+            <div className="flex gap-1 mr-auto">
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={onThumbsUp}
+                disabled={isPending}
+                data-testid="button-thumbs-up"
+              >
+                <ThumbsUp className="w-4 h-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={onThumbsDown}
+                disabled={isPending}
+                data-testid="button-thumbs-down"
+              >
+                <ThumbsDown className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
           <Button
             size="sm"
             onClick={onMakeIntro}
@@ -158,13 +202,12 @@ export default function SuggestionCard({
           </Button>
           <Button
             size="sm"
-            variant="destructive"
+            variant="outline"
             onClick={onMaybe}
-            className="flex-1"
             disabled={isPending}
             data-testid="button-not-a-fit"
           >
-            Not a Fit
+            <X className="w-3 h-3" />
           </Button>
         </div>
       )}

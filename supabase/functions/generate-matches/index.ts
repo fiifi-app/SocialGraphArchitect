@@ -257,13 +257,23 @@ Deno.serve(async (req) => {
       );
     }
     
-    // Get contacts with theses
+    // Also fetch rich context from conversation for better matching
+    const { data: conversationContext } = await supabaseService
+      .from('conversations')
+      .select('target_person, matching_intent, goals_and_needs, domains_and_topics')
+      .eq('id', conversationId)
+      .single();
+    
+    console.log('Rich context available:', !!conversationContext?.matching_intent);
+    
+    // Get contacts with theses and relationship_strength
     const { data: contacts } = await supabaseService
       .from('contacts')
       .select(`
         id, name, first_name, last_name, title, company, location, bio,
         category, contact_type, check_size_min, check_size_max, is_investor,
-        theses (id, sectors, stages, check_size_min, check_size_max)
+        relationship_strength, bio_embedding, thesis_embedding,
+        theses (id, sectors, stages, check_size_min, check_size_max, geos)
       `)
       .eq('owned_by_profile', user.id);
     
@@ -298,87 +308,158 @@ Deno.serve(async (req) => {
     const maxCheckSize = parsedCheckSizes.length > 0 ? Math.max(...parsedCheckSizes) : null;
     console.log('Parsed check size range:', minCheckSize, '-', maxCheckSize);
 
+    // Weighted scoring formula:
+    // score = 0.5 * semantic_similarity + 0.2 * tag_overlap + 0.1 * role_match + 0.1 * geo_match + 0.1 * relationship_strength
+    const WEIGHTS = {
+      semantic: 0.5,
+      tagOverlap: 0.2,
+      roleMatch: 0.1,
+      geoMatch: 0.1,
+      relationship: 0.1,
+    };
+    
+    // Helper: Jaccard similarity for tag overlap
+    function jaccardSimilarity(set1: string[], set2: string[]): number {
+      if (set1.length === 0 && set2.length === 0) return 0;
+      const s1 = new Set(set1.map(s => s.toLowerCase()));
+      const s2 = new Set(set2.map(s => s.toLowerCase()));
+      const intersection = [...s1].filter(x => s2.has(x)).length;
+      const union = new Set([...s1, ...s2]).size;
+      return union > 0 ? intersection / union : 0;
+    }
+    
+    // Helper: Check role/title match for hiring needs
+    function roleMatchScore(contactTitle: string | null, neededRoles: string[]): number {
+      if (!contactTitle || neededRoles.length === 0) return 0;
+      const titleLower = contactTitle.toLowerCase();
+      for (const role of neededRoles) {
+        if (titleLower.includes(role.toLowerCase())) return 1;
+      }
+      return 0;
+    }
+    
+    // Extract what kind of contacts to find from matching_intent
+    const whatToFind = conversationContext?.matching_intent?.what_kind_of_contacts_to_find || [];
+    const hiringRoles = conversationContext?.goals_and_needs?.hiring?.roles_needed || [];
+    const investorTypes = conversationContext?.goals_and_needs?.fundraising?.investor_types || [];
+    
+    console.log('What to find:', whatToFind);
+    console.log('Hiring roles:', hiringRoles);
+    console.log('Investor types:', investorTypes);
+    
+    // Build search tags from conversation context
+    const conversationTags: string[] = [
+      ...sectors,
+      ...stages,
+      ...geos,
+      ...(conversationContext?.domains_and_topics?.product_keywords || []),
+      ...(conversationContext?.domains_and_topics?.technology_keywords || []),
+    ];
+    
     // Score each contact
     interface Match {
       contact_id: string;
       contact_name: string;
       score: number;
+      rawScore: number; // 0-1 normalized score
       reasons: string[];
       justification: string;
       matchDetails: {
-        sectorMatch: boolean;
-        stageMatch: boolean;
-        checkSizeMatch: boolean;
+        semanticScore: number;
+        tagOverlapScore: number;
+        roleMatchScore: number;
+        geoMatchScore: number;
+        relationshipScore: number;
         nameMatch: boolean;
         nameMatchScore: number;
         nameMatchType: string;
-        geoMatch: boolean;
       };
     }
     
     const matches: Match[] = [];
     
-    console.log('=== SCORING CONTACTS ===');
+    console.log('=== SCORING CONTACTS (Weighted Formula) ===');
     
     for (const contact of contacts) {
-      let score = 0;
       const reasons: string[] = [];
       const matchDetails = {
-        sectorMatch: false,
-        stageMatch: false,
-        checkSizeMatch: false,
+        semanticScore: 0,
+        tagOverlapScore: 0,
+        roleMatchScore: 0,
+        geoMatchScore: 0,
+        relationshipScore: 0,
         nameMatch: false,
         nameMatchScore: 0,
         nameMatchType: 'none',
-        geoMatch: false,
       };
       
-      // Check thesis matches (PRIMARY CRITERIA)
+      // Build contact tags from theses and profile
+      const contactTags: string[] = [];
       const theses = contact.theses || [];
       
       for (const thesis of theses) {
-        const thesisSectors = thesis.sectors || [];
-        const thesisStages = thesis.stages || [];
-        
-        // Sector match
-        if (sectors.length > 0 && thesisSectors.length > 0) {
-          for (const sector of sectors) {
-            if (matchesAny(sector, thesisSectors)) {
-              matchDetails.sectorMatch = true;
+        contactTags.push(...(thesis.sectors || []));
+        contactTags.push(...(thesis.stages || []));
+        contactTags.push(...(thesis.geos || []));
+      }
+      
+      // Add contact type tags
+      if (contact.contact_type) {
+        contactTags.push(...contact.contact_type);
+      }
+      if (contact.is_investor) {
+        contactTags.push('investor');
+      }
+      
+      // 1. SEMANTIC SIMILARITY (50% weight)
+      // For now, use 0 if embeddings not available (Phase 3 will add embedding matching)
+      // TODO: Implement pgvector similarity when embeddings are populated
+      matchDetails.semanticScore = 0;
+      
+      // 2. TAG OVERLAP (20% weight) - Jaccard similarity
+      matchDetails.tagOverlapScore = jaccardSimilarity(conversationTags, contactTags);
+      if (matchDetails.tagOverlapScore > 0.1) {
+        const matchedTags = conversationTags.filter(t => 
+          contactTags.some(ct => ct.toLowerCase().includes(t.toLowerCase()))
+        );
+        if (matchedTags.length > 0) {
+          reasons.push(`Matches: ${matchedTags.slice(0, 3).join(', ')}`);
+        }
+      }
+      
+      // 3. ROLE MATCH (10% weight) - Check if contact's role fits needs
+      matchDetails.roleMatchScore = roleMatchScore(contact.title, hiringRoles);
+      
+      // Also check if contact type matches investor types needed
+      if (investorTypes.length > 0 && contact.contact_type) {
+        for (const iType of investorTypes) {
+          const iTypeLower = iType.toLowerCase();
+          for (const cType of contact.contact_type) {
+            if (cType.toLowerCase().includes(iTypeLower) || iTypeLower.includes(cType.toLowerCase())) {
+              matchDetails.roleMatchScore = Math.max(matchDetails.roleMatchScore, 0.8);
+              reasons.push(`${cType} investor`);
               break;
             }
           }
         }
-        
-        // Stage match
-        if (stages.length > 0 && thesisStages.length > 0) {
-          for (const stage of stages) {
-            if (matchesAny(stage, thesisStages)) {
-              matchDetails.stageMatch = true;
-              break;
-            }
-          }
-        }
-        
-        // Check size match
-        if (minCheckSize !== null && thesis.check_size_min !== null && thesis.check_size_max !== null) {
-          if (minCheckSize >= thesis.check_size_min && minCheckSize <= thesis.check_size_max) {
-            matchDetails.checkSizeMatch = true;
+      }
+      
+      // 4. GEO MATCH (10% weight)
+      if (geos.length > 0 && contact.location) {
+        for (const geo of geos) {
+          if (matchesAny(geo, [contact.location])) {
+            matchDetails.geoMatchScore = 1;
+            reasons.push(`Location: ${contact.location}`);
+            break;
           }
         }
       }
       
-      // Also check contact-level check size
-      if (!matchDetails.checkSizeMatch && minCheckSize !== null) {
-        if (contact.check_size_min !== null && contact.check_size_max !== null) {
-          if (minCheckSize >= contact.check_size_min && minCheckSize <= contact.check_size_max) {
-            matchDetails.checkSizeMatch = true;
-          }
-        }
-      }
+      // 5. RELATIONSHIP STRENGTH (10% weight) - Normalized 0-1
+      const relStrength = contact.relationship_strength ?? 50;
+      matchDetails.relationshipScore = relStrength / 100;
       
-      // Name match (SECONDARY but boosts score)
-      // Check both the 'name' field and constructed 'first_name last_name'
+      // NAME MATCH - Major boost for explicit mentions
       const namesToCheck: string[] = [];
       if (contact.name) namesToCheck.push(contact.name);
       if (contact.first_name && contact.last_name) {
@@ -399,82 +480,62 @@ Deno.serve(async (req) => {
         }
       }
       
-      // Geo match (SECONDARY)
-      if (geos.length > 0 && contact.location) {
-        for (const geo of geos) {
-          if (matchesAny(geo, [contact.location])) {
-            matchDetails.geoMatch = true;
-            break;
-          }
-        }
-      }
+      // CALCULATE WEIGHTED SCORE (0-1 range)
+      let rawScore = 
+        WEIGHTS.semantic * matchDetails.semanticScore +
+        WEIGHTS.tagOverlap * matchDetails.tagOverlapScore +
+        WEIGHTS.roleMatch * matchDetails.roleMatchScore +
+        WEIGHTS.geoMatch * matchDetails.geoMatchScore +
+        WEIGHTS.relationship * matchDetails.relationshipScore;
       
-      // Calculate score based on PRIMARY criteria
-      // Sector + Stage + CheckSize are primary
-      let primaryMatches = 0;
-      if (matchDetails.sectorMatch) {
-        primaryMatches++;
-        reasons.push(`Sector match: invests in ${sectors.join(', ')}`);
-      }
-      if (matchDetails.stageMatch) {
-        primaryMatches++;
-        reasons.push(`Stage match: focuses on ${stages.join(', ')}`);
-      }
-      if (matchDetails.checkSizeMatch) {
-        primaryMatches++;
-        reasons.push(`Check size match: ${checkSizes.join(', ')}`);
-      }
-      
-      // Base score from primary matches
-      if (primaryMatches >= 2) {
-        score = 2; // Good match with 2+ primary criteria
-      } else if (primaryMatches >= 1) {
-        score = 1; // Weak match with 1 primary criterion
-      }
-      
-      // Name match BOOSTS the score significantly
+      // NAME MATCH BOOST - Add 0.3 to raw score for name mentions
       if (matchDetails.nameMatch) {
-        score += 1; // Boost by 1 for name match
+        rawScore += 0.3 * matchDetails.nameMatchScore;
         if (matchDetails.nameMatchScore >= 0.95) {
-          reasons.unshift(`Name mentioned: "${contact.name}" (${matchDetails.nameMatchType})`);
+          reasons.unshift(`Name mentioned: "${contact.name}"`);
         } else {
-          reasons.unshift(`Similar name: "${contact.name}" (${matchDetails.nameMatchType}, ${Math.round(matchDetails.nameMatchScore * 100)}% match)`);
+          reasons.unshift(`Similar name: "${contact.name}" (${Math.round(matchDetails.nameMatchScore * 100)}%)`);
         }
       }
       
-      // Geo match as secondary bonus
-      if (matchDetails.geoMatch) {
-        if (score > 0) score = Math.min(score + 0.5, 3);
-        reasons.push(`Location match: ${geos.join(', ')}`);
+      // Clamp raw score to 0-1
+      rawScore = Math.min(Math.max(rawScore, 0), 1);
+      
+      // MAP TO 3-STAR RATING
+      // Thresholds: 0.15 = 1 star, 0.35 = 2 stars, 0.55 = 3 stars
+      let starScore = 0;
+      if (rawScore >= 0.55) {
+        starScore = 3;
+      } else if (rawScore >= 0.35) {
+        starScore = 2;
+      } else if (rawScore >= 0.15) {
+        starScore = 1;
       }
       
-      // Cap at 3 stars
-      score = Math.min(Math.round(score), 3);
-      
-      // Only include if score >= 1
-      if (score >= 1) {
+      // Only include if score >= 1 star
+      if (starScore >= 1) {
         const justification = reasons.length > 0 
-          ? `${contact.name} matches: ${reasons.join('; ')}`
-          : `${contact.name} is a potential match based on profile.`;
+          ? `${contact.name}: ${reasons.join('; ')}`
+          : `${contact.name} is a potential match.`;
         
         matches.push({
           contact_id: contact.id,
           contact_name: contact.name,
-          score,
+          score: starScore,
+          rawScore,
           reasons,
           justification,
           matchDetails,
         });
         
-        console.log(`MATCH: ${contact.name} (score: ${score})`);
-        console.log(`   Details:`, matchDetails);
+        console.log(`MATCH: ${contact.name} (${starScore}★, raw: ${rawScore.toFixed(3)})`);
       }
     }
     
-    // Sort by score (highest first), then by name match score
+    // Sort by star score (highest first), then by raw score for finer ranking
     matches.sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
-      return b.matchDetails.nameMatchScore - a.matchDetails.nameMatchScore;
+      return b.rawScore - a.rawScore;
     });
     
     // Take top 20 matches

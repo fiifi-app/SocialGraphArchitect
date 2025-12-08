@@ -151,6 +151,12 @@ export const conversations = pgTable("conversations", {
   recordedAt: timestamp("recorded_at").notNull().defaultNow(),
   status: text("status").notNull().default('completed'),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  
+  // Rich context from entity extraction (Phase 1B)
+  targetPerson: jsonb("target_person"), // {name, role, company, seniority, relationship, location, context}
+  matchingIntent: jsonb("matching_intent"), // {what_kind_of_contacts_to_find, hard_constraints, soft_preferences, urgency}
+  goalsAndNeeds: jsonb("goals_and_needs"), // {fundraising, hiring, customers_or_partners, other_needs}
+  domainsAndTopics: jsonb("domains_and_topics"), // {industries, keywords, geo, stage}
 });
 
 export const conversationParticipants = pgTable("conversation_participants", {
@@ -252,6 +258,31 @@ export const relationshipScores = pgTable("relationship_scores", {
 });
 
 // ============================================================================
+// CONTACT ALIASES (Phase 2B) - For fuzzy name matching
+// ============================================================================
+
+export const contactAliases = pgTable("contact_aliases", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id, { onDelete: 'cascade' }),
+  aliasType: text("alias_type").notNull(), // 'nickname', 'former_name', 'alternate_spelling'
+  aliasValue: text("alias_value").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// ============================================================================
+// MATCH FEEDBACK (Phase 2C) - For learning from user feedback
+// ============================================================================
+
+export const matchFeedback = pgTable("match_feedback", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  suggestionId: varchar("suggestion_id").notNull().references(() => matchSuggestions.id, { onDelete: 'cascade' }),
+  profileId: uuid("profile_id").notNull().references(() => profiles.id, { onDelete: 'cascade' }),
+  feedback: text("feedback").notNull(), // 'thumbs_up', 'thumbs_down', 'saved', 'intro_sent'
+  feedbackReason: text("feedback_reason"), // Optional reason for dismissal
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// ============================================================================
 // INSERT SCHEMAS
 // ============================================================================
 
@@ -334,6 +365,16 @@ export const insertRelationshipScoreSchema = createInsertSchema(relationshipScor
   updatedAt: true,
 });
 
+export const insertContactAliasSchema = createInsertSchema(contactAliases).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertMatchFeedbackSchema = createInsertSchema(matchFeedback).omit({
+  id: true,
+  createdAt: true,
+});
+
 // ============================================================================
 // TYPE EXPORTS
 // ============================================================================
@@ -382,3 +423,9 @@ export type InsertRelationshipEvent = z.infer<typeof insertRelationshipEventSche
 
 export type RelationshipScore = typeof relationshipScores.$inferSelect;
 export type InsertRelationshipScore = z.infer<typeof insertRelationshipScoreSchema>;
+
+export type ContactAlias = typeof contactAliases.$inferSelect;
+export type InsertContactAlias = z.infer<typeof insertContactAliasSchema>;
+
+export type MatchFeedback = typeof matchFeedback.$inferSelect;
+export type InsertMatchFeedback = z.infer<typeof insertMatchFeedbackSchema>;
