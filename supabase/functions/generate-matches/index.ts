@@ -309,14 +309,14 @@ Deno.serve(async (req) => {
     const maxCheckSize = parsedCheckSizes.length > 0 ? Math.max(...parsedCheckSizes) : null;
     console.log('Parsed check size range:', minCheckSize, '-', maxCheckSize);
 
-    // Weighted scoring formula:
-    // score = 0.5 * semantic_similarity + 0.2 * tag_overlap + 0.1 * role_match + 0.1 * geo_match + 0.1 * relationship_strength
+    // Weighted scoring formula (adjusted for thesis-based matching)
+    // When semantic embeddings aren't available, we redistribute weight to other factors
     const WEIGHTS = {
-      semantic: 0.5,
-      tagOverlap: 0.2,
-      roleMatch: 0.1,
+      semantic: 0.2,        // Reduced - falls back to keyword matching
+      tagOverlap: 0.35,     // Increased - thesis sector/stage matching is key
+      roleMatch: 0.15,      // Increased - investor type matching
       geoMatch: 0.1,
-      relationship: 0.1,
+      relationship: 0.2,    // Increased - relationship strength matters
     };
     
     // Helper: Jaccard similarity for tag overlap
@@ -418,10 +418,41 @@ Deno.serve(async (req) => {
         contactTags.push('investor');
       }
       
-      // 1. SEMANTIC SIMILARITY (50% weight)
-      // For now, use 0 if embeddings not available (Phase 3 will add embedding matching)
-      // TODO: Implement pgvector similarity when embeddings are populated
-      matchDetails.semanticScore = 0;
+      // Extract keywords from bio/title/investor_notes for better matching
+      const bioText = (contact.bio || '').toLowerCase();
+      const titleText = (contact.title || '').toLowerCase();
+      const notesText = (contact.investor_notes || '').toLowerCase();
+      
+      // Common investment terms to look for
+      const investmentTerms = ['venture', 'capital', 'seed', 'series a', 'series b', 'pre-seed', 
+        'biotech', 'fintech', 'healthtech', 'saas', 'ai', 'ml', 'deep tech', 'climate',
+        'enterprise', 'b2b', 'b2c', 'consumer', 'healthcare', 'life sciences'];
+      for (const term of investmentTerms) {
+        if (bioText.includes(term) || titleText.includes(term) || notesText.includes(term)) {
+          contactTags.push(term);
+        }
+      }
+      
+      // 1. SEMANTIC SIMILARITY (20% weight) - Keyword matching fallback
+      // Extract keywords from contact bio/title/investor_notes and match against conversation
+      const contactText = [
+        contact.bio || '',
+        contact.title || '',
+        contact.investor_notes || '',
+        contact.company || ''
+      ].join(' ').toLowerCase();
+      
+      // Check for sector keyword matches in contact text
+      let keywordMatches = 0;
+      const allSearchTerms = [...sectors, ...stages, ...conversationTags];
+      for (const term of allSearchTerms) {
+        if (contactText.includes(term.toLowerCase())) {
+          keywordMatches++;
+        }
+      }
+      matchDetails.semanticScore = allSearchTerms.length > 0 
+        ? Math.min(keywordMatches / Math.max(allSearchTerms.length, 1), 1)
+        : 0;
       
       // 2. TAG OVERLAP (20% weight) - Jaccard similarity
       matchDetails.tagOverlapScore = jaccardSimilarity(conversationTags, contactTags);
@@ -509,13 +540,13 @@ Deno.serve(async (req) => {
       rawScore = Math.min(Math.max(rawScore, 0), 1);
       
       // MAP TO 3-STAR RATING
-      // Thresholds: 0.15 = 1 star, 0.35 = 2 stars, 0.55 = 3 stars
+      // Lowered thresholds: 0.05 = 1 star, 0.20 = 2 stars, 0.40 = 3 stars
       let starScore = 0;
-      if (rawScore >= 0.55) {
+      if (rawScore >= 0.40) {
         starScore = 3;
-      } else if (rawScore >= 0.35) {
+      } else if (rawScore >= 0.20) {
         starScore = 2;
-      } else if (rawScore >= 0.15) {
+      } else if (rawScore >= 0.05) {
         starScore = 1;
       }
       
