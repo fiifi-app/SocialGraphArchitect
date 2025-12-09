@@ -2,7 +2,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePipeline } from "@/contexts/PipelineContext";
-import { LogOut, User, Bell, Shield, Calendar, CheckCircle2, BrainCircuit, Loader2, Play, Pause, RotateCcw, Mail, Search } from "lucide-react";
+import { LogOut, User, Bell, Shield, Calendar, CheckCircle2, BrainCircuit, Loader2, Play, Pause, RotateCcw, Mail, Search, CloudCog, Power } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -213,6 +214,97 @@ export default function Settings() {
       };
     },
     enabled: !!user,
+  });
+  
+  // Type for pipeline job (from Supabase table not in Drizzle schema)
+  type PipelineJob = {
+    id: string;
+    owned_by_profile: string;
+    enabled: boolean;
+    status: string;
+    current_stage: string;
+    enrich_succeeded: number;
+    enrich_failed: number;
+    thesis_succeeded: number;
+    thesis_failed: number;
+    embed_succeeded: number;
+    embed_failed: number;
+    last_run_at: string | null;
+    last_error: string | null;
+  };
+
+  // Query for background pipeline job status
+  const { data: backgroundPipeline, refetch: refetchBackgroundPipeline } = useQuery<PipelineJob | null>({
+    queryKey: ['/pipeline-jobs', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from('pipeline_jobs')
+        .select('*')
+        .eq('owned_by_profile', user.id)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows returned
+      return data as PipelineJob | null;
+    },
+    enabled: !!user,
+  });
+  
+  // Mutation to toggle background pipeline
+  const toggleBackgroundPipeline = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      if (!user) throw new Error('Not authenticated');
+      
+      // Use upsert to handle both insert and update cases
+      const { error } = await supabase
+        .from('pipeline_jobs')
+        .upsert({
+          owned_by_profile: user.id,
+          enabled,
+          status: enabled ? 'running' : 'idle',
+          started_at: enabled ? new Date().toISOString() : null,
+          current_stage: 'enrichment',
+        }, { 
+          onConflict: 'owned_by_profile',
+          ignoreDuplicates: false
+        });
+      
+      if (error) throw error;
+      
+      // If enabling, trigger an immediate run
+      if (enabled) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          try {
+            await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/run-pipeline-batch`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json',
+              },
+            });
+          } catch (e) {
+            console.error('Failed to trigger immediate run:', e);
+          }
+        }
+      }
+    },
+    onSuccess: () => {
+      refetchBackgroundPipeline();
+      toast({
+        title: toggleBackgroundPipeline.variables ? "Background Processing Enabled" : "Background Processing Disabled",
+        description: toggleBackgroundPipeline.variables 
+          ? "The pipeline will continue processing even when you close the app."
+          : "Background processing has been stopped.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to toggle background processing",
+        variant: "destructive",
+      });
+    },
   });
   
   // Helper to fetch all rows with pagination
@@ -932,6 +1024,95 @@ export default function Settings() {
                 </>
               )}
             </div>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <CloudCog className="w-5 h-5 text-primary" />
+            <h2 className="text-xl font-semibold">Background Processing</h2>
+          </div>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Enable background processing to continue enriching contacts even when you close the app. 
+              The pipeline runs automatically every 2 minutes on the server.
+            </p>
+            
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div className="flex items-center gap-3">
+                <Power className={`w-5 h-5 ${backgroundPipeline?.enabled ? 'text-green-500' : 'text-muted-foreground'}`} />
+                <div>
+                  <p className="font-medium">Auto-run Pipeline</p>
+                  <p className="text-xs text-muted-foreground">
+                    {backgroundPipeline?.enabled ? 'Processing continues in background' : 'Pipeline stops when app is closed'}
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={backgroundPipeline?.enabled || false}
+                onCheckedChange={(checked) => toggleBackgroundPipeline.mutate(checked)}
+                disabled={toggleBackgroundPipeline.isPending}
+                data-testid="switch-background-pipeline"
+              />
+            </div>
+            
+            {backgroundPipeline && backgroundPipeline.enabled && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm p-3 bg-muted/30 rounded-md">
+                <div>
+                  <span className="text-muted-foreground">Status:</span>
+                  <span className={`ml-2 font-medium ${backgroundPipeline.status === 'running' ? 'text-green-600' : backgroundPipeline.status === 'failed' ? 'text-red-600' : 'text-muted-foreground'}`}>
+                    {backgroundPipeline.status === 'running' ? 'Running' : 
+                     backgroundPipeline.status === 'completed' ? 'Completed' :
+                     backgroundPipeline.status === 'failed' ? 'Failed' : 'Idle'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Stage:</span>
+                  <span className="ml-2 font-medium capitalize">{backgroundPipeline.current_stage || 'enrichment'}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Enriched:</span>
+                  <span className="ml-2 font-medium text-green-600">{backgroundPipeline.enrich_succeeded || 0}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Theses:</span>
+                  <span className="ml-2 font-medium text-green-600">{backgroundPipeline.thesis_succeeded || 0}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Embeddings:</span>
+                  <span className="ml-2 font-medium text-blue-600">{backgroundPipeline.embed_succeeded || 0}</span>
+                </div>
+                {backgroundPipeline.last_run_at && (
+                  <div>
+                    <span className="text-muted-foreground">Last run:</span>
+                    <span className="ml-2 font-medium">{new Date(backgroundPipeline.last_run_at).toLocaleTimeString()}</span>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {backgroundPipeline?.last_error && (
+              <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-md text-sm text-red-700 dark:text-red-300">
+                <strong>Error:</strong> {backgroundPipeline.last_error}
+              </div>
+            )}
+            
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => refetchBackgroundPipeline()}
+                data-testid="button-refresh-background-status"
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Refresh Status
+              </Button>
+            </div>
+            
+            <p className="text-xs text-muted-foreground">
+              Note: Requires the run-pipeline-batch Edge Function to be deployed in Supabase.
+              For automatic scheduling, enable pg_cron in Supabase Dashboard.
+            </p>
           </div>
         </Card>
 

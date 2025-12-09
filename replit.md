@@ -13,6 +13,7 @@ supabase functions deploy generate-matches --project-ref YOUR_PROJECT_REF
 supabase functions deploy embed-contact --project-ref YOUR_PROJECT_REF
 supabase functions deploy extract-entities --project-ref YOUR_PROJECT_REF
 supabase functions deploy generate-intro-email --project-ref YOUR_PROJECT_REF
+supabase functions deploy run-pipeline-batch --project-ref YOUR_PROJECT_REF
 supabase secrets set OPENAI_API_KEY=your_key --project-ref YOUR_PROJECT_REF
 ```
 Or manually via Supabase Dashboard → Edge Functions → Create → paste code from:
@@ -22,6 +23,7 @@ Or manually via Supabase Dashboard → Edge Functions → Create → paste code 
 - `supabase/functions/embed-contact/index.ts` (OpenAI embeddings for contacts)
 - `supabase/functions/extract-entities/index.ts` (rich entity extraction with matching_intent)
 - `supabase/functions/generate-intro-email/index.ts` (context-aware intro emails)
+- `supabase/functions/run-pipeline-batch/index.ts` (background autonomous pipeline processing)
 
 **Run SQL Migration:**
 Execute `supabase/migrations/20241208_matching_upgrade.sql` in Supabase SQL Editor to enable:
@@ -32,6 +34,14 @@ Execute `supabase/migrations/20241208_matching_upgrade.sql` in Supabase SQL Edit
 - relationship_strength column in contacts
 
 ## Recent Changes
+- **Background Pipeline Processing (NEW):** Autonomous server-side contact enrichment:
+  - pipeline_jobs table tracks job status, progress counters, and enables per-user configuration
+  - run-pipeline-batch Edge Function processes contacts in batches without browser open
+  - Three-stage pipeline: enrichment (bio generation) → thesis extraction → embedding generation
+  - Settings UI toggle to enable/disable background processing with live status display
+  - Status lifecycle cycles idle→running→idle to continuously process new contacts
+  - Proper error handling, timeout management (60s limit), and rate limiting
+  - Optional pg_cron scheduling (requires Supabase Pro) or external scheduler (GitHub Actions)
 - **Meeting Insights Dashboard (NEW):** Dynamic dashboard on Home page showing:
   - Key Topics: Aggregated sectors, technologies, and geographic focus from last 7 days of conversations
   - Contacts Discussed: Unique contacts mentioned in recent conversations with name/title/company
