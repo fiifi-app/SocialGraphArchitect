@@ -7,6 +7,7 @@ import { useTodaysEvents } from "@/hooks/useUpcomingEvents";
 import { useConversations } from "@/hooks/useConversations";
 import RecordingDrawer from "@/components/RecordingDrawer";
 import SwipeableRecordingCard from "@/components/SwipeableRecordingCard";
+import MeetingInsights from "@/components/MeetingInsights";
 import { format, isToday, isYesterday, startOfDay } from "date-fns";
 import { supabase } from "@/lib/supabase";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -200,6 +201,9 @@ export default function HomeNew() {
             </div>
           )}
         </div>
+
+        {/* Meeting Insights Dashboard */}
+        <MeetingInsights />
 
         {/* Conversation History */}
         <div className="p-4 md:p-6 lg:p-8">
