@@ -67,7 +67,7 @@ function detectContactTypes(title: string | null, bio: string | null, existingTy
 }
 
 // Use standard OpenAI Chat API as primary method
-async function generateBioWithChatAPI(openaiApiKey: string, name: string, company: string | null, title: string | null): Promise<any> {
+async function generateBioWithChatAPI(openaiApiKey: string, name: string, company: string | null, title: string | null) {
   console.log('[Research] Using Chat API for:', name);
   
   const prompt = `Generate a professional bio for this person based on their available information.
@@ -126,7 +126,7 @@ Return ONLY a valid JSON object:
 }
 
 // Generate investor thesis using Chat API
-async function generateThesisWithChatAPI(openaiApiKey: string, name: string, company: string | null, title: string | null): Promise<any> {
+async function generateThesisWithChatAPI(openaiApiKey: string, name: string, company: string | null, title: string | null) {
   console.log('[Research] Generating investor thesis for:', name);
   
   const prompt = `Generate an investment thesis profile for this investor based on their available information.
