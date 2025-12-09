@@ -32,7 +32,13 @@ Execute `supabase/migrations/20241208_matching_upgrade.sql` in Supabase SQL Edit
 - relationship_strength column in contacts
 
 ## Recent Changes
-- **Advanced Matching System (NEW):** Upgraded matching with weighted scoring and AI explanations:
+- **Meeting Insights Dashboard (NEW):** Dynamic dashboard on Home page showing:
+  - Key Topics: Aggregated sectors, technologies, and geographic focus from last 7 days of conversations
+  - Contacts Discussed: Unique contacts mentioned in recent conversations with name/title/company
+  - Action Items: AI-extracted needs (fundraising, hiring) and pending introduction suggestions
+  - Clickable action items navigate to relevant conversations
+  - Responsive 3-column grid layout with loading skeletons
+- **Advanced Matching System:** Upgraded matching with weighted scoring and AI explanations:
   - Weighted scoring formula: 50% semantic similarity + 20% tag overlap + 10% role match + 10% geo match + 10% relationship strength
   - AI-generated "why this intro is perfect" explanations for top 2-3 star matches using GPT-4o-mini
   - Relationship strength display (heart icon with percentage) on match cards
