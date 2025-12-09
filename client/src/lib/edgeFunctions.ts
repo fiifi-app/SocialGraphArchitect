@@ -101,6 +101,20 @@ export async function extractThesis(contactId: string) {
   return data;
 }
 
+export async function embedContact(contactId: string) {
+  console.log('[Embedding] Generating embeddings for contact:', contactId);
+  const { data, error } = await supabase.functions.invoke('embed-contact', {
+    body: { contactId }
+  });
+  
+  if (error) {
+    console.error('Embed contact error:', error);
+    throw error;
+  }
+  console.log('Embeddings generated successfully:', data);
+  return data;
+}
+
 // Hunter.io email finding
 export async function checkHunterStatus() {
   const { data, error } = await supabase.functions.invoke('hunter-batch', {

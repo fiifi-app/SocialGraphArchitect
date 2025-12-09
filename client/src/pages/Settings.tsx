@@ -26,6 +26,7 @@ export default function Settings() {
     pipelineStage,
     enrichProgress,
     extractionProgress,
+    embeddingProgress,
     currentBatch,
     totalBatches,
     startPipeline,
@@ -184,6 +185,31 @@ export default function Settings() {
         withName: withName || 0,
         enriched: enrichedCount || 0,
         needsEnrichment: (withName || 0) - (enrichedCount || 0),
+      };
+    },
+    enabled: !!user,
+  });
+  
+  // Query to count contacts with embeddings
+  const { data: embeddingStats, refetch: refetchEmbeddingStats } = useQuery({
+    queryKey: ['/embedding-stats'],
+    queryFn: async () => {
+      // Count contacts with bio or investor notes (eligible for embeddings)
+      const { count: eligibleCount } = await supabase
+        .from('contacts')
+        .select('*', { count: 'exact', head: true })
+        .or('bio.not.is.null,investor_notes.not.is.null');
+      
+      // Count contacts that already have embeddings
+      const { count: withEmbeddingCount } = await supabase
+        .from('contacts')
+        .select('*', { count: 'exact', head: true })
+        .not('bio_embedding', 'is', null);
+      
+      return {
+        eligible: eligibleCount || 0,
+        withEmbedding: withEmbeddingCount || 0,
+        needsEmbedding: (eligibleCount || 0) - (withEmbeddingCount || 0),
       };
     },
     enabled: !!user,
@@ -748,15 +774,15 @@ export default function Settings() {
           </div>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Run a complete AI analysis on all contacts: Step 1) AI researches bio/title and investor info, Step 2) Extracts investment thesis keywords. This combines enrichment and thesis extraction into one workflow.
+              Run a complete AI analysis on all contacts: Step 1) AI researches bio/title and investor info, Step 2) Extracts investment thesis keywords, Step 3) Generates embeddings for semantic matching.
             </p>
             
             <div className="p-3 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 rounded-md text-sm text-indigo-700 dark:text-indigo-300">
-              <strong>Unified Pipeline:</strong> {pipelineStage === 'enrichment' ? '📝 Step 1: AI Research' : '🧠 Step 2: Thesis Extraction'}
+              <strong>Unified Pipeline:</strong> {pipelineStage === 'enrichment' ? '📝 Step 1: AI Research' : pipelineStage === 'extraction' ? '🧠 Step 2: Thesis Extraction' : '🔗 Step 3: Generate Embeddings'}
             </div>
             
             {enrichStats && thesisStats && (
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-3 gap-4 text-sm">
                 <div>
                   <span className="text-muted-foreground">Total contacts:</span>
                   <span className="ml-2 font-medium">{enrichStats.total.toLocaleString()}</span>
@@ -779,6 +805,20 @@ export default function Settings() {
                     {isPipelineRunning || hasInterruptedPipeline
                       ? extractionProgress.succeeded
                       : thesisStats.withThesis.toLocaleString()}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">With embeddings:</span>
+                  <span className="ml-2 font-medium text-blue-600">
+                    {isPipelineRunning || hasInterruptedPipeline
+                      ? embeddingProgress.succeeded
+                      : (embeddingStats?.withEmbedding || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Need embeddings:</span>
+                  <span className="ml-2 font-medium text-amber-600">
+                    {(embeddingStats?.needsEmbedding || 0).toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -818,6 +858,21 @@ export default function Settings() {
                     <Progress value={(extractionProgress.processed / Math.max(extractionProgress.total, 1)) * 100} className="h-2" />
                   </div>
                 )}
+                
+                {pipelineStage === 'embedding' && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        {isPipelinePaused ? 'Paused' : 'Generating embeddings...'}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {embeddingProgress.processed} / {embeddingProgress.total}
+                      </span>
+                    </div>
+                    <Progress value={(embeddingProgress.processed / Math.max(embeddingProgress.total, 1)) * 100} className="h-2" />
+                  </div>
+                )}
               </div>
             )}
             
@@ -848,7 +903,7 @@ export default function Settings() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => { refetchEnrichStats(); refetchThesisStats(); }}
+                    onClick={() => { refetchEnrichStats(); refetchThesisStats(); refetchEmbeddingStats(); }}
                     data-testid="button-refresh-pipeline-stats"
                   >
                     <RotateCcw className="w-4 h-4 mr-2" />

@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useRef, useCallback, ReactNode, us
 import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import { researchContact, extractThesis } from '@/lib/edgeFunctions';
+import { researchContact, extractThesis, embedContact } from '@/lib/edgeFunctions';
 
 interface PipelineProgress {
   processed: number;
@@ -19,15 +19,18 @@ interface PipelineState {
   enrichFailed: number;
   thesisSucceeded: number;
   thesisFailed: number;
+  embeddingSucceeded: number;
+  embeddingFailed: number;
   currentIndex: number;
 }
 
 interface PipelineContextType {
   isPipelineRunning: boolean;
   isPipelinePaused: boolean;
-  pipelineStage: 'enrichment' | 'extraction';
+  pipelineStage: 'enrichment' | 'extraction' | 'embedding';
   enrichProgress: PipelineProgress;
   extractionProgress: PipelineProgress;
+  embeddingProgress: PipelineProgress;
   currentBatch: number;
   totalBatches: number;
   startPipeline: () => Promise<void>;
@@ -75,9 +78,10 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
   
   const [isPipelineRunning, setIsPipelineRunning] = useState(false);
   const [isPipelinePaused, setIsPipelinePaused] = useState(false);
-  const [pipelineStage, setPipelineStage] = useState<'enrichment' | 'extraction'>('enrichment');
+  const [pipelineStage, setPipelineStage] = useState<'enrichment' | 'extraction' | 'embedding'>('enrichment');
   const [enrichProgress, setEnrichProgress] = useState<PipelineProgress>({ processed: 0, total: 0, succeeded: 0, failed: 0 });
   const [extractionProgress, setExtractionProgress] = useState<PipelineProgress>({ processed: 0, total: 0, succeeded: 0, failed: 0 });
+  const [embeddingProgress, setEmbeddingProgress] = useState<PipelineProgress>({ processed: 0, total: 0, succeeded: 0, failed: 0 });
   const [currentBatch, setCurrentBatch] = useState(0);
   const [totalBatches, setTotalBatches] = useState(0);
   const [hasInterruptedPipeline, setHasInterruptedPipeline] = useState(false);
@@ -102,6 +106,12 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
         total: savedState.totalContacts,
         succeeded: savedState.thesisSucceeded,
         failed: savedState.thesisFailed
+      });
+      setEmbeddingProgress({
+        processed: savedState.processedIds.length,
+        total: savedState.totalContacts,
+        succeeded: savedState.embeddingSucceeded || 0,
+        failed: savedState.embeddingFailed || 0
       });
       console.log(`[Pipeline] Found interrupted pipeline with ${remaining} contacts remaining`);
     }
@@ -151,6 +161,8 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
       enrichFailed: 0,
       thesisSucceeded: 0,
       thesisFailed: 0,
+      embeddingSucceeded: 0,
+      embeddingFailed: 0,
       currentIndex: startIndex
     };
     stateRef.current = state;
@@ -237,6 +249,47 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
         failed: state.thesisFailed 
       });
       
+      // Step 3: Generate embeddings for contacts with bio or thesis data
+      setPipelineStage('embedding');
+      
+      const contactsForEmbedding = batch.filter(c => 
+        (c.bio && c.bio.trim().length > 0) || 
+        (c.investor_notes && c.investor_notes.trim().length > 0)
+      );
+      
+      // Count skipped contacts (no bio/investor_notes) as processed but not succeeded/failed
+      const skippedForEmbedding = batch.length - contactsForEmbedding.length;
+      
+      if (contactsForEmbedding.length > 0) {
+        const embeddingResults = await Promise.allSettled(
+          contactsForEmbedding.map(async (contact) => {
+            try {
+              await embedContact(contact.id);
+              return { success: true, name: contact.name };
+            } catch (error) {
+              console.error(`Failed to generate embeddings for ${contact.name}:`, error);
+              return { success: false, name: contact.name };
+            }
+          })
+        );
+        
+        let batchEmbeddingSucceeded = 0, batchEmbeddingFailed = 0;
+        embeddingResults.forEach((result) => {
+          if (result.status === 'fulfilled' && result.value.success) batchEmbeddingSucceeded++;
+          else batchEmbeddingFailed++;
+        });
+        
+        state.embeddingSucceeded += batchEmbeddingSucceeded;
+        state.embeddingFailed += batchEmbeddingFailed;
+      }
+      
+      setEmbeddingProgress({ 
+        processed: i + batch.length, 
+        total: totalContacts, 
+        succeeded: state.embeddingSucceeded, 
+        failed: state.embeddingFailed 
+      });
+      
       batch.forEach(c => state.processedIds.push(c.id));
       state.currentIndex = i + BATCH_SIZE;
       savePipelineState(state);
@@ -244,6 +297,7 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ['/api/contacts'] });
       queryClient.invalidateQueries({ queryKey: ['/enrich-stats'] });
       queryClient.invalidateQueries({ queryKey: ['/thesis-extraction-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/embedding-stats'] });
       
       if (i + BATCH_SIZE < contacts.length && !abortRef.current) {
         await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
@@ -268,6 +322,7 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
     abortRef.current = false;
     setEnrichProgress({ processed: 0, total: 0, succeeded: 0, failed: 0 });
     setExtractionProgress({ processed: 0, total: 0, succeeded: 0, failed: 0 });
+    setEmbeddingProgress({ processed: 0, total: 0, succeeded: 0, failed: 0 });
     
     try {
       toast({ title: "Starting Contact Intelligence Pipeline", description: "Processing contacts in batches..." });
@@ -282,6 +337,7 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
       
       setEnrichProgress({ processed: 0, total: allContacts.length, succeeded: 0, failed: 0 });
       setExtractionProgress({ processed: 0, total: allContacts.length, succeeded: 0, failed: 0 });
+      setEmbeddingProgress({ processed: 0, total: allContacts.length, succeeded: 0, failed: 0 });
       
       const finalState = await runPipeline(allContacts);
       
@@ -293,12 +349,12 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
       if (abortRef.current) {
         toast({ 
           title: "Pipeline stopped", 
-          description: `Processed: ${finalState.processedIds.length}/${finalState.totalContacts}. Thesis: ${finalState.thesisSucceeded}.` 
+          description: `Processed: ${finalState.processedIds.length}/${finalState.totalContacts}. Thesis: ${finalState.thesisSucceeded}. Embeddings: ${finalState.embeddingSucceeded}.` 
         });
       } else {
         toast({ 
           title: "Contact Intelligence Pipeline Complete!", 
-          description: `Processed ${finalState.processedIds.length}/${finalState.totalContacts} contacts. Extracted thesis for ${finalState.thesisSucceeded}.` 
+          description: `Processed ${finalState.processedIds.length} contacts. Thesis: ${finalState.thesisSucceeded}. Embeddings: ${finalState.embeddingSucceeded}.` 
         });
       }
       
@@ -368,6 +424,12 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
         succeeded: savedState.thesisSucceeded,
         failed: savedState.thesisFailed
       });
+      setEmbeddingProgress({
+        processed: savedState.processedIds.length,
+        total: totalContacts,
+        succeeded: savedState.embeddingSucceeded || 0,
+        failed: savedState.embeddingFailed || 0
+      });
       
       const resumeState: PipelineState = {
         ...savedState,
@@ -385,12 +447,12 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
       if (abortRef.current) {
         toast({ 
           title: "Pipeline stopped", 
-          description: `Processed: ${finalState.processedIds.length}/${finalState.totalContacts}. Thesis: ${finalState.thesisSucceeded}.` 
+          description: `Processed: ${finalState.processedIds.length}/${finalState.totalContacts}. Thesis: ${finalState.thesisSucceeded}. Embeddings: ${finalState.embeddingSucceeded}.` 
         });
       } else {
         toast({ 
           title: "Contact Intelligence Pipeline Complete!", 
-          description: `Processed ${finalState.processedIds.length}/${finalState.totalContacts} contacts. Extracted thesis for ${finalState.thesisSucceeded}.` 
+          description: `Processed ${finalState.processedIds.length} contacts. Thesis: ${finalState.thesisSucceeded}. Embeddings: ${finalState.embeddingSucceeded}.` 
         });
       }
       
@@ -419,6 +481,7 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
       pipelineStage,
       enrichProgress,
       extractionProgress,
+      embeddingProgress,
       currentBatch,
       totalBatches,
       startPipeline,
