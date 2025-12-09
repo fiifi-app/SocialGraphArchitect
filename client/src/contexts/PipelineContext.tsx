@@ -211,22 +211,42 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
         failed: state.enrichFailed 
       });
       
+      // Re-fetch batch contacts to get fresh data after enrichment
+      // This fresh data is used for BOTH thesis extraction AND embedding
+      console.log('[Pipeline] Re-fetching fresh batch data after enrichment');
+      const batchIds = batch.map(c => c.id);
+      const { data: freshBatchData, error: fetchError } = await supabase
+        .from('contacts')
+        .select('id, name, bio, title, investor_notes')
+        .in('id', batchIds);
+      
+      if (fetchError) {
+        console.error('[Pipeline] Failed to fetch fresh batch data:', fetchError);
+      }
+      
+      const freshBatch = freshBatchData || [];
+      console.log('[Pipeline] Fresh batch fetched:', freshBatch.length, 'contacts');
+      
+      // Step 2: Thesis extraction using FRESH data
       setPipelineStage('extraction');
       
-      const contactsForThesis = batch.filter(c => 
+      const contactsForThesis = freshBatch.filter(c => 
         (c.bio && c.bio.trim().length > 0) || 
         (c.title && c.title.trim().length > 0) || 
         (c.investor_notes && c.investor_notes.trim().length > 0)
       );
       
+      console.log('[Thesis] Eligible for thesis:', contactsForThesis.length, 'of', freshBatch.length);
+      
       if (contactsForThesis.length > 0) {
         const thesisResults = await Promise.allSettled(
           contactsForThesis.map(async (contact) => {
             try {
+              console.log('[Thesis] Extracting thesis for:', contact.name);
               await extractThesis(contact.id);
               return { success: true, name: contact.name };
             } catch (error) {
-              console.error(`Failed to extract thesis for ${contact.name}:`, error);
+              console.error(`[Thesis] Failed for ${contact.name}:`, error);
               return { success: false, name: contact.name };
             }
           })
@@ -249,30 +269,25 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
         failed: state.thesisFailed 
       });
       
-      // Step 3: Generate embeddings for contacts with bio or thesis data
-      // Re-fetch batch contacts to get fresh data after enrichment
+      // Step 3: Generate embeddings using the same fresh data
       setPipelineStage('embedding');
       
-      const batchIds = batch.map(c => c.id);
-      const { data: freshBatchData } = await supabase
-        .from('contacts')
-        .select('id, name, bio, investor_notes')
-        .in('id', batchIds);
-      
-      const freshBatch = freshBatchData || [];
       const contactsForEmbedding = freshBatch.filter(c => 
         (c.bio && c.bio.trim().length > 0) || 
         (c.investor_notes && c.investor_notes.trim().length > 0)
       );
       
+      console.log('[Embedding] Eligible for embedding:', contactsForEmbedding.length, 'of', freshBatch.length);
+      
       if (contactsForEmbedding.length > 0) {
         const embeddingResults = await Promise.allSettled(
           contactsForEmbedding.map(async (contact) => {
             try {
+              console.log('[Embedding] Generating embedding for:', contact.name);
               await embedContact(contact.id);
               return { success: true, name: contact.name };
             } catch (error) {
-              console.error(`Failed to generate embeddings for ${contact.name}:`, error);
+              console.error(`[Embedding] Failed for ${contact.name}:`, error);
               return { success: false, name: contact.name };
             }
           })

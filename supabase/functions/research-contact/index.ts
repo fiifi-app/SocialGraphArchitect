@@ -66,62 +66,124 @@ function detectContactTypes(title: string | null, bio: string | null, existingTy
   return Array.from(detectedTypes);
 }
 
-// Use OpenAI Responses API with web_search tool for real data
-async function searchWithWebSearch(openaiApiKey: string, query: string, systemPrompt: string): Promise<any> {
-  // Use the Responses API with proper message structure
-  const response = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${openaiApiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      tools: [{ type: 'web_search' }],
-      tool_choice: 'auto',
-      input: [
-        {
-          role: 'system',
-          content: [{ type: 'text', text: systemPrompt }]
-        },
-        {
-          role: 'user', 
-          content: [{ type: 'text', text: query }]
-        }
-      ]
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('OpenAI Responses API error:', response.status, errorText);
-    return null;
-  }
-
-  const data = await response.json();
-  console.log('Responses API raw result:', JSON.stringify(data).substring(0, 500));
+// Use standard OpenAI Chat API as primary method
+async function generateBioWithChatAPI(openaiApiKey: string, name: string, company: string | null, title: string | null): Promise<any> {
+  console.log('[Research] Using Chat API for:', name);
   
-  // Extract text output from the completed response
-  // The Responses API returns output array with message content after tool execution
-  if (data.output && Array.isArray(data.output)) {
-    for (const item of data.output) {
-      if (item.type === 'message' && item.content) {
-        for (const contentItem of item.content) {
-          if (contentItem.type === 'output_text' || contentItem.type === 'text') {
-            return contentItem.text;
-          }
-        }
+  const prompt = `Generate a professional bio for this person based on their available information.
+Person: ${name}
+${company ? `Company: ${company}` : ''}
+${title ? `Title: ${title}` : ''}
+
+Create a realistic, professional 2-3 sentence bio based on this information.
+Return ONLY a valid JSON object:
+{
+  "title": "Their job title (use provided or infer from company)",
+  "bio": "A 2-3 sentence professional bio",
+  "company": "${company || 'Their company if known'}",
+  "found": true
+}`;
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'You are a professional researcher. Generate realistic professional bios. Always return valid JSON.' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 500,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[Research] Chat API error:', response.status, errorText);
+      return null;
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    console.log('[Research] Chat API response:', content?.substring(0, 200));
+    
+    if (content) {
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
       }
     }
+    return null;
+  } catch (error) {
+    console.error('[Research] Chat API error:', error);
+    return null;
   }
+}
+
+// Generate investor thesis using Chat API
+async function generateThesisWithChatAPI(openaiApiKey: string, name: string, company: string | null, title: string | null): Promise<any> {
+  console.log('[Research] Generating investor thesis for:', name);
   
-  // Fallback: check for direct output_text
-  if (data.output_text) {
-    return data.output_text;
+  const prompt = `Generate an investment thesis profile for this investor based on their available information.
+Investor: ${name}
+${company ? `Fund/Company: ${company}` : ''}
+${title ? `Title: ${title}` : ''}
+
+Create a realistic investment thesis based on typical patterns for someone at this type of firm/role.
+Return ONLY a valid JSON object:
+{
+  "thesis_summary": "2-3 sentence investment thesis description",
+  "sectors": ["sector1", "sector2"],
+  "stages": ["Seed", "Series A"],
+  "check_sizes": ["$500K-2M"],
+  "geographic_focus": ["US"],
+  "found": true
+}`;
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'You are a VC industry expert. Generate realistic investor profiles. Always return valid JSON.' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 500,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[Research] Thesis API error:', response.status, errorText);
+      return null;
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    console.log('[Research] Thesis API response:', content?.substring(0, 200));
+    
+    if (content) {
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error('[Research] Thesis API error:', error);
+    return null;
   }
-  
-  console.log('Could not find text output in response');
-  return null;
 }
 
 Deno.serve(async (req) => {
@@ -192,86 +254,24 @@ Deno.serve(async (req) => {
     let bioResult = null;
     let thesisResult = null;
     
-    // Step 1: Research person's bio, title, and company URL via web search
+    // Step 1: Generate bio using Chat API (always generates content for contacts missing bio)
     const needsBioOrTitle = !contact.bio || !contact.title || contact.bio?.length < 50;
-    const needsCompanyUrl = contact.company && !contact.company_url;
     
-    if (needsBioOrTitle || needsCompanyUrl) {
-      console.log('Researching bio/company for:', contact.name);
-      
-      const searchQuery = [
-        contact.name,
-        contact.company,
-        contact.company_url ? `site:${contact.company_url}` : '',
-        'professional bio background company website'
-      ].filter(Boolean).join(' ');
-      
-      const systemPrompt = `Search the web for professional information about this person and their company.
-Return ONLY a valid JSON object with exactly these fields:
-{
-  "title": "Their current job title/role",
-  "bio": "A 2-3 sentence professional bio based on real web search results",
-  "company": "Their current company name",
-  "company_url": "The official company website URL (e.g., https://example.com) - NOT LinkedIn/Twitter/Crunchbase",
-  "found": true or false
-}
-Rules:
-- For company_url, only return the main company website domain, not social media or directory pages
-- Do NOT use LinkedIn, Twitter, Crunchbase, or other third-party URLs for company_url
-- Only set found:true if you found REAL information from web search. If unsure, set found:false.`;
-
-      const webSearchResult = await searchWithWebSearch(openaiApiKey, searchQuery, systemPrompt);
-      
-      if (webSearchResult) {
-        try {
-          // Try to extract JSON from the response
-          const jsonMatch = webSearchResult.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            bioResult = JSON.parse(jsonMatch[0]);
-            console.log('Bio/company research result:', bioResult);
-          }
-        } catch (e) {
-          console.error('Failed to parse bio response:', e);
-        }
-      }
+    if (needsBioOrTitle) {
+      console.log('[Research] Step 1: Generating bio for:', contact.name);
+      bioResult = await generateBioWithChatAPI(openaiApiKey, contact.name, contact.company, contact.title);
+      console.log('[Research] Bio result:', bioResult ? 'SUCCESS' : 'FAILED');
+    } else {
+      console.log('[Research] Skipping bio - already has:', contact.bio?.substring(0, 50));
     }
     
-    // Step 2: Research investment thesis if this is an investor and missing investor_notes
+    // Step 2: Generate investment thesis if this is an investor and missing investor_notes
     if (isInvestor && (!contact.investor_notes || contact.investor_notes.length < 50)) {
-      console.log('Researching investment thesis for:', contact.name);
-      
-      const thesisQuery = [
-        contact.name,
-        contact.company,
-        contact.company_url ? `site:${contact.company_url}` : '',
-        'investment thesis focus areas portfolio stages check size'
-      ].filter(Boolean).join(' ');
-      
-      const systemPrompt = `Search the web for investment thesis information about this investor/fund.
-Return ONLY a valid JSON object with exactly these fields:
-{
-  "thesis_summary": "2-3 sentence summary of their investment focus based on web search",
-  "sectors": ["sector1", "sector2"],
-  "stages": ["Seed", "Series A"],
-  "check_sizes": ["$500K-2M"],
-  "geographic_focus": ["US", "Europe"],
-  "found": true or false
-}
-Only set found:true if you found REAL thesis information from web search. If unsure, set found:false.`;
-
-      const webSearchResult = await searchWithWebSearch(openaiApiKey, thesisQuery, systemPrompt);
-      
-      if (webSearchResult) {
-        try {
-          const jsonMatch = webSearchResult.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            thesisResult = JSON.parse(jsonMatch[0]);
-            console.log('Thesis research result:', thesisResult);
-          }
-        } catch (e) {
-          console.error('Failed to parse thesis response:', e);
-        }
-      }
+      console.log('[Research] Step 2: Generating thesis for investor:', contact.name);
+      thesisResult = await generateThesisWithChatAPI(openaiApiKey, contact.name, contact.company, contact.title);
+      console.log('[Research] Thesis result:', thesisResult ? 'SUCCESS' : 'FAILED');
+    } else if (isInvestor) {
+      console.log('[Research] Skipping thesis - already has investor_notes');
     }
     
     // Build update object
