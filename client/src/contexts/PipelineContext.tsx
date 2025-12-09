@@ -250,15 +250,20 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
       });
       
       // Step 3: Generate embeddings for contacts with bio or thesis data
+      // Re-fetch batch contacts to get fresh data after enrichment
       setPipelineStage('embedding');
       
-      const contactsForEmbedding = batch.filter(c => 
+      const batchIds = batch.map(c => c.id);
+      const { data: freshBatchData } = await supabase
+        .from('contacts')
+        .select('id, name, bio, investor_notes')
+        .in('id', batchIds);
+      
+      const freshBatch = freshBatchData || [];
+      const contactsForEmbedding = freshBatch.filter(c => 
         (c.bio && c.bio.trim().length > 0) || 
         (c.investor_notes && c.investor_notes.trim().length > 0)
       );
-      
-      // Count skipped contacts (no bio/investor_notes) as processed but not succeeded/failed
-      const skippedForEmbedding = batch.length - contactsForEmbedding.length;
       
       if (contactsForEmbedding.length > 0) {
         const embeddingResults = await Promise.allSettled(
