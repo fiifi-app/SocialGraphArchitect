@@ -782,7 +782,7 @@ export default function Settings() {
             </div>
             
             {enrichStats && thesisStats && (
-              <div className="grid grid-cols-3 gap-4 text-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-sm">
                 <div>
                   <span className="text-muted-foreground">Total contacts:</span>
                   <span className="ml-2 font-medium">{enrichStats.total.toLocaleString()}</span>
@@ -953,7 +953,7 @@ export default function Settings() {
               </div>
             ) : hunterStatus ? (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                   <div>
                     <span className="text-muted-foreground">Searches used:</span>
                     <span className="ml-2 font-medium">
