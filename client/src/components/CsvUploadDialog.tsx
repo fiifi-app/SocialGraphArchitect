@@ -75,6 +75,13 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
     return url.includes('linkedin.com/in/') || url.includes('linkedin.com/company/');
   };
 
+  const isValidUrl = (str: string): boolean => {
+    if (!str || str.trim() === '') return false;
+    // Check if it looks like a URL (has domain-like structure or starts with http)
+    const urlPattern = /^(https?:\/\/)?([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/.*)?$/i;
+    return urlPattern.test(str.trim());
+  };
+
   const normalizeLinkedInUrl = (url: string): string => {
     if (!url) return '';
     if (url.startsWith('http')) return url;
@@ -107,13 +114,18 @@ export default function CsvUploadDialog({ open, onOpenChange }: CsvUploadDialogP
           const category = row.category || row.Category || row.Catagory || row.catagory || '';
           const twitter = row.twitter || row.Twitter || '';
           const angellist = row.angellist || row.Angellist || row['Angel List'] || row.angel_list || '';
-          const bio = row.bio || row.Bio || row.about || row.About || row.description || row.Description || row.summary || row.Summary || '';
+          const bio = row.bio || row.Bio || row.about || row.About || row.description || row.Description || row.summary || row.Summary || 
+                     row['Company Description'] || row.company_description || row['Company About'] || row.company_about || 
+                     row['Person Summary'] || row.person_summary || row['Profile'] || row.profile || '';
           
           // Company information fields
-          const companyAddress = row['Company Address'] || row.company_address || '';
-          const companyEmployees = row['Company # of Employees'] || row.company_employees || '';
-          const companyFounded = row['Company Founded'] || row.company_founded || '';
-          const companyUrl = row['Company URL'] || row.company_url || '';
+          const companyAddress = row['Company Address'] || row.company_address || row['Address'] || row.address || row['Company Street'] || row.company_street || row['HQ Address'] || row.hq_address || '';
+          const companyEmployees = row['Company # of Employees'] || row.company_employees || row['Employees'] || row.employees || row['Company Size'] || row.company_size || '';
+          const companyFounded = row['Company Founded'] || row.company_founded || row['Founded'] || row.founded || row['Year Founded'] || row.year_founded || '';
+          
+          // Get raw company URL candidate and validate it's actually a URL
+          const companyUrlRaw = row['Company URL'] || row.company_url || row['Website'] || row.website || row['Company Website'] || row.company_website || row['URL'] || row.url || '';
+          const companyUrl = isValidUrl(companyUrlRaw) ? companyUrlRaw : '';
           const companyLinkedin = row['Company Linkedin'] || row['Company LinkedIn'] || row.company_linkedin || '';
           const companyTwitter = row['Company Twitter'] || row.company_twitter || '';
           const companyFacebook = row['Company Facebook'] || row.company_facebook || '';
