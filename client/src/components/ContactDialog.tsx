@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -24,9 +24,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import { useCreateContact, useUpdateContact, useDeleteContact } from "@/hooks/useContacts";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Trash2, Pencil, Mail, Phone, MapPin, Briefcase, Building2, Globe, Linkedin, Twitter, ExternalLink } from "lucide-react";
 import type { Contact } from "@shared/schema";
 import { useFeatureFlags } from "@/lib/featureFlags";
 import {
@@ -39,7 +40,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useState } from "react";
 
 // Helper function to auto-detect contact types from title (same as ContactCard)
 const detectContactTypesFromTitle = (title: string | null | undefined): ('LP' | 'GP' | 'Angel' | 'FamilyOffice' | 'Startup' | 'PE')[] => {
@@ -131,13 +131,27 @@ interface ContactDialogProps {
 }
 
 export default function ContactDialog({ open, onOpenChange, contact }: ContactDialogProps) {
-  const isEditMode = !!contact;
+  const hasExistingContact = !!contact;
   const createContact = useCreateContact();
   const updateContact = useUpdateContact();
   const deleteContact = useDeleteContact();
   const { toast } = useToast();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const { data: featureFlags } = useFeatureFlags();
+
+  // Reset editing state when dialog opens/closes or contact changes
+  useEffect(() => {
+    if (!open) {
+      setIsEditing(false);
+    } else if (!contact) {
+      // New contact mode - start in editing mode
+      setIsEditing(true);
+    } else {
+      // Existing contact - start in view mode
+      setIsEditing(false);
+    }
+  }, [open, contact]);
 
   const form = useForm<ContactFormData>({
     resolver: zodResolver(contactFormSchema),
@@ -338,7 +352,7 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
         investorNotes: derivedIsInvestor ? (data.bio || null) : null,
       };
       
-      if (isEditMode) {
+      if (hasExistingContact) {
         await updateContact.mutateAsync({
           id: contact.id,
           ...contactData,
@@ -358,10 +372,11 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
       }
 
       form.reset();
+      setIsEditing(false);
       onOpenChange(false);
     } catch (error: any) {
       toast({
-        title: `Failed to ${isEditMode ? 'update' : 'create'} contact`,
+        title: `Failed to ${hasExistingContact ? 'update' : 'create'} contact`,
         description: error.message,
         variant: "destructive",
       });
@@ -390,18 +405,222 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
     }
   };
 
+  // Helper to format check size
+  const formatCheckSize = (min?: number | null, max?: number | null) => {
+    if (!min && !max) return null;
+    const formatMoney = (val: number) => {
+      if (val >= 1000000) return `$${(val / 1000000).toFixed(1)}M`;
+      if (val >= 1000) return `$${(val / 1000).toFixed(0)}K`;
+      return `$${val}`;
+    };
+    if (min && max) return `${formatMoney(min)} - ${formatMoney(max)}`;
+    if (min) return `${formatMoney(min)}+`;
+    if (max) return `Up to ${formatMoney(max)}`;
+    return null;
+  };
+
+  // View mode component for displaying contact details
+  const ViewMode = () => {
+    if (!contact) return null;
+    
+    const checkSizeDisplay = formatCheckSize(contact.checkSizeMin, contact.checkSizeMax);
+    const contactTypes = contact.contactType && contact.contactType.length > 0 
+      ? contact.contactType 
+      : detectContactTypesFromTitle(contact.title);
+    const isInvestorContact = hasInvestorType(contactTypes);
+
+    return (
+      <ScrollArea className="h-[calc(90vh-180px)] pr-4">
+        <div className="space-y-6">
+          {/* Basic Info Section */}
+          <div className="space-y-3">
+            {/* Email */}
+            {contact.email && (
+              <div className="flex items-center gap-2 text-sm">
+                <Mail className="w-4 h-4 text-muted-foreground" />
+                <a href={`mailto:${contact.email}`} className="text-primary hover:underline" data-testid="view-email">
+                  {contact.email}
+                </a>
+              </div>
+            )}
+            
+            {/* Phone */}
+            {contact.phone && (
+              <div className="flex items-center gap-2 text-sm">
+                <Phone className="w-4 h-4 text-muted-foreground" />
+                <a href={`tel:${contact.phone}`} className="hover:underline" data-testid="view-phone">
+                  {contact.phone}
+                </a>
+              </div>
+            )}
+            
+            {/* Title & Company */}
+            {(contact.title || contact.company) && (
+              <div className="flex items-center gap-2 text-sm">
+                <Briefcase className="w-4 h-4 text-muted-foreground" />
+                <span data-testid="view-title-company">
+                  {contact.title}{contact.title && contact.company ? ' at ' : ''}{contact.company}
+                </span>
+              </div>
+            )}
+            
+            {/* Location */}
+            {contact.location && (
+              <div className="flex items-center gap-2 text-sm">
+                <MapPin className="w-4 h-4 text-muted-foreground" />
+                <span data-testid="view-location">{contact.location}</span>
+              </div>
+            )}
+            
+            {/* LinkedIn */}
+            {contact.linkedinUrl && (
+              <div className="flex items-center gap-2 text-sm">
+                <Linkedin className="w-4 h-4 text-muted-foreground" />
+                <a href={contact.linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1" data-testid="view-linkedin">
+                  LinkedIn <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            )}
+            
+            {/* Twitter */}
+            {contact.twitter && (
+              <div className="flex items-center gap-2 text-sm">
+                <Twitter className="w-4 h-4 text-muted-foreground" />
+                <span data-testid="view-twitter">{contact.twitter}</span>
+              </div>
+            )}
+          </div>
+          
+          {/* Contact Types */}
+          {contactTypes.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium text-muted-foreground">Type</h4>
+              <div className="flex flex-wrap gap-2">
+                {contactTypes.map((type) => (
+                  <Badge key={type} variant="secondary" data-testid={`view-type-${type.toLowerCase()}`}>
+                    {type === 'FamilyOffice' ? 'Family Office' : type}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Check Size - for investors */}
+          {isInvestorContact && checkSizeDisplay && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium text-muted-foreground">Check Size</h4>
+              <p className="text-sm" data-testid="view-check-size">{checkSizeDisplay}</p>
+            </div>
+          )}
+          
+          {/* Bio/Notes */}
+          {(contact.bio || contact.investorNotes) && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium text-muted-foreground">
+                {isInvestorContact ? 'Investor Notes' : 'About'}
+              </h4>
+              <p className="text-sm whitespace-pre-wrap" data-testid="view-bio">
+                {contact.bio || contact.investorNotes}
+              </p>
+            </div>
+          )}
+          
+          {/* Company Information */}
+          {(contact.companyUrl || contact.companyAddress || contact.companyEmployees || contact.companyFounded) && (
+            <div className="space-y-3 border-t pt-4">
+              <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Building2 className="w-4 h-4" /> Company Information
+              </h4>
+              
+              {contact.companyUrl && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Globe className="w-4 h-4 text-muted-foreground" />
+                  <a href={contact.companyUrl.startsWith('http') ? contact.companyUrl : `https://${contact.companyUrl}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1" data-testid="view-company-url">
+                    {contact.companyUrl} <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              )}
+              
+              {contact.companyAddress && (
+                <div className="flex items-center gap-2 text-sm">
+                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                  <span data-testid="view-company-address">{contact.companyAddress}</span>
+                </div>
+              )}
+              
+              {(contact.companyEmployees || contact.companyFounded) && (
+                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                  {contact.companyEmployees && (
+                    <span data-testid="view-company-employees">{contact.companyEmployees} employees</span>
+                  )}
+                  {contact.companyFounded && (
+                    <span data-testid="view-company-founded">Founded {contact.companyFounded}</span>
+                  )}
+                </div>
+              )}
+              
+              {/* Company Social Links */}
+              <div className="flex flex-wrap gap-3">
+                {contact.companyLinkedin && (
+                  <a href={contact.companyLinkedin} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm flex items-center gap-1" data-testid="view-company-linkedin">
+                    <Linkedin className="w-3 h-3" /> Company LinkedIn
+                  </a>
+                )}
+                {contact.companyTwitter && (
+                  <span className="text-sm" data-testid="view-company-twitter">
+                    <Twitter className="w-3 h-3 inline mr-1" />{contact.companyTwitter}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+    );
+  };
+
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={(newOpen) => {
+        if (!newOpen) {
+          setIsEditing(false);
+        }
+        onOpenChange(newOpen);
+      }}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col" data-testid="dialog-contact">
           <DialogHeader className="flex-shrink-0">
-            <DialogTitle>{isEditMode ? "Edit Contact" : "Add New Contact"}</DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle>
+                {!hasExistingContact ? "Add New Contact" : isEditing ? "Edit Contact" : contact?.name}
+              </DialogTitle>
+              {hasExistingContact && !isEditing && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setIsEditing(true)}
+                  data-testid="button-edit-contact"
+                >
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Edit
+                </Button>
+              )}
+            </div>
             <DialogDescription>
-              {isEditMode ? "Update contact information" : "Add a new contact to your network"}
+              {!hasExistingContact 
+                ? "Add a new contact to your network" 
+                : isEditing 
+                  ? "Update contact information" 
+                  : contact?.title && contact?.company 
+                    ? `${contact.title} at ${contact.company}`
+                    : contact?.title || contact?.company || "Contact details"}
             </DialogDescription>
           </DialogHeader>
 
-          <Form {...form}>
+          {/* View Mode */}
+          {hasExistingContact && !isEditing && <ViewMode />}
+
+          {/* Edit/Create Mode */}
+          {isEditing && <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
               <ScrollArea className="h-[calc(90vh-220px)] pr-4">
                 <div className="pr-2">
@@ -918,7 +1137,7 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
               </ScrollArea>
 
               <DialogFooter className="gap-2 mt-4 flex-shrink-0">
-                {isEditMode && (
+                {hasExistingContact && (
                   <Button
                     type="button"
                     variant="destructive"
@@ -936,7 +1155,11 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
                   variant="outline"
                   onClick={() => {
                     form.reset();
-                    onOpenChange(false);
+                    if (hasExistingContact) {
+                      setIsEditing(false);
+                    } else {
+                      onOpenChange(false);
+                    }
                   }}
                   data-testid="button-cancel"
                 >
@@ -950,15 +1173,40 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
                   {(createContact.isPending || updateContact.isPending) ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      {isEditMode ? "Updating..." : "Creating..."}
+                      {hasExistingContact ? "Updating..." : "Creating..."}
                     </>
                   ) : (
-                    isEditMode ? "Update Contact" : "Create Contact"
+                    hasExistingContact ? "Update Contact" : "Create Contact"
                   )}
                 </Button>
               </DialogFooter>
             </form>
-          </Form>
+          </Form>}
+
+          {/* View Mode Footer */}
+          {hasExistingContact && !isEditing && (
+            <DialogFooter className="gap-2 mt-4 flex-shrink-0">
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={deleteContact.isPending}
+                className="mr-auto"
+                data-testid="button-delete-contact-view"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                data-testid="button-close"
+              >
+                Close
+              </Button>
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
 
