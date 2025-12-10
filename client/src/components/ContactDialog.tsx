@@ -450,16 +450,6 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
               </div>
             )}
             
-            {/* Title & Company */}
-            {(contact.title || contact.company) && (
-              <div className="flex items-center gap-2 text-sm">
-                <Briefcase className="w-4 h-4 text-muted-foreground" />
-                <span data-testid="view-title-company">
-                  {contact.title}{contact.title && contact.company ? ' at ' : ''}{contact.company}
-                </span>
-              </div>
-            )}
-            
             {/* Location */}
             {contact.location && (
               <div className="flex items-center gap-2 text-sm">
@@ -585,22 +575,9 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
       }}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col" data-testid="dialog-contact">
           <DialogHeader className="flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <DialogTitle>
-                {!hasExistingContact ? "Add New Contact" : isEditing ? "Edit Contact" : contact?.name}
-              </DialogTitle>
-              {hasExistingContact && !isEditing && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setIsEditing(true)}
-                  data-testid="button-edit-contact"
-                >
-                  <Pencil className="w-4 h-4 mr-2" />
-                  Edit
-                </Button>
-              )}
-            </div>
+            <DialogTitle>
+              {!hasExistingContact ? "Add New Contact" : isEditing ? "Edit Contact" : contact?.name}
+            </DialogTitle>
             <DialogDescription>
               {!hasExistingContact 
                 ? "Add a new contact to your network" 
@@ -1182,17 +1159,27 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
           {/* View Mode Footer */}
           {hasExistingContact && !isEditing && (
             <DialogFooter className="gap-2 mt-4 flex-shrink-0">
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => setShowDeleteDialog(true)}
-                disabled={deleteContact.isPending}
-                className="mr-auto"
-                data-testid="button-delete-contact-view"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete
-              </Button>
+              <div className="flex gap-2 mr-auto">
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => setShowDeleteDialog(true)}
+                  disabled={deleteContact.isPending}
+                  data-testid="button-delete-contact-view"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete
+                </Button>
+                <Button 
+                  type="button"
+                  variant="outline" 
+                  onClick={() => setIsEditing(true)}
+                  data-testid="button-edit-contact"
+                >
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Edit
+                </Button>
+              </div>
               <Button
                 type="button"
                 variant="outline"
