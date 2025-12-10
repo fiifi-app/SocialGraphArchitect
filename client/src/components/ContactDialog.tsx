@@ -137,19 +137,15 @@ export default function ContactDialog({ open, onOpenChange, contact }: ContactDi
   const deleteContact = useDeleteContact();
   const { toast } = useToast();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  // New contacts start in edit mode, existing contacts start in view mode
+  const [isEditing, setIsEditing] = useState(!hasExistingContact);
   const { data: featureFlags } = useFeatureFlags();
 
-  // Reset editing state when dialog opens/closes or contact changes
+  // Reset editing state when dialog opens with different contact
   useEffect(() => {
-    if (!open) {
-      setIsEditing(false);
-    } else if (!contact) {
-      // New contact mode - start in editing mode
-      setIsEditing(true);
-    } else {
-      // Existing contact - start in view mode
-      setIsEditing(false);
+    if (open) {
+      // New contact mode = edit mode, existing contact = view mode
+      setIsEditing(!contact);
     }
   }, [open, contact]);
 
