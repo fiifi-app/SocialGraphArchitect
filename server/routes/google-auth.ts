@@ -9,10 +9,24 @@ const supabaseUrl = process.env.VITE_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+// OAuth callback URL - use Vercel URL if available, otherwise Replit or local
+const getOAuthCallbackUrl = () => {
+  if (process.env.VERCEL_URL) {
+    // Vercel provides VERCEL_URL (e.g., "your-app.vercel.app")
+    return `https://${process.env.VERCEL_URL}/api/auth/google/callback`;
+  } else if (process.env.REPLIT_DEV_DOMAIN) {
+    // Replit deployment
+    return `https://${process.env.REPLIT_DEV_DOMAIN}/api/auth/google/callback`;
+  } else {
+    // Local development
+    return `http://localhost:${process.env.PORT || '5000'}/api/auth/google/callback`;
+  }
+};
+
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
-  `https://${process.env.REPLIT_DEV_DOMAIN}/api/auth/google/callback`
+  getOAuthCallbackUrl()
 );
 
 // Store pending OAuth states with expiry (in-memory, could use Redis for production)

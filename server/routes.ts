@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import googleAuthRoutes from "./routes/google-auth";
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express): Promise<Server | null> {
   /**
    * This application uses Supabase as the database.
    * Most CRUD operations are performed directly from the frontend using Supabase hooks.
@@ -12,7 +12,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Google Calendar OAuth routes
   app.use('/api/auth/google', googleAuthRoutes);
 
-  const httpServer = createServer(app);
+  // Only create HTTP server if not in serverless environment (Vercel)
+  if (process.env.VERCEL) {
+    return null;
+  }
 
+  const httpServer = createServer(app);
   return httpServer;
 }

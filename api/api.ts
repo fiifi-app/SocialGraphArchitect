@@ -1,6 +1,8 @@
+import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { registerRoutes } from "../server/routes";
+import serverless from 'serverless-http';
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const app = express();
 
@@ -9,6 +11,7 @@ declare module 'http' {
     rawBody: unknown
   }
 }
+
 app.use(express.json({
   verify: (req, _res, buf) => {
     req.rawBody = buf;
@@ -39,15 +42,16 @@ app.use((req, res, next) => {
         logLine = logLine.slice(0, 79) + "…";
       }
 
-      log(logLine);
+      console.log(logLine);
     }
   });
 
   next();
 });
 
+// Initialize routes
 (async () => {
-  const server = await registerRoutes(app);
+  await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -56,38 +60,15 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
     throw err;
   });
-
-  // Skip server setup if in serverless environment (Vercel)
-  // In Vercel, static files are served automatically and API routes go through api/api.ts
-  if (process.env.VERCEL) {
-    return;
-  }
-
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    if (!server) {
-      throw new Error("Server is required for development mode");
-    }
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
-
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  if (!server) {
-    throw new Error("Server is required for non-serverless deployment");
-  }
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
 })();
+
+// Export Vercel serverless function handler
+// This only handles /api/* routes - static files are served by Vercel
+export default async (req: VercelRequest, res: VercelResponse) => {
+  // Use serverless-http to wrap Express app for Vercel
+  const handler = serverless(app, {
+    binary: ['image/*', 'application/pdf']
+  });
+  
+  return handler(req as any, res as any);
+};

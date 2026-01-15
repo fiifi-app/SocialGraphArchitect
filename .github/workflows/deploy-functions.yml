@@ -41,3 +41,30 @@ jobs:
       
       - name: Deploy generate-intro-email function
         run: supabase functions deploy generate-intro-email --project-ref $PROJECT_REF
+      
+      - name: Deploy research-contact function
+        run: supabase functions deploy research-contact --project-ref $PROJECT_REF
+      
+      - name: Deploy batch-extract-thesis function
+        run: supabase functions deploy batch-extract-thesis --project-ref $PROJECT_REF
+      
+      - name: Deploy embed-contact function
+        run: supabase functions deploy embed-contact --project-ref $PROJECT_REF
+      
+      - name: Deploy extract-thesis function
+        run: supabase functions deploy extract-thesis --project-ref $PROJECT_REF
+      
+      - name: Deploy extract-participants function
+        run: supabase functions deploy extract-participants --project-ref $PROJECT_REF
+      
+      - name: Deploy process-participants function
+        run: supabase functions deploy process-participants --project-ref $PROJECT_REF
+      
+      - name: Deploy transcribe-audio function
+        run: supabase functions deploy transcribe-audio --project-ref $PROJECT_REF
+      
+      - name: Deploy sync-google-calendar function
+        run: supabase functions deploy sync-google-calendar --project-ref $PROJECT_REF
+      
+      - name: Deploy run-pipeline-batch function
+        run: supabase functions deploy run-pipeline-batch --project-ref $PROJECT_REF
