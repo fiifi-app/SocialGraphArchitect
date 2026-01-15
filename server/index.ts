@@ -57,19 +57,10 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // Skip server setup if in serverless environment (Vercel)
-  // In Vercel, static files are served automatically and API routes go through api/api.ts
-  if (process.env.VERCEL) {
-    return;
-  }
-
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   if (app.get("env") === "development") {
-    if (!server) {
-      throw new Error("Server is required for development mode");
-    }
     await setupVite(app, server);
   } else {
     serveStatic(app);
@@ -79,9 +70,6 @@ app.use((req, res, next) => {
   // Other ports are firewalled. Default to 5000 if not specified.
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  if (!server) {
-    throw new Error("Server is required for non-serverless deployment");
-  }
   const port = parseInt(process.env.PORT || '5000', 10);
   server.listen({
     port,
